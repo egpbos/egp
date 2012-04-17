@@ -487,9 +487,8 @@ class GaussianRandomField(DensityField):
         
         # Fill in the grid with random numbers
         # ... for the regular grid components:
-        np.random.seed(self.seed)
-        arg = np.random.random((self.gridsize,self.gridsize,halfgrid+1))
-        mod = 1 - np.random.random((self.gridsize,self.gridsize,halfgrid+1)) # "1 -" so there's no zero
+        arg = resolution_independent_random_grid(self.gridsize, self.seed)
+        mod = 1 - resolution_independent_random_grid(self.gridsize, self.seed+1) # "1 -" so there's no zero
         z = np.sqrt(-np.log(mod)) * np.exp(1j*2*np.pi*arg)
         # Reduce z by sqrt(2) for real f since need sum of |z|^2 over all
         # wavenumbers (positive and negative) to be Chi-square for N degrees
@@ -573,3 +572,7 @@ def symmetrizeMatrix(m):
     # but just the full matrix mirrored and conjugated.
     m[xi,yi[:,:halfgrid],zi] = m[xj,yj[:,:halfgrid],zj].conj()
     m[xi,yi[:,halfgrid:],zi] = m[xj,yj[:,halfgrid:],zj].conj()
+
+def resolution_independent_random_grid(gridsize, seed):
+    np.random.seed(seed)
+    return np.random.random((gridsize,gridsize,gridsize/2+1))
