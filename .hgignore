@@ -2,3 +2,5 @@ syntax: glob
 *.pyc
 *~
 crunch/build
+crunch.so
+
