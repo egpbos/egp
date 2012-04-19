@@ -41,5 +41,5 @@ namespace crunch {
     // Resolution independent random grid (for gaussian random field generation)
     extern double_vector resolution_independent_random_grid(int gridsize, unsigned int seed);
     extern double_vector resolution_independent_random_grid_seedtable(int gridsize, unsigned int seed); // this is the old version, kept in for testing
-	extern double_vector naive_random_grid(int gridsize, unsigned int seed) // another one for testing
+	extern double_vector naive_random_grid(int gridsize, unsigned int seed); // another one for testing
 }
