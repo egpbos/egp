@@ -38,6 +38,6 @@ BOOST_PYTHON_MODULE(crunch)
 	boost::python::def("test3", test3);
 	boost::python::def("octreeSectorSearch", octreeSectorSearch);
 	boost::python::def("resolution_independent_random_grid", resolution_independent_random_grid);
-	boost::python::def("naive_random_grid", naive_independent_random_grid);
+	boost::python::def("naive_random_grid", naive_random_grid);
 	boost::python::def("resolution_independent_random_grid_seedtable", resolution_independent_random_grid_seedtable);
 }
