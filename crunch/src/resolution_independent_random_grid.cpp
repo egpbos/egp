@@ -76,25 +76,22 @@ double_vector crunch::resolution_independent_random_grid(int gridsize, unsigned 
     engine.seed(seed); // don't seed too much! http://tinyurl.com/cwbqqvg
     
     // Fill out:
-    //            GAAT DIT WEL GOED? CHECK OF NIET DUBBEL GELOOPT WORDT!!!!
     for (i = 0; i < gridsize / 2; i++) {
         for (k = 0; k < i+1; k++) {
-            for (j = 0; j < i; j++)
+            for (j = 0; j < i; j++) {
                 outpoint[i * i_stride + j * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i + 1; j++)
-                outpoint[j * i_stride + i * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i; j++)
                 outpoint[(gridsize - 1 - i) * i_stride + j * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i + 1; j++)
-                outpoint[(gridsize - 1 - j) * i_stride + i * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i; j++)
                 outpoint[i * i_stride + (gridsize - 1 - j) * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i + 1; j++)
-                outpoint[j * i_stride + (gridsize - 1 - i) * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i; j++)
                 outpoint[(gridsize - 1 - i) * i_stride + (gridsize - 1 - j) * j_stride + k] = uni_dist(engine);
-            for (j = 0; j < i + 1; j++)
+                outpoint[j * i_stride + i * j_stride + k] = uni_dist(engine);
+                outpoint[(gridsize - 1 - j) * i_stride + i * j_stride + k] = uni_dist(engine);
+                outpoint[j * i_stride + (gridsize - 1 - i) * j_stride + k] = uni_dist(engine);
                 outpoint[(gridsize - 1 - j) * i_stride + (gridsize - 1 - i) * j_stride + k] = uni_dist(engine);
+			}
+			outpoint[i * i_stride + i * j_stride + k] = uni_dist(engine);
+			outpoint[(gridsize - 1 - i) * i_stride + i * j_stride + k] = uni_dist(engine);
+			outpoint[i * i_stride + (gridsize - 1 - i) * j_stride + k] = uni_dist(engine);
+			outpoint[(gridsize - 1 - i) * i_stride + (gridsize - 1 - i) * j_stride + k] = uni_dist(engine);
         }
         for (j = 0; j < i; j++) {
             for (k = 0; k < i; k++) {
