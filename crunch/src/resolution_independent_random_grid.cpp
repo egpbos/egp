@@ -115,6 +115,35 @@ double_vector crunch::resolution_independent_random_grid(int gridsize, unsigned 
     return out;
 }
 
+// EXTRA TEST FUNCTIE VOOR VERGELIJKING MET numpy.random.random
+double_vector crunch::naive_random_grid(int gridsize, unsigned int seed) {
+    rng_type engine; // only initialize an RNG once! http://tinyurl.com/cwbqqvg
+    uniform_real uni_dist(0,1);
+    int i, j, k;
+    
+    // Create the output array:
+    double_vector out(gridsize * gridsize * (gridsize/2+1));
+    double* outpoint = out.data().begin();
+    int i_stride = gridsize*(gridsize/2+1);
+    int j_stride = (gridsize/2+1);
+
+    // Seed random number generator:
+    engine.seed(seed); // don't seed too much! http://tinyurl.com/cwbqqvg
+    
+    // Fill out:
+    for (i = 0; i < gridsize; i++) {
+        for (j = 0; j < gridsize; j++) {
+			for (k = 0; k < gridsize/2+1; k++) {
+            	outpoint[i_stride*i + j_stride*j + k] = uni_dist(engine);
+			}
+		}
+    }
+    
+    const npy_intp dims[3] = {(npy_intp) gridsize, (npy_intp) gridsize, (npy_intp) gridsize/2+1};
+    out.reshape(3, dims);
+    return out;
+}
+
 // OLD VERSION (using seedtable as in N-GenIC -> slow!)
 /* Based on:
  * http://en.wikipedia.org/wiki/C%2B%2B11#Extensible_random_number_facility
