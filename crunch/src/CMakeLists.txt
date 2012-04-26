@@ -28,4 +28,5 @@ set_target_properties(crunch PROPERTIES PREFIX "")
 set_target_properties(crunch PROPERTIES LIBRARY_OUTPUT_DIRECTORY $ENV{HOME}/code/egp)
 
 # Add C++11 support (used in resolution_independent_random_grid):
-set_target_properties(crunch PROPERTIES COMPILE_FLAGS "-std=c++0x")
+# And add massive local(!!) optimization with -march=native
+set_target_properties(crunch PROPERTIES COMPILE_FLAGS "-std=c++0x -march=native")

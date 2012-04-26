@@ -15,6 +15,8 @@ from numpy.random import random as rnd, seed as setseed
 from scipy.integrate import quadrature as integrate
 from scipy.interpolate import InterpolatedUnivariateSpline as Interpolator
 from periodic import PeriodicArray
+import pyublas
+from egp.crunch import resolution_independent_random_grid
 
 
 # constants
@@ -48,7 +50,7 @@ class Cosmology(object):
     * bias:      Bias factor b (default = 1)
     * TCMB:      Temperature of the CMB spectrum (default = 2.7 Kelvin)
     """
-    def __init__(self, choice, trans = None):
+    def __init__(self, choice = None, trans = None):
         """
         Initialize a Cosmology instance with some default values.
         """
@@ -467,6 +469,8 @@ class GaussianRandomField(DensityField):
         self.boxlen = boxlen
         self.gridsize = int(gridsize)
         self.seed = seed
+        if not self.seed:
+            self.seed = np.random.randint(1)
         self.ksphere = ksphere
         self.build_fourier()
     
@@ -573,6 +577,6 @@ def symmetrizeMatrix(m):
     m[xi,yi[:,:halfgrid],zi] = m[xj,yj[:,:halfgrid],zj].conj()
     m[xi,yi[:,halfgrid:],zi] = m[xj,yj[:,halfgrid:],zj].conj()
 
-def resolution_independent_random_grid(gridsize, seed):
+def resolution_dependent_random_grid(gridsize, seed):
     np.random.seed(seed)
     return np.random.random((gridsize,gridsize,gridsize/2+1))
