@@ -18,6 +18,8 @@ from matplotlib import pyplot as pl
 from egp.icgen import CosmoPowerSpectrum as PS, Cosmology, GaussianRandomField as GRF, DensityField
 from matplotlib.pyplot import figure, show
 from time import time
+from csv import reader as csvreader
+from scipy.special import erf
 
 
 # ---- CLASSES ----
@@ -238,10 +240,7 @@ class HeightConstraint(Constraint):
 
 class ExtremumConstraint(Constraint):
     """Make the location a maximum, minimum or saddlepoint in one direction.
-    Specify the direction with the direction keyword."""
-    # To have the option to leave out direction (=> None) and get a list of
-    # three ExtremumConstraint objects returned, see above Factory/__new__
-    # idea in the stackoverflow url.
+    Specify the direction with the direction keyword; 0,1,2 = x,y,z."""
     def __init__(self, location, scale, direction):
         self.direction = direction
         self.value = 0
@@ -350,6 +349,171 @@ def euler_matrix(alpha, beta, psi):
     M33 = cos(beta)
     return np.matrix([[M11,M12,M13],[M21,M22,M23],[M31,M32,M33]])
 
+
+# ---------------------------- FACTORIES  ----------------------------
+
+def constraints_from_csv(filename, power_spectrum, boxlen):
+    """Load a csv-file containing constraints and convert it into a list of
+    Constraint objects. Also needs the power spectrum of the CRF that you're 
+    going to build, because it needs to determine the spectral parameters.
+    Finally, we need the boxsize (in Mpc h^-1) of the random field that we're
+    going to build, also needed for the spectral parameters.
+    
+    The structure of the csv-file needs to be:
+    
+    1.  x-location (Mpc h^-1)
+    2.  y-location (Mpc h^-1)
+    3.  z-location (Mpc h^-1)
+    4.  scale (Mpc h^-1)
+  A 5.  peak height (density contrast units (-1-\inf))
+  B 6.  x-extremum (True or False)
+  B 7.  y-extremum (True or False)
+  B 8.  z-extremum (True or False)
+  C 9.  peak curvature (fraction of mean curvature)
+  C 10. shape a_2/a_1 (0-1)
+  C 11. shape a_3/a_1 (0-a_2/a_1)
+  C 12. orientation (Euler) angle phi (degrees)
+  C 13. orientation (Euler) angle theta (degrees)
+  C 14. orientation (Euler) angle psi (degrees)
+  D 15. x-velocity (km/s)
+  D 16. y-velocity (km/s)
+  D 17. z-velocity (km/s)
+  E 18. shear eigenvalue 1* (km/s/Mpc)
+  E 19. shear eigenvalue 2* (km/s/Mpc)
+    * The shear eigenvalues sum to 0 (the tidal tensor is traceless) so you need
+      only specify two eigenvalues. The eigenvalues determine whether you have a
+      sheet (two negative eigenvalues), a filament (one negative eigenvalue) or
+      a random situation (all eigenvalues zero). Could also be different, not
+      sure, just guessing here, really.
+  E 20. shear orientation (Euler) angle phi (degrees)
+  E 21. shear orientation (Euler) angle theta (degrees)
+  E 22. shear orientation (Euler) angle psi (degrees)
+    
+    The first four are mandatory, the others are not. If a group (A-E) is left
+    empty, no constraint will be made on that group. If groups C and E are left
+    partially empty, the other values will be randomly selected and constraints
+    will be put on them as well (this is necessary, because they are correlated
+    in some complicated way that is hard to disentangle).
+    """
+    f = open(filename)
+    table = csvreader(f)
+    
+    cosmo = power_spectrum.cosmo
+    
+    locations = {}
+    scales = {}
+    constraints = []
+    
+    for row in table:
+        # Location
+        pos = tuple(row[:3]) # tuple needed; lists cannot be dictionary keys
+        if pos in locations:
+            location = locations[pos]
+        else:
+            location = ConstraintLocation(pos)
+            locations[pos] = location
+        
+        # Scale
+        scalestr = row[3]
+        if scalestr in scales:
+            scale = scales[scalestr]
+        else:
+            scale = ConstraintScale(float(scalestr))
+            scales[scalestr] = scale
+        
+        # Spectral parameters (for easier constraint value definition, at least
+        # in case of gaussian random field):
+        sigma0 = power_spectrum.moment(0, scale.scale, boxlen**3)
+        sigma1 = power_spectrum.moment(1, scale.scale, boxlen**3)
+        sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
+        sigma_min1 = power_spectrum.moment(-1, scale.scale, boxlen**3)
+        gamma_nu = sigma0**2 / sigma_min1 / sigma1
+        sigma_g = 3./2 * cosmo.omegaM * (cosmo.h*100)**2 * sigma_min1
+        sigma_g_peak = sigma_g * np.sqrt(1 - gamma_nu**2)
+        gamma = sigma1**2/sigma0/sigma2
+        sigma_E = 3./2*cosmo.omegaM*(cosmo.h*100)**2 * sigma0 * np.sqrt((1-gamma**2)/15)
+        
+        # Peak height
+        height = row[4]
+        if height:
+            constraints.append(HeightConstraint(location, scale, height))
+        
+        # Extrema
+        x_extremum = row[5]
+        if x_extremum:
+            constraints.append(ExtremumConstraint(location, scale, 0))
+        y_extremum = row[6]
+        if y_extremum:
+            constraints.append(ExtremumConstraint(location, scale, 1))
+        z_extremum = row[7]
+        if z_extremum:
+            constraints.append(ExtremumConstraint(location, scale, 2))
+        
+        # Shape & orientation
+        curvature = row[8]
+        a21 = row[9]
+        a31 = row[10]
+        density_phi = row[11]
+        density_theta = row[12]
+        density_psi = row[13]
+        # if one is defined, randomly define all:
+        if curvature or a21 or a31 or density_phi or density_theta or density_psi:
+            if not curvature:
+                # determine the cumulative cpdf of curvature x for peak height \nu:
+                x = np.linspace(0,10,5001) # ongeveer zelfde als in Riens code
+                cumPDF = cumulative_cpdf_curvature(x,height,gamma)
+                curvature = np.random.random()
+        
+        # Velocity
+        vx = row[14]
+        vy = row[15]
+        vz = row[16]
+        
+        
+        # Shear/tidal field
+        ev1 = row[17]
+        ev2 = row[18]
+        shear_phi = row[19]
+        shear_theta = row[20]
+        shear_psi = row[21]
+        
+    
+    return constraints
+
+# ------------------------- FACTORY HELPER FUNCTIONS -----------------
+
+def cumulative_cpdf_curvature(x, height, gamma):
+    """Determine the cumulative conditional probability distribution function of
+    the curvature of peaks with height /height/ over curvature range /x/. This
+    is given in Bardeen, Bond, Kaiser & Szalay (1986) by equation (7.5),
+    together with (A15), (A19) and (4.4)/(4.5). /gamma/ is a fraction of
+    spectral momenta."""
+    xdel = (x[-1]-x[0])/(len(x)-1)
+    return np.cumsum(cpdf_curvature(x,height,gamma))*xdel
+
+def cpdf_curvature(x, height, gamma):
+    """The conditional probability distribution function of the curvature of
+    peaks with height /height/ over curvature range /x/. See also the docstring
+    of function cumulative_cpdf_curvature()."""
+    w = gamma*height # xstar in Rien's code and in BBKS
+    # BBKS eqn. (4.5):
+    A = 2.5/(9 - 5*gamma**2)
+    B = 432./np.sqrt(10*np.pi)/(9 - 5*gamma**2)**(5./2)
+    C1 = 1.84 + 1.13*(1-gamma**2)**5.72
+    C2 = 8.91 + 1.27*np.exp(6.51*gamma**2)
+    C3 = 2.58*np.exp(1.05*gamma**2)
+    # BBKS eqn. (4.4) (N.B.: this is an approximation of the real G(gamma, nu)):
+    G = ( w**3 - 3*gamma**2*w + (B*w**2 + C1)*np.exp(-A*w**2) ) \
+        / ( 1 + C2*np.exp(-C3*w) )
+    # BBKS eqn. (A15):
+    f = (x**3 - 3*x) * ( erf(np.sqrt(5./2)*x) + erf(np.sqrt(5./2)*x/2) ) / 2 \
+        + np.sqrt(2./5/np.pi) * ( (31.*x**2/4 + 8./5)*np.exp(-5.*x**2/8) \
+        + (x**2/2 - 8./5)*np.exp(-5*x**2/2) )
+    # BBKS eqn. (A19):
+    g = f * np.exp( -(x-w)**2/2/(1-gamma**2) ) / np.sqrt( 2*np.pi*(1-gamma**2) )
+    # BBKS eqn. (7.5):
+    P_x_given_nu = g/G
+    return P_x_given_nu
 
 # --------------------------- TESTING CODE ---------------------------
 
