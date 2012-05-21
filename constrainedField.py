@@ -20,6 +20,8 @@ from matplotlib.pyplot import figure, show
 from time import time
 from csv import reader as csvreader
 from scipy.special import erf
+from scipy.interpolate import UnivariateSpline
+import egp.zeldovich
 
 
 # ---- CLASSES ----
@@ -404,8 +406,13 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
     scales = {}
     constraints = []
     
+    fpeebl = egp.zeldovich.fpeebl
+    z = 0
+    velocity_to_gravity = 2*fpeebl(z, cosmo.h, cosmo.omegaR, cosmo.omegaM, \
+                          cosmo.omegaL) / 3 / (cosmo.h*100) / cosmo.omegaM
+    
     for row in table:
-        # Location
+        # ----- Location
         pos = tuple(row[:3]) # tuple needed; lists cannot be dictionary keys
         if pos in locations:
             location = locations[pos]
@@ -413,7 +420,7 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
             location = ConstraintLocation(pos)
             locations[pos] = location
         
-        # Scale
+        # ----- Scale
         scalestr = row[3]
         if scalestr in scales:
             scale = scales[scalestr]
@@ -421,8 +428,8 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
             scale = ConstraintScale(float(scalestr))
             scales[scalestr] = scale
         
-        # Spectral parameters (for easier constraint value definition, at least
-        # in case of gaussian random field):
+        # ----- Spectral parameters (for easier constraint value definition, at
+        # ----- least in case of gaussian random field):
         sigma0 = power_spectrum.moment(0, scale.scale, boxlen**3)
         sigma1 = power_spectrum.moment(1, scale.scale, boxlen**3)
         sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
@@ -433,12 +440,12 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
         gamma = sigma1**2/sigma0/sigma2
         sigma_E = 3./2*cosmo.omegaM*(cosmo.h*100)**2 * sigma0 * np.sqrt((1-gamma**2)/15)
         
-        # Peak height
+        # ----- Peak height
         height = row[4]
         if height:
             constraints.append(HeightConstraint(location, scale, height))
         
-        # Extrema
+        # ----- Extrema
         x_extremum = row[5]
         if x_extremum:
             constraints.append(ExtremumConstraint(location, scale, 0))
@@ -449,7 +456,7 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
         if z_extremum:
             constraints.append(ExtremumConstraint(location, scale, 2))
         
-        # Shape & orientation
+        # ----- Shape & orientation
         curvature = row[8]
         a21 = row[9]
         a31 = row[10]
@@ -459,24 +466,117 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
         # if one is defined, randomly define all:
         if curvature or a21 or a31 or density_phi or density_theta or density_psi:
             if not curvature:
-                # determine the cumulative cpdf of curvature x for peak height \nu:
+                # determine the cumulative cpdf of curvature x given peak height:
                 x = np.linspace(0,10,5001) # ongeveer zelfde als in Riens code
+                dx = x[1]-x[0]
                 cumPDF = cumulative_cpdf_curvature(x,height,gamma)
-                curvature = np.random.random()
+                percentile = 1 - np.random.random() # don't want zero
+                ix = cumPDF.searchsorted(percentile)
+                curvature = dx*((ix-1) + (percentile-cumPDF[ix-1])/(cumPDF[ix]-cumPDF[ix-1]))
+                # This is basically just the ``transformation method'' of
+                # drawing random variables (sect. 7.3.2 of Press+07).
+                # Note: at the end of the x-range the cumulative PDF is flat,
+                # within numerical precision, so no interpolation is possible. 
+                # This means that the curvature will never be higher than the
+                # corresponding value at which the PDF flattens.
+            if not a21 or not a31:
+                # For the shape distribution we apply the rejection method (see
+                # e.g. sect. 7.3.6 of Press+07) because we cannot easily
+                # determine the 
+                # N.B.: if only one is given, both will be randomly calculated!
+                p,e = np.mgrid[-0.25:0.25:0.005, 0:0.5:0.005]
+                PDF = cpdf_shape(e, p, curvature)
+                # The top of the uniform distribution beneath which we draw:
+                comparison_function_max = 1.01*PDF.max()
+                # Drawing in 3D space beneath the comparison function until we
+                # no longer reject (ugly Pythonic do-while loop equivalent):
+                draw = lambda: (0.5*np.random.random(), \
+                                0.75*np.random.random() - 0.25, \
+                                comparison_function_max*(1-np.random.random()))
+                                # gives, respectively: e, p, something not zero
+                e,p,prob = draw()
+                while cpdf_shape(e,p,curvature) < prob: # rejection criterion
+                    e,p,prob = draw()
+                # Convert to a21 and a31:
+                a21 = np.sqrt((1-2*p)/(1+p-3*e))
+                a31 = np.sqrt((1+p+3*e)/(1+p-3*e))
+            if not density_phi:
+                density_phi = 180*np.random.random()
+            if not density_theta:
+                density_theta = 180/np.pi*np.arccos(1-np.random.random())
+            if not density_psi:
+                density_psi = 180*np.random.random()
+            
+            # Convert stuff and calculate matrix coefficients (= 2nd derivs)...
+            a12 = 1/a21
+            a13 = 1/a31
+            A = euler_matrix(density_phi, density_theta, density_psi)
+            lambda1 = x_d * sigma2 / (1 + a12**2 + a13**2)
+            lambda2 = lambda1 * a12**2
+            lambda3 = lambda1 * a13**2
+            d11 = - lambda1*A[0,0]*A[0,0] - lambda2*A[1,0]*A[1,0] - lambda3*A[2,0]*A[2,0]
+            d22 = - lambda1*A[0,1]*A[0,1] - lambda2*A[1,1]*A[1,1] - lambda3*A[2,1]*A[2,1]
+            d33 = - lambda1*A[0,2]*A[0,2] - lambda2*A[1,2]*A[1,2] - lambda3*A[2,2]*A[2,2]
+            d12 = - lambda1*A[0,0]*A[0,1] - lambda2*A[1,0]*A[1,1] - lambda3*A[2,0]*A[2,1]
+            d13 = - lambda1*A[0,0]*A[0,2] - lambda2*A[1,0]*A[1,2] - lambda3*A[2,0]*A[2,2]
+            d23 = - lambda1*A[0,1]*A[0,2] - lambda2*A[1,1]*A[1,2] - lambda3*A[2,1]*A[2,2]
+            # ... and define Constraints:
+            constraints.append(ShapeConstraint(location, scale, d11, 0, 0))
+            constraints.append(ShapeConstraint(location, scale, d22, 1, 1))
+            constraints.append(ShapeConstraint(location, scale, d33, 2, 2))
+            constraints.append(ShapeConstraint(location, scale, d12, 0, 1))
+            constraints.append(ShapeConstraint(location, scale, d13, 0, 2))
+            constraints.append(ShapeConstraint(location, scale, d23, 1, 2))
         
-        # Velocity
+        # ----- Velocity
         vx = row[14]
         vy = row[15]
         vz = row[16]
         
+        # Convert to gravity:
+        if vx:
+            gx = velocity_to_gravity*vx
+            constraints.append(GravityConstraint(location, scale, gx*sigma_g_peak, 0, cosmo))
+        if vy:
+            gy = velocity_to_gravity*vy
+            constraints.append(GravityConstraint(location, scale, gy*sigma_g_peak, 1, cosmo))
+        if vz:
+            gz = velocity_to_gravity*vz
+            constraints.append(GravityConstraint(location, scale, gz*sigma_g_peak, 2, cosmo))
         
-        # Shear/tidal field
+        # ----- Shear/tidal field
         ev1 = row[17]
         ev2 = row[18]
         shear_phi = row[19]
         shear_theta = row[20]
         shear_psi = row[21]
         
+        if ev1 or ev2 or shear_phi or shear_theta or shear_psi:
+            if not ev1 or not ev2: # No random distribution known for this
+                raise Exception("Must define both shear eigenvalues or none at all!")
+            ev3 = -(ev1 + ev2)
+            
+            if not shear_phi:
+                shear_phi = 180*np.random.random()
+            if not shear_theta:
+                shear_theta = 180/np.pi*np.arccos(1-np.random.random())
+            if not shear_psi:
+                shear_psi = 180*np.random.random()
+            
+            T = euler_matrix(shear_phi, shear_theta, shear_psi)
+            
+            E11 = - ev1*T[0,0]*T[0,0] - ev2*T[1,0]*T[1,0] - ev3*T[2,0]*T[2,0]
+            E22 = - ev1*T[0,1]*T[0,1] - ev2*T[1,1]*T[1,1] - ev3*T[2,1]*T[2,1]
+            E12 = - ev1*T[0,0]*T[0,1] - ev2*T[1,0]*T[1,1] - ev3*T[2,0]*T[2,1]
+            E13 = - ev1*T[0,0]*T[0,2] - ev2*T[1,0]*T[1,2] - ev3*T[2,0]*T[2,2]
+            E23 = - ev1*T[0,1]*T[0,2] - ev2*T[1,1]*T[1,2] - ev3*T[2,1]*T[2,2]
+            
+            constraints.append(TidalConstraint(location, scale, E11, 0, 0, cosmo))
+            constraints.append(TidalConstraint(location, scale, E22, 1, 1, cosmo))
+            constraints.append(TidalConstraint(location, scale, E12, 0, 1, cosmo))
+            constraints.append(TidalConstraint(location, scale, E13, 0, 2, cosmo))
+            constraints.append(TidalConstraint(location, scale, E23, 1, 2, cosmo))
+    
     
     return constraints
 
@@ -484,17 +584,17 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
 
 def cumulative_cpdf_curvature(x, height, gamma):
     """Determine the cumulative conditional probability distribution function of
-    the curvature of peaks with height /height/ over curvature range /x/. This
-    is given in Bardeen, Bond, Kaiser & Szalay (1986) by equation (7.5),
-    together with (A15), (A19) and (4.4)/(4.5). /gamma/ is a fraction of
-    spectral momenta."""
+    the curvature of peaks with height /height/ over curvature range /x/. See
+    also the docstring of function cpdf_curvature()."""
     xdel = (x[-1]-x[0])/(len(x)-1)
     return np.cumsum(cpdf_curvature(x,height,gamma))*xdel
 
 def cpdf_curvature(x, height, gamma):
     """The conditional probability distribution function of the curvature of
-    peaks with height /height/ over curvature range /x/. See also the docstring
-    of function cumulative_cpdf_curvature()."""
+    peaks with height /height/ over curvature range /x/. This
+    is given in Bardeen, Bond, Kaiser & Szalay (1986) by equation (7.5),
+    together with (A15), (A19) and (4.4)/(4.5). /gamma/ is a fraction of
+    spectral momenta."""
     w = gamma*height # xstar in Rien's code and in BBKS
     # BBKS eqn. (4.5):
     A = 2.5/(9 - 5*gamma**2)
@@ -503,17 +603,49 @@ def cpdf_curvature(x, height, gamma):
     C2 = 8.91 + 1.27*np.exp(6.51*gamma**2)
     C3 = 2.58*np.exp(1.05*gamma**2)
     # BBKS eqn. (4.4) (N.B.: this is an approximation of the real G(gamma, nu)):
-    G = ( w**3 - 3*gamma**2*w + (B*w**2 + C1)*np.exp(-A*w**2) ) \
-        / ( 1 + C2*np.exp(-C3*w) )
+    #G = ( w**3 - 3*gamma**2*w + (B*w**2 + C1)*np.exp(-A*w**2) ) \
+    #    / ( 1 + C2*np.exp(-C3*w) )
+    # This is a bad approximation though, it differs from the real normalizing
+    # factor by up to 1.5%. Below we just normalize by the sum of all elements
+    # of g.
     # BBKS eqn. (A15):
-    f = (x**3 - 3*x) * ( erf(np.sqrt(5./2)*x) + erf(np.sqrt(5./2)*x/2) ) / 2 \
-        + np.sqrt(2./5/np.pi) * ( (31.*x**2/4 + 8./5)*np.exp(-5.*x**2/8) \
-        + (x**2/2 - 8./5)*np.exp(-5*x**2/2) )
+    f = f_BBKS(x)
     # BBKS eqn. (A19):
     g = f * np.exp( -(x-w)**2/2/(1-gamma**2) ) / np.sqrt( 2*np.pi*(1-gamma**2) )
+    # Normalization:
+    
+    dx = np.r_[x[1]-x[0], x[1:]-x[:-1]] # approximate for complicated x ranges!
+    G = (g*dx).sum()
     # BBKS eqn. (7.5):
     P_x_given_nu = g/G
     return P_x_given_nu
+
+def cpdf_shape(e, p, x):
+    """The conditional probability distribution function of the shape parameters
+    e and p (ellipticity and prolateness) given the curvature x, as defined by
+    Bardeen, Bond, Kaiser & Szalay (1986) in equation (7.6), together with
+    (A15), (C4) and (C3)."""
+    # BBKS eqn. (C3):
+    chi = ((0 <= e)&(e <= 0.25) & (-e <= p)&(p <= e)) | ((0.25 <= e)&(e <= 0.5) & (e*3 - 1 <= p)&(p <= e))
+    # Equivalent to:
+    #~ if 0 <= e <= 0.25 and -e <= p <= e: chi = 1.
+    #~ elif 0.25 <= e <= 0.5 and e*3 - 1 <= p <= e: chi = 1.
+    #~ else: chi = 0.
+    # BBKS eqn. (C4):
+    W = e*(e**2 - p**2) * (1 - 2*p) * ( (1+p)**2 - 9*e**2 ) * chi
+    # BBKS eqn. (A15):
+    f = f_BBKS(x)
+    # BBKS eqn. (7.6):
+    P_e_p_given_x = 9*5**(5./2)/np.sqrt(2*np.pi) * x**8 / f * W * \
+                    np.exp( -5./2*x**2 * (3*e**2 + p**2) )
+    return P_e_p_given_x
+
+def f_BBKS(x):
+    """Equation (A15) from BBKS."""
+    f = (x**3 - 3*x) * ( erf(np.sqrt(5./2)*x) + erf(np.sqrt(5./2)*x/2) ) / 2 \
+        + np.sqrt(2./5/np.pi) * ( (31.*x**2/4 + 8./5)*np.exp(-5.*x**2/8) \
+        + (x**2/2 - 8./5)*np.exp(-5*x**2/2) )
+    return f
 
 # --------------------------- TESTING CODE ---------------------------
 
@@ -664,3 +796,23 @@ ax4.imshow(rhoC3.t[halfgrid], interpolation='nearest')
 ax5.imshow(rhoC4.t[halfgrid], interpolation='nearest')
 pl.show()
 
+
+# ------------ PROBABILITY FUNCTIONS ----------- -
+# curvature
+x = np.linspace(0,10,5001)
+
+cpdf = cpdf_curvature(x, height.value, gamma)
+#cumcpdf = np.cumsum(cpdf)/cpdf.sum()
+cumcpdfBBKS = cumulative_cpdf_curvature(x,height.value, gamma)
+invPDF = UnivariateSpline(cumcpdfBBKS, x, k=3, s=0)
+curvature = invPDF(np.random.random())
+
+pl.plot(x,cpdf,'-',x,cumcpdfBBKS,'-')#,x,cumcpdf,'-')
+pl.show()
+
+# shape
+p,e = np.mgrid[-0.25:0.25:0.005, 0:0.5:0.005]
+xmax = x[cpdf.argmax()]
+cpdf_ep = cpdf_shape(e, p, xmax)
+pl.imshow(cpdf_ep, interpolation='nearest')
+pl.show()

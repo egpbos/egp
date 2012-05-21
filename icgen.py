@@ -498,6 +498,10 @@ class GaussianRandomField(DensityField):
         # wavenumbers (positive and negative) to be Chi-square for N degrees
         # of freedom, not 2N as in the complex case.  Equivalently, the power
         # is shared with the conjugate harmonics with k1 > halfgrid (k1 < 0).
+        #
+        # EGP: note that this is simply the Box-Muller method for obtaining two
+        # *independent* Gaussian random variables (see sect. 7.3.4 of Press+07).
+        # A faster method could/should be used here (sect. 7.3.9, Press+07)!
         
         # ... for the 7 real, independent, non-zero grid values:
         real7x,real7y,real7z = np.mgrid[0:2,0:2,0:2]*halfgrid
