@@ -1,0 +1,2116 @@
+%!PS-Adobe-3.0
+%%Title: subfind_density.c
+%%For: Klaus Dolag
+%%Creator: a2ps version 4.10.4
+%%CreationDate: Wed Oct 17 15:16:27 2007
+%%BoundingBox: 24 24 571 818
+%%DocumentData: Clean7Bit
+%%Orientation: Landscape
+%%Pages: 5
+%%PageOrder: Ascend
+%%DocumentMedia: A4 595 842 0 () ()
+%%DocumentNeededResources: font Courier
+%%+ font Courier-Bold
+%%+ font Courier-BoldOblique
+%%+ font Courier-Oblique
+%%+ font Helvetica
+%%+ font Helvetica-Bold
+%%+ font Symbol
+%%+ font Times-Bold
+%%+ font Times-Roman
+%%DocumentProcessColors: Black 
+%%DocumentSuppliedResources: procset a2ps-a2ps-hdr
+%%+ procset a2ps-black+white-Prolog
+%%+ encoding ISO-8859-1Encoding
+%%EndComments
+/a2psdict 200 dict def
+a2psdict begin
+%%BeginProlog
+%%Copyright: (c) 1988, 89, 90, 91, 92, 93 Miguel Santana
+%%Copyright: (c) 1995, 96, 97, 98 Akim Demaille, Miguel Santana
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+
+% EPSF import as in the Red Book
+/BeginInclude {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack 
+  userdict begin
+    0 setgray 0 setlinecap
+    1 setlinewidth 0 setlinejoin
+    10 setmiterlimit [ ] 0 setdash newpath
+    gs_languagelevel 1 ne {
+      false setstrokeadjust false setoverprint 
+    } if
+} bind def
+
+/EndInclude {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+/BeginEPSF {
+  BeginInclude
+  /showpage { } def
+} bind def
+
+/EndEPSF {
+  EndInclude
+} bind def
+
+% Page prefeed
+/page_prefeed {         % bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} bind def
+
+/deffont {
+  findfont exch scalefont def
+} bind def
+
+/reencode_font {
+  findfont reencode 2 copy definefont pop def
+} bind def
+
+% Function c-show (str => -)
+% centers text only according to x axis.
+/c-show { 
+  dup stringwidth pop
+  2 div neg 0 rmoveto
+  show
+} bind def
+
+% Function l-show (str => -)
+% prints texts so that it ends at currentpoint
+/l-show {
+  dup stringwidth pop neg 
+  0 
+  rmoveto show
+} bind def
+
+% center-fit show (str w => -)
+% show centered, and scale currentfont so that the width is less than w
+/cfshow {
+  exch dup stringwidth pop
+  % If the title is too big, try to make it smaller
+  3 2 roll 2 copy
+  gt
+  { % if, i.e. too big
+    exch div
+    currentfont exch scalefont setfont
+  } { % ifelse
+    pop pop 
+  }
+  ifelse
+  c-show			% center title
+} bind def
+
+% Return the y size of the current font
+% - => fontsize
+/currentfontsize {
+  currentfont /FontMatrix get 3 get 1000 mul
+} bind def
+
+% reencode the font
+% <encoding-vector> <fontdict> -> <newfontdict>
+/reencode { %def
+  dup length 5 add dict begin
+    { %forall
+      1 index /FID ne 
+      { def }{ pop pop } ifelse
+    } forall
+    /Encoding exch def
+
+    % Use the font's bounding box to determine the ascent, descent,
+    % and overall height; don't forget that these values have to be
+    % transformed using the font's matrix.
+    % We use `load' because sometimes BBox is executable, sometimes not.
+    % Since we need 4 numbers an not an array avoid BBox from being executed
+    /FontBBox load aload pop
+    FontMatrix transform /Ascent exch def pop
+    FontMatrix transform /Descent exch def pop
+    /FontHeight Ascent Descent sub def
+
+    % Define these in case they're not in the FontInfo (also, here
+    % they're easier to get to.
+    /UnderlinePosition 1 def
+    /UnderlineThickness 1 def
+    
+    % Get the underline position and thickness if they're defined.
+    currentdict /FontInfo known {
+      FontInfo
+      
+      dup /UnderlinePosition known {
+	dup /UnderlinePosition get
+	0 exch FontMatrix transform exch pop
+	/UnderlinePosition exch def
+      } if
+      
+      dup /UnderlineThickness known {
+	/UnderlineThickness get
+	0 exch FontMatrix transform exch pop
+	/UnderlineThickness exch def
+      } if
+      
+    } if
+    currentdict 
+  end 
+} bind def
+
+% Function print line number (<string> # -)
+/# {
+  gsave
+    sx cw mul neg 2 div 0 rmoveto
+    f# setfont
+    c-show
+  grestore
+} bind def
+
+% -------- Some routines to enlight plain b/w printings ---------
+
+% Underline
+% width --
+/dounderline {
+  currentpoint
+  gsave
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    0 rlineto
+    stroke
+  grestore
+} bind def
+
+% Underline a string
+% string --
+/dounderlinestring {
+  stringwidth pop
+  dounderline
+} bind def
+
+/UL {
+  /ul exch store
+} bind def
+
+% Draw a box of WIDTH wrt current font
+% width --
+/dobox {
+  currentpoint
+  gsave
+    newpath
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    dup 0 rlineto
+    0 currentfont /FontHeight get currentfontsize mul rlineto
+    neg 0 rlineto
+    closepath
+    stroke
+  grestore
+} bind def
+
+/BX {
+  /bx exch store
+} bind def
+
+% Box a string
+% string --
+/doboxstring {
+  stringwidth pop
+  dobox
+} bind def
+
+%
+% ------------- Color routines ---------------
+%
+/FG /setrgbcolor load def
+
+% Draw the background
+% width --
+/dobackground {
+  currentpoint
+  gsave
+    newpath
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    dup 0 rlineto
+    0 currentfont /FontHeight get currentfontsize mul rlineto
+    neg 0 rlineto
+    closepath
+    bgcolor aload pop setrgbcolor
+    fill
+  grestore
+} bind def
+
+% Draw bg for a string
+% string --
+/dobackgroundstring {
+  stringwidth pop
+  dobackground
+} bind def
+
+
+/BG {
+  dup /bg exch store
+  { mark 4 1 roll ] /bgcolor exch store } if
+} bind def
+
+
+/Show {
+  bg { dup dobackgroundstring } if
+  ul { dup dounderlinestring } if
+  bx { dup doboxstring } if
+  show
+} bind def
+
+% Function T(ab), jumps to the n-th tabulation in the current line
+/T {
+  cw mul x0 add
+  bg { dup currentpoint pop sub dobackground } if
+  ul { dup currentpoint pop sub dounderline } if
+  bx { dup currentpoint pop sub dobox } if
+  y0 moveto
+} bind def
+
+% Function n: move to the next line
+/n {
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+% Function N: show and move to the next line
+/N {
+  Show
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+/S {
+  Show
+} bind def
+
+%%BeginResource: procset a2ps-a2ps-hdr 2.0 2
+%%Copyright: (c) 1988, 89, 90, 91, 92, 93 Miguel Santana
+%%Copyright: (c) 1995, 96, 97, 98 Akim Demaille, Miguel Santana
+% Function title: prints page header.
+% <ct> <rt> <lt> are passed as argument
+/title { 
+  % 1. Draw the background
+  x v get y v get moveto
+  gsave
+    0 th 2 div neg rmoveto 
+    th setlinewidth
+    0.95 setgray
+    pw 0 rlineto stroke
+  grestore
+  % 2. Border it
+  gsave
+    0.7 setlinewidth
+    pw 0 rlineto
+    0 th neg rlineto
+    pw neg 0 rlineto
+    closepath stroke
+  grestore
+  % stk: ct rt lt
+  x v get y v get th sub 1 add moveto
+%%IncludeResource: font Helvetica
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  % 3. The left title
+  gsave
+    dup stringwidth pop fnfs 0.8 mul add exch % leave space took on stack
+    fnfs 0.8 mul hm rmoveto
+    show			% left title
+  grestore
+  exch
+  % stk: ct ltw rt
+  % 4. the right title
+  gsave
+    dup stringwidth pop fnfs 0.8 mul add exch % leave space took on stack
+    dup
+    pw exch stringwidth pop fnfs 0.8 mul add sub
+    hm
+    rmoveto
+    show			% right title
+  grestore
+  % stk: ct ltw rtw
+  % 5. the center title
+  gsave
+    pw 3 1 roll
+    % stk: ct pw ltw rtw
+    3 copy 
+    % Move to the center of the left room
+    sub add 2 div hm rmoveto
+    % What is the available space in here?
+    add sub fnfs 0.8 mul sub fnfs 0.8 mul sub
+    % stk: ct space_left
+%%IncludeResource: font Helvetica-Bold
+  fHelvetica-Bold fnfs scalefont setfont
+    cfshow
+  grestore
+} bind def
+
+% Function border: prints virtual page border
+/border { %def
+  gsave				% print four sides
+    0 setgray
+    x v get y v get moveto
+    0.7 setlinewidth		% of the square
+    pw 0 rlineto
+    0 ph neg rlineto
+    pw neg 0 rlineto
+    closepath stroke
+  grestore
+} bind def
+
+% Function water: prints a water mark in background
+/water { %def
+  gsave
+    scx scy moveto rotate
+%%IncludeResource: font Times-Bold
+  fTimes-Bold 100 scalefont setfont
+    .97 setgray
+    dup stringwidth pop 2 div neg -50 rmoveto
+    show
+  grestore
+} bind def
+
+% Function rhead: prints the right header
+/rhead {  %def
+  lx ly moveto
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  l-show
+} bind def
+
+% Function footer (cf rf lf -> -)
+/footer {
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  dx dy moveto
+  show
+
+  snx sny moveto
+  l-show
+  
+  fnx fny moveto
+  c-show
+} bind def
+%%EndResource
+%%BeginResource: procset a2ps-black+white-Prolog 2.0 1
+
+% Function T(ab), jumps to the n-th tabulation in the current line
+/T { 
+  cw mul x0 add y0 moveto
+} bind def
+
+% Function n: move to the next line
+/n { %def
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+% Function N: show and move to the next line
+/N {
+  Show
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+}  bind def
+
+/S {
+  Show
+} bind def
+
+/p {
+  false UL
+  false BX
+  fCourier bfs scalefont setfont
+  Show
+} bind def
+
+/sy {
+  false UL
+  false BX
+  fSymbol bfs scalefont setfont
+  Show
+} bind def
+
+/k {
+  false UL
+  false BX
+  fCourier-Oblique bfs scalefont setfont
+  Show
+} bind def
+
+/K {
+  false UL
+  false BX
+  fCourier-Bold bfs scalefont setfont
+  Show
+} bind def
+
+/c {
+  false UL
+  false BX
+  fCourier-Oblique bfs scalefont setfont
+  Show
+} bind def
+
+/C {
+  false UL
+  false BX
+  fCourier-BoldOblique bfs scalefont setfont
+  Show 
+} bind def
+
+/l {
+  false UL
+  false BX
+  fHelvetica bfs scalefont setfont
+  Show
+} bind def
+
+/L {
+  false UL
+  false BX
+  fHelvetica-Bold bfs scalefont setfont
+  Show 
+} bind def
+
+/str{
+  false UL
+  false BX
+  fTimes-Roman bfs scalefont setfont
+  Show
+} bind def
+
+/e{
+  false UL
+  true BX
+  fHelvetica-Bold bfs scalefont setfont
+  Show
+} bind def
+
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier
+%%IncludeResource: font Courier-Oblique
+%%IncludeResource: font Courier-Bold
+%%IncludeResource: font Times-Roman
+%%IncludeResource: font Symbol
+%%IncludeResource: font Courier-BoldOblique
+%%BeginResource: encoding ISO-8859-1Encoding
+/ISO-8859-1Encoding [
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/space /exclam /quotedbl /numbersign /dollar /percent /ampersand /quoteright 
+/parenleft /parenright /asterisk /plus /comma /minus /period /slash 
+/zero /one /two /three /four /five /six /seven 
+/eight /nine /colon /semicolon /less /equal /greater /question 
+/at /A /B /C /D /E /F /G 
+/H /I /J /K /L /M /N /O 
+/P /Q /R /S /T /U /V /W 
+/X /Y /Z /bracketleft /backslash /bracketright /asciicircum /underscore 
+/quoteleft /a /b /c /d /e /f /g 
+/h /i /j /k /l /m /n /o 
+/p /q /r /s /t /u /v /w 
+/x /y /z /braceleft /bar /braceright /asciitilde /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/space /exclamdown /cent /sterling /currency /yen /brokenbar /section 
+/dieresis /copyright /ordfeminine /guillemotleft /logicalnot /hyphen /registered /macron 
+/degree /plusminus /twosuperior /threesuperior /acute /mu /paragraph /bullet 
+/cedilla /onesuperior /ordmasculine /guillemotright /onequarter /onehalf /threequarters /questiondown 
+/Agrave /Aacute /Acircumflex /Atilde /Adieresis /Aring /AE /Ccedilla 
+/Egrave /Eacute /Ecircumflex /Edieresis /Igrave /Iacute /Icircumflex /Idieresis 
+/Eth /Ntilde /Ograve /Oacute /Ocircumflex /Otilde /Odieresis /multiply 
+/Oslash /Ugrave /Uacute /Ucircumflex /Udieresis /Yacute /Thorn /germandbls 
+/agrave /aacute /acircumflex /atilde /adieresis /aring /ae /ccedilla 
+/egrave /eacute /ecircumflex /edieresis /igrave /iacute /icircumflex /idieresis 
+/eth /ntilde /ograve /oacute /ocircumflex /otilde /odieresis /divide 
+/oslash /ugrave /uacute /ucircumflex /udieresis /yacute /thorn /ydieresis 
+] def
+%%EndResource
+% Initialize page description variables.
+/sh 595 def
+/sw 842 def
+/llx 24 def
+/urx 818 def
+/ury 571 def
+/lly 24 def
+/#copies 1 def
+/th 15.000000 def
+/fnfs 11 def
+/bfs 6.000000 def
+/cw 3.600000 def
+
+% Dictionary for ISO-8859-1 support
+/iso1dict 8 dict begin
+  /fCourier ISO-8859-1Encoding /Courier reencode_font
+  /fCourier-Bold ISO-8859-1Encoding /Courier-Bold reencode_font
+  /fCourier-BoldOblique ISO-8859-1Encoding /Courier-BoldOblique reencode_font
+  /fCourier-Oblique ISO-8859-1Encoding /Courier-Oblique reencode_font
+  /fHelvetica ISO-8859-1Encoding /Helvetica reencode_font
+  /fHelvetica-Bold ISO-8859-1Encoding /Helvetica-Bold reencode_font
+  /fTimes-Bold ISO-8859-1Encoding /Times-Bold reencode_font
+  /fTimes-Roman ISO-8859-1Encoding /Times-Roman reencode_font
+currentdict end def
+/bgcolor [ 0 0 0 ] def
+/bg false def
+/ul false def
+/bx false def
+% The font for line numbering
+/f# /Helvetica findfont bfs .6 mul scalefont def
+/fSymbol /Symbol findfont def
+/hm fnfs 0.25 mul def
+/pw
+   cw 108.400000 mul
+def
+/ph
+   502.200000 th add
+def
+/pmw urx llx sub pw 2 mul sub 1 div def
+/pmh 0 def
+/v 0 def
+/x [
+  0
+  dup pmw add pw add
+] def
+/y [
+  pmh ph add 0 mul ph add
+  dup
+] def
+/scx sw 2 div def
+/scy sh 2 div def
+/snx urx def
+/sny lly 2 add def
+/dx llx def
+/dy sny def
+/fnx scx def
+/fny dy def
+/lx snx def
+/ly ury fnfs 0.8 mul sub def
+/sx 0 def
+/tab 8 def
+/x0 0 def
+/y0 0 def
+%%EndSetup
+
+%%Page: (1-2) 1
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#include) K
+( <mpi.h>) p n
+(#include) K
+( <stdio.h>) p n
+(#include) K
+( <stdlib.h>) p n
+(#include) K
+( <string.h>) p n
+(#include) K
+( <math.h>) p n
+(#include) K
+( <gsl/gsl_math.h>) p n
+(#include) K
+( <sys/stat.h>) p n
+(#include) K
+( <sys/types.h>) p n
+() N
+() N
+(#include) K
+( ") p
+(allvars.h) str
+(") p n
+(#include) K
+( ") p
+(proto.h) str
+(") p n
+() N
+() N
+(#ifdef) K
+( SUBFIND) p n
+() N
+(#include) K
+( ") p
+(fof.h) str
+(") p n
+(#include) K
+( ") p
+(subfind.h) str
+(") p n
+() N
+() N
+(/*! Structure for communication during the density computation. Holds data that is sent to other processors) c n
+(.) N
+( */) N
+(static) K
+( ) p
+(struct) k
+( densdata_in) p n
+({) N
+(  MyDouble Pos[3];) N
+(  MyFloat Hsml;) N
+(  ) S
+(int) k
+( NodeList[NODELISTLENGTH];) p n
+(}) N
+( *DensDataIn, *DensDataGet;) N
+() N
+() N
+(static) K
+( ) p
+(struct) k
+( densdata_out) p n
+({) N
+(  MyFloat Rho;) N
+(  MyFloat VelDisp, Vx, Vy, Vz;) N
+(  ) S
+(int) k
+( Ngb;) p n
+(}) N
+( *DensDataResult, *DensDataOut;) N
+() N
+() N
+(static) K
+( MyFloat *DM_Vx, *DM_Vy, *DM_Vz;) p n
+(static) K
+( ) p
+(long) k
+( ) p
+(long) k
+( Ntotal;) p n
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(void) k
+( subfind_density\() p
+(int) k
+( j_in\)) p n
+(#else) K n
+(void) k
+( subfind_density\() p
+(void) k
+(\)) p n
+(#endif) K n
+({) p n
+(  ) S
+(long) k
+( ) p
+(long) k
+( ntot;) p n
+(  ) S
+(int) k
+( i, j, ndone, ndone_flag, npleft, dummy, iter = 0;) p n
+(  MyFloat *Left, *Right;) N
+(  ) S
+(char) k
+( *Todo;) p n
+(  ) S
+(int) k
+( ngrp, sendTask, recvTask, place, nexport, nimport;) p n
+(  ) S
+(double) k
+( vel_to_phys, dmax1, dmax2, t0, t1;) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(  ) S
+(int) k
+( j_target;) p n
+() N
+(  ) S
+(if) K
+(\(j_in < 0\) j_target = -j_in - 1;) p n
+(  ) S
+(else) K
+(         j_target = j_in;) p n
+(#endif) K n
+() p n
+(  ) S
+(if) K
+(\(ThisTask == 0\)) p n
+(    {) N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(      printf\(") S
+(finding densities, mode %d \\n) str
+(",j_in\);) p n
+(#else) K n
+(      printf\(") p
+(finding densities for all particles\\n) str
+("\);) p n
+(#endif) K n
+(      fflush\(stdout\);) p n
+(    }) N
+() N
+(  ) S
+(/* allocate buffers to arrange communication */) c n
+() p n
+(  Ngblist = \() S
+(int) k
+( *\) mymalloc\(NumPart * ) p
+(sizeof) K
+(\() p
+(int) k
+(\)\);) p n
+(  Dist2list = \() S
+(double) k
+( *\) mymalloc\(NumPart * ) p
+(sizeof) K
+(\() p
+(double) k
+(\)\);) p n
+() N
+(  All.BunchSize =) N
+(    \() S
+(int) k
+(\) \(\(All.BufferSize * 1024 * 1024\) / \() p
+(sizeof) K
+(\() p
+(struct) k
+( data_index\) + ) p
+(sizeof) K
+(\() p
+(struct) k
+( data_nodelist\) +) p n
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     ) S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_in\) + ) p
+(sizeof) K
+(\() p
+(struct) k
+( densdata_out\) +) p n
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     sizemax\() S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_in\),) p n
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T (     ) S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_out\)\)\)\);) p n
+(subfind_density.c) (Page 1/10) (Aug 16, 07 0:25) title
+border
+/v 1 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(  DataIndexTable = \() p
+(struct) k
+( data_index *\) mymalloc\(All.BunchSize * ) p
+(sizeof) K
+(\() p
+(struct) k
+( data_index\)\);) p n
+(  DataNodeList = \() S
+(struct) k
+( data_nodelist *\) mymalloc\(All.BunchSize * ) p
+(sizeof) K
+(\() p
+(struct) k
+( data_nodelist\)\);) p n
+() N
+(  Left = mymalloc\() S
+(sizeof) K
+(\(MyFloat\) * NumPart\);) p n
+(  Right = mymalloc\() S
+(sizeof) K
+(\(MyFloat\) * NumPart\);) p n
+(  Todo = mymalloc\() S
+(sizeof) K
+(\() p
+(char) k
+(\) * NumPart\);) p n
+() N
+(  DM_Vx = mymalloc\() S
+(sizeof) K
+(\(MyFloat\) * NumPart\);) p n
+(  DM_Vy = mymalloc\() S
+(sizeof) K
+(\(MyFloat\) * NumPart\);) p n
+(  DM_Vz = mymalloc\() S
+(sizeof) K
+(\(MyFloat\) * NumPart\);) p n
+() N
+(  ) S
+(for) K
+(\(i = 0; i < NumPart; i++\)) p n
+(    {) N
+(      Left[i] = Right[i] = 0;) N
+(      P[i].DM_NumNgb = 0;) N
+(      Todo[i] = 1;) N
+(    }) N
+() N
+(  ) S
+(/* we will repeat the whole thing for those particles where we didn't find enough neighbours */) c n
+(  ) p
+(do) K n
+(    {) p n
+(      t0 = second\(\);) N
+() N
+(      i = 0;) S 16 T () S 24 T () S 32 T () S
+(/* begin with this index */) c n
+() p n
+(      ) S
+(do) K n
+() p 8 T ({) N
+() S 8 T (  ) S
+(for) K
+(\(j = 0; j < NTask; j++\)) p n
+() S 8 T (    {) N
+() S 8 T (      Send_count[j] = 0;) N
+() S 8 T (      Exportflag[j] = -1;) N
+() S 8 T (    }) N
+() N
+() S 8 T (  ) S
+(/* do local particles and prepare export list */) c n
+() p n
+() S 8 T (  ) S
+(for) K
+(\(nexport = 0; i < NumPart; i++\)) p n
+() S 8 T (    {) N
+() S 8 T (      ) S
+(if) K
+(\(Todo[i]\)) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T () S 16 T () S
+(if) K
+(\(P[i].Type == j_target\)) p n
+() S 8 T () S 16 T (  {) N
+() S 8 T () S 16 T (    ) S
+(if) K
+(\(subfind_density_evaluate\(i, 0, &nexport, Send_count, j_in\) < 0\)) p n
+() S 8 T () S 16 T (      ) S
+(break) K
+(;) p n
+() S 8 T () S 16 T (  }) N
+(#else) K n
+() p 8 T () S 16 T () S
+(if) K
+(\(\(\(1 << P[i].Type\) & \(FOF_PRIMARY_LINK_TYPES\)\)\)) p n
+() S 8 T () S 16 T (  {) N
+() S 8 T () S 16 T (    ) S
+(if) K
+(\(subfind_density_evaluate\(i, 0, &nexport, Send_count\) < 0\)) p n
+() S 8 T () S 16 T (      ) S
+(break) K
+(;) p n
+() S 8 T () S 16 T (  }) N
+(#endif) K n
+() p 8 T (    }) N
+() N
+() S 8 T (  qsort\(DataIndexTable, nexport, ) S
+(sizeof) K
+(\() p
+(struct) k
+( data_index\), data_index_compare\);) p n
+() N
+() S 8 T (  MPI_Allgather\(Send_count, NTask, MPI_INT, Sendcount_matrix, NTask, MPI_INT, MPI_COMM_WORLD\);) N
+() N
+() S 8 T (  ) S
+(for) K
+(\(j = 0, nimport = 0, Recv_offset[0] = 0, Send_offset[0] = 0; j < NTask; j++\)) p n
+() S 8 T (    {) N
+() S 8 T (      Recv_count[j] = Sendcount_matrix[j * NTask + ThisTask];) N
+() S 8 T (      nimport += Recv_count[j];) N
+() N
+() S 8 T (      ) S
+(if) K
+(\(j > 0\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  Send_offset[j] = Send_offset[j - 1] + Send_count[j - 1];) N
+() S 8 T () S 16 T (  Recv_offset[j] = Recv_offset[j - 1] + Recv_count[j - 1];) N
+() S 8 T () S 16 T (}) N
+() S 8 T (    }) N
+() N
+() S 8 T (  DensDataGet = \() S
+(struct) k
+( densdata_in *\) mymalloc\(nimport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( densdata_in\)\);) p n
+() S 8 T (  DensDataIn = \() S
+(struct) k
+( densdata_in *\) mymalloc\(nexport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( densdata_in\)\);) p n
+() N
+() S 8 T (  ) S
+(/* prepare particle data for export */) c n
+() p 8 T (  ) S
+(for) K
+(\(j = 0; j < nexport; j++\)) p n
+() S 8 T (    {) N
+() S 8 T (      place = DataIndexTable[j].Index;) N
+() N
+() S 8 T (      DensDataIn[j].Pos[0] = P[place].Pos[0];) N
+() S 8 T (      DensDataIn[j].Pos[1] = P[place].Pos[1];) N
+() S 8 T (      DensDataIn[j].Pos[2] = P[place].Pos[2];) N
+() S 8 T (      DensDataIn[j].Hsml = P[place].DM_Hsml;) N
+() N
+() S 8 T (      memcpy\(DensDataIn[j].NodeList,) N
+(subfind_density.c) (Page 2/10) (Aug 16, 07 0:25) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(subfind_density.c) (1/5) (Wednesday October 17, 2007) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3-4) 2
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T (     DataNodeList[DataIndexTable[j].IndexGet].NodeList, NODELISTLENGTH * ) S
+(sizeof) K
+(\() p
+(int) k
+(\)\);) p n
+() S 8 T (    }) N
+() N
+() S 8 T (  ) S
+(/* exchange particle data */) c n
+() p 8 T (  ) S
+(for) K
+(\(ngrp = 1; ngrp < \(1 << PTask\); ngrp++\)) p n
+() S 8 T (    {) N
+() S 8 T (      sendTask = ThisTask;) N
+() S 8 T (      recvTask = ThisTask ^ ngrp;) N
+() N
+() S 8 T (      ) S
+(if) K
+(\(recvTask < NTask\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(Send_count[recvTask] > 0 || Recv_count[recvTask] > 0\)) p n
+() S 8 T () S 16 T (    {) N
+() S 8 T () S 16 T (      ) S
+(/* get the particles */) c n
+() p 8 T () S 16 T (      MPI_Sendrecv\(&DensDataIn[Send_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T () S 32 T (   Send_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_in\), MPI_BYTE,) p n
+() S 8 T () S 16 T () S 24 T () S 32 T (   recvTask, TAG_DENS_A,) N
+() S 8 T () S 16 T () S 24 T () S 32 T (   &DensDataGet[Recv_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T () S 32 T (   Recv_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_in\), MPI_BYTE,) p n
+() S 8 T () S 16 T () S 24 T () S 32 T (   recvTask, TAG_DENS_A, MPI_COMM_WORLD, MPI_STATUS_IGNORE\);) N
+() S 8 T () S 16 T (    }) N
+() S 8 T () S 16 T (}) N
+() S 8 T (    }) N
+() N
+() S 8 T (  myfree\(DensDataIn\);) N
+() S 8 T (  DensDataResult = \() S
+(struct) k
+( densdata_out *\) mymalloc\(nimport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( densdata_out\)\);) p n
+() S 8 T (  DensDataOut = \() S
+(struct) k
+( densdata_out *\) mymalloc\(nexport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( densdata_out\)\);) p n
+() N
+() N
+() S 8 T (  ) S
+(/* now do the particles that were sent to us */) c n
+() p 8 T (  ) S
+(for) K
+(\(j = 0; j < nimport; j++\)) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T (    subfind_density_evaluate\(j, 1, &dummy, &dummy, j_in\);) N
+(#else) K n
+() p 8 T (    subfind_density_evaluate\(j, 1, &dummy, &dummy\);) N
+(#endif) K n
+() p 8 T (  ) S
+(if) K
+(\(i >= NumPart\)) p n
+() S 8 T (    ndone_flag = 1;) N
+() S 8 T (  ) S
+(else) K n
+() p 8 T (    ndone_flag = 0;) N
+() N
+() S 8 T (  MPI_Allreduce\(&ndone_flag, &ndone, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD\);) N
+() N
+() S 8 T (  ) S
+(/* get the result */) c n
+() p 8 T (  ) S
+(for) K
+(\(ngrp = 1; ngrp < \(1 << PTask\); ngrp++\)) p n
+() S 8 T (    {) N
+() S 8 T (      sendTask = ThisTask;) N
+() S 8 T (      recvTask = ThisTask ^ ngrp;) N
+() S 8 T (      ) S
+(if) K
+(\(recvTask < NTask\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(Send_count[recvTask] > 0 || Recv_count[recvTask] > 0\)) p n
+() S 8 T () S 16 T (    {) N
+() S 8 T () S 16 T (      ) S
+(/* send the results */) c n
+() p 8 T () S 16 T (      MPI_Sendrecv\(&DensDataResult[Recv_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T () S 32 T (   Recv_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_out\),) p n
+() S 8 T () S 16 T () S 24 T () S 32 T (   MPI_BYTE, recvTask, TAG_DENS_B,) N
+() S 8 T () S 16 T () S 24 T () S 32 T (   &DensDataOut[Send_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T () S 32 T (   Send_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( densdata_out\),) p n
+() S 8 T () S 16 T () S 24 T () S 32 T (   MPI_BYTE, recvTask, TAG_DENS_B, MPI_COMM_WORLD, MPI_STATUS_IGNORE\);) N
+() S 8 T () S 16 T (    }) N
+() S 8 T () S 16 T (}) N
+() S 8 T (    }) N
+() N
+() S 8 T (  ) S
+(/* add the result to the local particles */) c n
+() p 8 T (  ) S
+(for) K
+(\(j = 0; j < nexport; j++\)) p n
+() S 8 T (    {) N
+() S 8 T (      place = DataIndexTable[j].Index;) N
+() N
+() S 8 T (      P[place].DM_NumNgb += DensDataOut[j].Ngb;) N
+() S 8 T (      P[place].u.DM_Density += DensDataOut[j].Rho;) N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T (      ) S
+(if) K
+(\(j_in >= 0\)      ) p
+(/* sum up VelDisp only for own species */) c n
+(#endif) K n
+() p 8 T (      P[place].v.DM_VelDisp += DensDataOut[j].VelDisp;) N
+() S 8 T (      DM_Vx[place] += DensDataOut[j].Vx;) N
+() S 8 T (      DM_Vy[place] += DensDataOut[j].Vy;) N
+() S 8 T (      DM_Vz[place] += DensDataOut[j].Vz;) N
+() S 8 T (    }) N
+() N
+() S 8 T (  myfree\(DensDataOut\);) N
+() S 8 T (  myfree\(DensDataResult\);) N
+() S 8 T (  myfree\(DensDataGet\);) N
+() S 8 T (}) N
+(subfind_density.c) (Page 3/10) (Aug 16, 07 0:25) title
+border
+/v 1 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(      ) p
+(while) K
+(\(ndone < NTask\);) p n
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(      ) S
+(if) K
+(\(ThisTask == 0\)) p n
+() S 8 T (printf\(") S
+(checking smoothing lenghs ... \\n) str
+("\);) p n
+(#endif) K n
+() p n
+(      ) S
+(/* do final operations on results */) c n
+(      ) p
+(for) K
+(\(i = 0, npleft = 0; i < NumPart; i++\)) p n
+() S 8 T ({) N
+() S 8 T (  ) S
+(/* now check whether we had enough neighbours */) c n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(          ) S
+(if) K
+(\(j_in < 0\)) p n
+() S 8 T (    Todo[i] = 0;) N
+() S 8 T (  ) S
+(if) K
+(\(\(P[i].Type != j_target\) || \(j_in < 0\)\)) p n
+() S 8 T (    ) S
+(continue) K
+(;) p n
+(#else) K n
+() p 8 T (  ) S
+(if) K
+(\(!\(\(1 << P[i].Type\) & \(FOF_PRIMARY_LINK_TYPES\)\)\)) p n
+() S 8 T (    ) S
+(continue) K
+(;) p n
+(#endif) K n
+() p n
+() S 8 T (  ) S
+(if) K
+(\(Todo[i]\)) p n
+() S 8 T (    {) N
+() S 8 T (      ) S
+(if) K
+(\(P[i].DM_NumNgb != All.DesNumNgb &&) p n
+() S 8 T () S 16 T ( \(\(Right[i] - Left[i]\) > 1.0e-4 * Left[i] || Left[i] == 0 || Right[i] == 0\)\)) N
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  ) S
+(/* need to redo this particle */) c n
+() p 8 T () S 16 T (  npleft++;) N
+() N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(P[i].DM_NumNgb < All.DesNumNgb\)) p n
+() S 8 T () S 16 T (    Left[i] = DMAX\(P[i].DM_Hsml, Left[i]\);) N
+() S 8 T () S 16 T (  ) S
+(else) K n
+() p 8 T () S 16 T (    {) N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(Right[i] != 0\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(P[i].DM_Hsml < Right[i]\)) p n
+() S 8 T () S 16 T () S 24 T (    Right[i] = P[i].DM_Hsml;) N
+() S 8 T () S 16 T () S 24 T (}) N
+() S 8 T () S 16 T (      ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (Right[i] = P[i].DM_Hsml;) N
+() S 8 T () S 16 T (    }) N
+() N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(iter >= MAXITER - 10\)) p n
+() S 8 T () S 16 T (    {) N
+() S 8 T () S 16 T (      printf) N
+() S 8 T () S 16 T () S 24 T (\(") S
+(i=%d task=%d ID=%d Hsml=%g Left=%g Right=%g Ngbs=%g Right-Left=%g\\n   pos=\(%g|%g|%g\)\\n) str
+(",) p n
+() S 8 T () S 16 T () S 24 T ( i, ThisTask, \() S
+(int) k
+(\) P[i].ID, P[i].DM_Hsml, Left[i], Right[i],) p n
+() S 8 T () S 16 T () S 24 T ( \() S
+(double) k
+(\) P[i].DM_NumNgb, Right[i] - Left[i], P[i].Pos[0], P[i].Pos[1], P[i].Pos[2]) p n
+(\);) N
+() S 8 T () S 16 T (      fflush\(stdout\);) N
+() S 8 T () S 16 T (    }) N
+() N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(Right[i] > 0 && Left[i] > 0\)) p n
+() S 8 T () S 16 T (    P[i].DM_Hsml = pow\(0.5 * \(pow\(Left[i], 3\) + pow\(Right[i], 3\)\), 1.0 / 3\);) N
+() S 8 T () S 16 T (  ) S
+(else) K n
+() p 8 T () S 16 T (    {) N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(Right[i] == 0 && Left[i] == 0\)) p n
+() S 8 T () S 16 T () S 24 T (endrun\(8187\);) S 40 T () S
+(/* can't occur */) c n
+() p n
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(Right[i] == 0 && Left[i] > 0\)) p n
+() S 8 T () S 16 T () S 24 T (P[i].DM_Hsml *= 1.26;) N
+() N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(Right[i] > 0 && Left[i] == 0\)) p n
+() S 8 T () S 16 T () S 24 T (P[i].DM_Hsml /= 1.26;) N
+() S 8 T () S 16 T (    }) N
+() S 8 T () S 16 T (}) N
+() S 8 T (      ) S
+(else) K n
+() p 8 T () S 16 T (Todo[i] = 0;) N
+() S 8 T (    }) N
+() S 8 T (}) N
+() N
+(      sumup_large_ints\(1, &npleft, &ntot\);) N
+() N
+(      t1 = second\(\);) N
+() N
+(      ) S
+(if) K
+(\(ntot > 0\)) p n
+() S 8 T ({) N
+() S 8 T (  iter++;) N
+() N
+() S 8 T (  ) S
+(if) K
+(\(iter > 0 && ThisTask == 0\)) p n
+() S 8 T (    {) N
+() S 8 T (      printf\(") S
+(ngb iteration %d: need to repeat for %d%09d particles. \(took %g sec\)\\n) str
+(", iter,) p n
+() S 8 T () S 16 T (     \() S
+(int) k
+(\) \(ntot / 1000000000\), \() p
+(int) k
+(\) \(ntot % 1000000000\), timediff\(t0, t1\)\);) p n
+(subfind_density.c) (Page 4/10) (Aug 16, 07 0:25) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(subfind_density.c) (2/5) (Wednesday October 17, 2007) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (5-6) 3
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T (      fflush\(stdout\);) N
+() S 8 T (    }) N
+() N
+() S 8 T (  ) S
+(if) K
+(\(iter > MAXITER\)) p n
+() S 8 T (    {) N
+() S 8 T (      printf\(") S
+(failed to converge in neighbour iteration in density\(\)\\n) str
+("\);) p n
+() S 8 T (      fflush\(stdout\);) N
+() S 8 T (      endrun\(1155\);) N
+() S 8 T (    }) N
+() S 8 T (}) N
+(    }) N
+(  ) S
+(while) K
+(\(ntot > 0\);) p n
+() N
+(  vel_to_phys = 1.0 / All.Time;) N
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(  ) S
+(if) K
+(\(ThisTask == 0\)) p n
+(    printf\(") S
+(final operations ... \\n) str
+("\);) p n
+(#endif) K n
+() p n
+(  ) S
+(for) K
+(\(i = 0; i < NumPart; i++\)) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(    ) S
+(if) K
+(\(P[i].Type == j_target && j_in >= 0\)) p n
+(#else) K n
+(    ) p
+(if) K
+(\(\(\(1 << P[i].Type\) & \(FOF_PRIMARY_LINK_TYPES\)\)\)) p n
+(#endif) K n
+(      {) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T () S
+(if) K
+(\(P[i].DM_NumNgb == 0\)) p n
+() S 8 T (  endrun\(5621\);) N
+(#endif) K n
+() p 8 T (DM_Vx[i] /= P[i].DM_NumNgb;) N
+() S 8 T (DM_Vy[i] /= P[i].DM_NumNgb;) N
+() S 8 T (DM_Vz[i] /= P[i].DM_NumNgb;) N
+() S 8 T (P[i].v.DM_VelDisp /= P[i].DM_NumNgb;) N
+() N
+() S 8 T (P[i].v.DM_VelDisp = vel_to_phys * sqrt\(P[i].v.DM_VelDisp -) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (       DM_Vx[i] * DM_Vx[i] -) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (       DM_Vy[i] * DM_Vy[i] - DM_Vz[i] * DM_Vz[i]\);) N
+(      }) N
+() N
+(  myfree\(DM_Vz\);) N
+(  myfree\(DM_Vy\);) N
+(  myfree\(DM_Vx\);) N
+() N
+(  myfree\(Todo\);) N
+(  myfree\(Right\);) N
+(  myfree\(Left\);) N
+() N
+(  myfree\(DataNodeList\);) N
+(  myfree\(DataIndexTable\);) N
+() N
+(  myfree\(Dist2list\);) N
+(  myfree\(Ngblist\);) N
+(}) N
+() N
+() N
+(/*! This function represents the core of the SPH density computation. The) c n
+( *  target particle may either be local, or reside in the communication) N
+( *  buffer.) N
+( */) N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(int) k
+( subfind_density_evaluate\() p
+(int) k
+( target, ) p
+(int) k
+( mode, ) p
+(int) k
+( *nexport, ) p
+(int) k
+( *nsend_local, ) p
+(int) k
+( tp\)) p n
+(#else) K n
+(int) k
+( subfind_density_evaluate\() p
+(int) k
+( target, ) p
+(int) k
+( mode, ) p
+(int) k
+( *nexport, ) p
+(int) k
+( *nsend_local\)) p n
+(#endif) K n
+({) p n
+(  ) S
+(int) k
+( j, n;) p n
+(  ) S
+(int) k
+( startnode, numngb, ngb, listindex = 0;) p n
+(  ) S
+(double) k
+( hmax;) p n
+(  ) S
+(double) k
+( h, h2, hinv, hinv3;) p n
+(  ) S
+(double) k
+( rho, wk;) p n
+(  ) S
+(double) k
+( r, r2, u, mass_j, v2, vx, vy, vz;) p n
+(  MyDouble *pos;) N
+() N
+(  rho = 0;) N
+(  numngb = 0;) N
+(  v2 = vx = vy = vz = 0;) N
+() N
+(  ) S
+(if) K
+(\(mode == 0\)) p n
+(    {) N
+(      pos = P[target].Pos;) N
+(      h = P[target].DM_Hsml;) N
+(subfind_density.c) (Page 5/10) (Aug 16, 07 0:25) title
+border
+/v 1 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(    }) p n
+(  ) S
+(else) K n
+(    {) p n
+(      pos = DensDataGet[target].Pos;) N
+(      h = DensDataGet[target].Hsml;) N
+(    }) N
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(  ) S
+(if) K
+(\(h == 0\)) p n
+(    endrun\(5622\);) N
+(#endif) K n
+() p n
+(  h2 = h * h;) N
+(  hinv = 1.0 / h;) N
+(  hinv3 = hinv * hinv * hinv;) N
+() N
+() N
+(  ) S
+(if) K
+(\(mode == 0\)) p n
+(    {) N
+(      startnode = All.MaxPart;) S 32 T () S
+(/* root node */) c n
+(    }) p n
+(  ) S
+(else) K n
+(    {) p n
+(      startnode = DensDataGet[target].NodeList[0];) N
+(      startnode = Nodes[startnode].u.d.nextnode;) S 56 T () S
+(/* open it */) c n
+(    }) p n
+() N
+(  numngb = 0;) N
+() N
+(  ) S
+(while) K
+(\(startnode >= 0\)) p n
+(    {) N
+(      ) S
+(while) K
+(\(startnode >= 0\)) p n
+() S 8 T ({) N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T (  ) S
+(if) K
+(\(tp < 0\)) p n
+() S 8 T (    ngb = subfind_ngb_treefind_linkpairs\(pos, h, target, &startnode, mode, &hmax, nexport, nsend_lo) N
+(cal\);) N
+() S 8 T (  ) S
+(else) K n
+() p 8 T (    ngb = subfind_ngb_treefind_linkngb\(pos, h, target, &startnode, mode, &hmax, nexport, nsend_loca) N
+(l\);) N
+(#else) K n
+() p 8 T (  ngb = subfind_ngb_treefind_linkngb\(pos, h, target, &startnode, mode, &hmax, nexport, nsend_local\)) N
+(;) N
+(#endif) K n
+() p 8 T (  ) S
+(if) K
+(\(ngb < 0\)) p n
+() S 8 T (    ) S
+(return) K
+( -1;) p n
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T (  ) S
+(if) K
+(\(tp >= 0\)) p n
+(#endif) K n
+() p 8 T (  ) S
+(if) K
+(\(mode == 0 && hmax > 0\)) p n
+() S 8 T (    {) N
+() S 8 T (      P[target].DM_Hsml = hmax;) N
+() S 8 T (      h = hmax;) N
+() S 8 T (      h2 = h * h;) N
+() S 8 T (      hinv = 1.0 / h;) N
+() S 8 T (      hinv3 = hinv * hinv * hinv;) N
+() N
+() S 8 T (      ) S
+(if) K
+(\(ngb != All.DesNumNgb\)) p n
+() S 8 T () S 16 T (endrun\(121\);) N
+() S 8 T (    }) N
+() N
+() S 8 T (  numngb += ngb;) N
+() N
+() S 8 T (  ) S
+(for) K
+(\(n = 0; n < ngb; n++\)) p n
+() S 8 T (    {) N
+() S 8 T (      j = Ngblist[n];) N
+() N
+() S 8 T (      r2 = Dist2list[n];) N
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T (      ) S
+(if) K
+(\(tp < 0\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  h = P[j].DM_Hsml;) N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(h == 0\)) p n
+() S 8 T () S 16 T (    endrun\(5622\);) N
+() S 8 T () S 16 T (  h2 = h * h;) N
+() S 8 T () S 16 T (  hinv = 1.0 / h;) N
+() S 8 T () S 16 T (  hinv3 = hinv * hinv * hinv;) N
+() S 8 T () S 16 T (}) N
+(#endif) K n
+() p n
+() S 8 T (      ) S
+(if) K
+(\(r2 < h2\)) p n
+(subfind_density.c) (Page 6/10) (Aug 16, 07 0:25) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(subfind_density.c) (3/5) (Wednesday October 17, 2007) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (7-8) 4
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  r = sqrt\(r2\);) N
+() N
+() S 8 T () S 16 T (  u = r * hinv;) N
+() N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(u < 0.5\)) p n
+() S 8 T () S 16 T (    wk = hinv3 * \(KERNEL_COEFF_1 + KERNEL_COEFF_2 * \(u - 1\) * u * u\);) N
+() S 8 T () S 16 T (  ) S
+(else) K n
+() p 8 T () S 16 T (    wk = hinv3 * KERNEL_COEFF_5 * \(1.0 - u\) * \(1.0 - u\) * \(1.0 - u\);) N
+() N
+() S 8 T () S 16 T (  mass_j = P[j].Mass;) N
+() N
+() S 8 T () S 16 T (  rho += \(mass_j * wk\);) N
+() S 8 T () S 16 T (}) N
+() N
+() S 8 T (      vx += P[j].Vel[0];) N
+() S 8 T (      vy += P[j].Vel[1];) N
+() S 8 T (      vz += P[j].Vel[2];) N
+() N
+() S 8 T (      v2 += P[j].Vel[0] * P[j].Vel[0] + P[j].Vel[1] * P[j].Vel[1] + P[j].Vel[2] * P[j].Vel[2];) N
+() S 8 T (    }) N
+() S 8 T (}) N
+() N
+(      ) S
+(if) K
+(\(mode == 1\)) p n
+() S 8 T ({) N
+() S 8 T (  listindex++;) N
+() S 8 T (  ) S
+(if) K
+(\(listindex < NODELISTLENGTH\)) p n
+() S 8 T (    {) N
+() S 8 T (      startnode = DensDataGet[target].NodeList[listindex];) N
+() S 8 T (      ) S
+(if) K
+(\(startnode >= 0\)) p n
+() S 8 T () S 16 T (startnode = Nodes[startnode].u.d.nextnode;) S 64 T () S
+(/* open it */) c n
+() p 8 T (    }) N
+() S 8 T (}) N
+(    }) N
+() N
+(  ) S
+(if) K
+(\(mode == 0\)) p n
+(    {) N
+(      P[target].DM_NumNgb = numngb;) N
+(      P[target].u.DM_Density = rho;) N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(      ) S
+(if) K
+(\(tp >= 0\)      ) p
+(/* sum up VelDisp only for own species */) c
+(    ) p n
+(#endif) K n
+(      P[target].v.DM_VelDisp = v2;) p n
+(      DM_Vx[target] = vx;) N
+(      DM_Vy[target] = vy;) N
+(      DM_Vz[target] = vz;) N
+(    }) N
+(  ) S
+(else) K n
+(    {) p n
+(      DensDataResult[target].Ngb = numngb;) N
+(      DensDataResult[target].Rho = rho;) N
+(      DensDataResult[target].VelDisp = v2;) N
+(      DensDataResult[target].Vx = vx;) N
+(      DensDataResult[target].Vy = vy;) N
+(      DensDataResult[target].Vz = vz;) N
+(    }) N
+() N
+(  ) S
+(return) K
+( 0;) p n
+(}) N
+() N
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(void) k
+( subfind_setup_smoothinglengths\() p
+(int) k
+( j\)) p n
+(#else) K n
+(void) k
+( subfind_setup_smoothinglengths\() p
+(void) k
+(\)) p n
+(#endif) K n
+({) p n
+(  ) S
+(int) k
+( i, no, p;) p n
+() N
+(  ) S
+(for) K
+(\(i = 0; i < NumPart; i++\)) p n
+(    {) N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(      ) S
+(if) K
+(\(P[i].Type == j\)) p n
+(#else) K n
+(      ) p
+(if) K
+(\(\(\(1 << P[i].Type\) & \(FOF_PRIMARY_LINK_TYPES\)\)\)) p n
+(#endif) K n
+() p 8 T ({) N
+() S 8 T (  no = Father[i];) N
+() N
+() S 8 T (  ) S
+(/* Not a good guess for gas/stars component, need more thought ! */) c n
+() p 8 T (  ) S
+(while) K
+(\(10 * All.DesNumNgb * P[i].Mass > Nodes[no].u.d.mass\)) p n
+() S 8 T (    {) N
+() S 8 T (      p = Nodes[no].u.d.father;) N
+(subfind_density.c) (Page 7/10) (Aug 16, 07 0:25) title
+border
+/v 1 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+() S 8 T (      ) S
+(if) K
+(\(p < 0\)) p n
+() S 8 T () S 16 T () S
+(break) K
+(;) p n
+() N
+() S 8 T (      no = p;) N
+() S 8 T (    }) N
+() N
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+() S 8 T (  ) S
+(if) K
+(\(P[i].Type == 0\)) p n
+() S 8 T (    P[i].DM_Hsml = PPP[i].Hsml;) N
+(          ) S
+(else) K n
+(#ifdef) S
+( KEEP_DM_HSML_AS_GUESS ) p n
+() S 8 T (    ) S
+(if) K
+(\(P[i].DM_Hsml < 0\)) p n
+(#endif) K n
+() p 8 T (      P[i].DM_Hsml =) N
+() S 8 T () S 16 T (pow\(3.0 / \(4 * M_PI\) * All.DesNumNgb * P[i].Mass / Nodes[no].u.d.mass, 1.0 / 3\) * Nodes[no]) N
+(.len;) N
+(#else) K n
+() p 8 T (  P[i].DM_Hsml =) N
+() S 8 T (    pow\(3.0 / \(4 * M_PI\) * All.DesNumNgb * P[i].Mass / Nodes[no].u.d.mass, 1.0 / 3\) * Nodes[no].len) N
+(;) N
+(#endif) K n
+() p 8 T (}) N
+(    }) N
+(}) N
+() N
+() N
+(static) K
+( ) p
+(int) k
+( Nhsml;) p n
+() N
+(static) K
+( ) p
+(struct) k
+( hsml_data) p n
+({) N
+(  ) S
+(float) k
+( Hsml;) p n
+(  ) S
+(float) k
+( Density;) p n
+(  ) S
+(float) k
+( VelDisp;) p n
+(  MyIDType ID;) N
+(}) N
+( *Hsml_list;) N
+() N
+(int) k
+( subfind_compare_hsml_data\() p
+(const) K
+( ) p
+(void) k
+( *a, ) p
+(const) K
+( ) p
+(void) k
+( *b\)) p n
+({) N
+(  ) S
+(if) K
+(\(\(\() p
+(struct) k
+( hsml_data *\) a\)->ID < \(\() p
+(struct) k
+( hsml_data *\) b\)->ID\)) p n
+(    ) S
+(return) K
+( -1;) p n
+() N
+(  ) S
+(if) K
+(\(\(\() p
+(struct) k
+( hsml_data *\) a\)->ID > \(\() p
+(struct) k
+( hsml_data *\) b\)->ID\)) p n
+(    ) S
+(return) K
+( +1;) p n
+() N
+(  ) S
+(return) K
+( 0;) p n
+(}) N
+() N
+() N
+(void) k
+( subfind_save_densities\() p
+(int) k
+( num\)) p n
+({) N
+(  ) S
+(int) k
+( i, nprocgroup, masterTask, groupTask;) p n
+(  ) S
+(char) k
+( buf[1000];) p n
+(  ) S
+(double) k
+( t0, t1;) p n
+() N
+(  ) S
+(if) K
+(\(ThisTask == 0\)) p n
+(    {) N
+(      printf\(") S
+(start saving smoothing lengths and densities\\n) str
+("\);) p n
+(      fflush\(stdout\);) N
+(    }) N
+() N
+(  ) S
+(for) K
+(\(i = 0, Nhsml = 0; i < NumPart; i++\)) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(    ) S
+(if) K
+(\(\(\(1 << P[i].Type\) & \(DENSITY_SPLIT_BY_TYPE\)\)\)) p n
+(#else) K n
+(    ) p
+(if) K
+(\(\(\(1 << P[i].Type\) & \(FOF_PRIMARY_LINK_TYPES\)\)\)) p n
+(#endif) K n
+(      Nhsml++;) p n
+() N
+(  MPI_Allgather\(&Nhsml, 1, MPI_INT, Send_count, 1, MPI_INT, MPI_COMM_WORLD\);) N
+(  ) S
+(for) K
+(\(i = 1, Send_offset[0] = 0; i < NTask; i++\)) p n
+(    Send_offset[i] = Send_offset[i - 1] + Send_count[i - 1];) N
+() N
+(  sumup_large_ints\(1, &Nhsml, &Ntotal\);) N
+() N
+(  Hsml_list = mymalloc\(Nhsml * ) S
+(sizeof) K
+(\() p
+(struct) k
+( hsml_data\)\);) p n
+() N
+(  ) S
+(for) K
+(\(i = 0, Nhsml = 0; i < NumPart; i++\)) p n
+(#ifdef) K
+( DENSITY_SPLIT_BY_TYPE) p n
+(    ) S
+(if) K
+(\(\(\(1 << P[i].Type\) & \(DENSITY_SPLIT_BY_TYPE\)\)\)) p n
+(#else) K n
+(    ) p
+(if) K
+(\(\(\(1 << P[i].Type\) & \(FOF_PRIMARY_LINK_TYPES\)\)\)) p n
+(subfind_density.c) (Page 8/10) (Aug 16, 07 0:25) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(subfind_density.c) (4/5) (Wednesday October 17, 2007) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (9-10) 5
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K n
+(      {) p n
+() S 8 T (Hsml_list[Nhsml].Hsml = P[i].DM_Hsml;) N
+() S 8 T (Hsml_list[Nhsml].Density = P[i].u.DM_Density;) N
+() S 8 T (Hsml_list[Nhsml].VelDisp = P[i].v.DM_VelDisp;) N
+() S 8 T (Hsml_list[Nhsml].ID = P[i].ID;) N
+() S 8 T (Nhsml++;) N
+(      }) N
+() N
+(  t0 = second\(\);) N
+(  parallel_sort\(Hsml_list, Nhsml, ) S
+(sizeof) K
+(\() p
+(struct) k
+( hsml_data\), subfind_compare_hsml_data\);) p n
+(  t1 = second\(\);) N
+() N
+(  ) S
+(if) K
+(\(ThisTask == 0\)) p n
+(    {) N
+(      printf\(") S
+(Sorting of densities in ID sequence took = %g sec\\n) str
+(", timediff\(t0, t1\)\);) p n
+(      fflush\(stdout\);) N
+(    }) N
+() N
+(  ) S
+(if) K
+(\(ThisTask == 0\)) p n
+(    {) N
+(      sprintf\(buf, ") S
+(%s/hsmldir_%03d) str
+(", All.OutputDir, num\);) p n
+(      mkdir\(buf, 02755\);) N
+(    }) N
+(  MPI_Barrier\(MPI_COMM_WORLD\);) N
+() N
+(  ) S
+(if) K
+(\(NTask < All.NumFilesWrittenInParallel\)) p n
+(    {) N
+(      printf) N
+() S 8 T (\(") S
+(Fatal error.\\nNumber of processors must be a smaller or equal than `NumFilesWrittenInParallel'.\\n) str
+("\);) p n
+(      endrun\(241931\);) N
+(    }) N
+() N
+(  nprocgroup = NTask / All.NumFilesWrittenInParallel;) N
+(  ) S
+(if) K
+(\(\(NTask % All.NumFilesWrittenInParallel\)\)) p n
+(    nprocgroup++;) N
+(  masterTask = \(ThisTask / nprocgroup\) * nprocgroup;) N
+(  ) S
+(for) K
+(\(groupTask = 0; groupTask < nprocgroup; groupTask++\)) p n
+(    {) N
+(      ) S
+(if) K
+(\(ThisTask == \(masterTask + groupTask\)\)) p 48 T () S
+(/* ok, it's this processor's turn */) c n
+() p 8 T (subfind_save_local_densities\(num\);) N
+(      MPI_Barrier\(MPI_COMM_WORLD\);) S 40 T () S
+(/* wait inside the group */) c n
+(    }) p n
+() N
+(  myfree\(Hsml_list\);) N
+() N
+(}) N
+() N
+(void) k
+( subfind_save_local_densities\() p
+(int) k
+( num\)) p n
+({) N
+(  ) S
+(char) k
+( fname[1000];) p n
+(  ) S
+(int) k
+( i;) p n
+(  ) S
+(float) k
+( *tmp;) p n
+(  ) S
+(FILE) k
+( *fd;) p n
+() N
+() N
+(  sprintf\(fname, ") S
+(%s/hsmldir_%03d/%s_%03d.%d) str
+(", All.OutputDir, num, ") p
+(hsml) str
+(", num, ThisTask\);) p n
+(  ) S
+(if) K
+(\(!\(fd = fopen\(fname, ") p
+(w) str
+("\)\)\)) p n
+(    {) N
+(      printf\(") S
+(can't open file `%s`\\n) str
+(", fname\);) p n
+(      endrun\(1183\);) N
+(    }) N
+() N
+(  my_fwrite\(&Nhsml, ) S
+(sizeof) K
+(\() p
+(int) k
+(\), 1, fd\);) p n
+(  my_fwrite\(&Send_offset[ThisTask], ) S
+(sizeof) K
+(\() p
+(int) k
+(\), 1, fd\);) p 64 T () S
+(/* this is the number of IDs in previous fi) c n
+(les */) N
+(  my_fwrite\(&Ntotal, ) p
+(sizeof) K
+(\() p
+(long) k
+( ) p
+(long) k
+(\), 1, fd\);) p n
+(  my_fwrite\(&NTask, ) S
+(sizeof) K
+(\() p
+(int) k
+(\), 1, fd\);) p n
+() N
+(  tmp = mymalloc\(Nhsml * ) S
+(sizeof) K
+(\() p
+(float) k
+(\)\);) p n
+() N
+(  ) S
+(for) K
+(\(i = 0; i < Nhsml; i++\)) p n
+(    tmp[i] = Hsml_list[i].Hsml;) N
+(  my_fwrite\(tmp, ) S
+(sizeof) K
+(\() p
+(float) k
+(\), Nhsml, fd\);) p n
+() N
+(  ) S
+(for) K
+(\(i = 0; i < Nhsml; i++\)) p n
+(    tmp[i] = Hsml_list[i].Density;) N
+(  my_fwrite\(tmp, ) S
+(sizeof) K
+(\() p
+(float) k
+(\), Nhsml, fd\);) p n
+() N
+(  ) S
+(for) K
+(\(i = 0; i < Nhsml; i++\)) p n
+(    tmp[i] = Hsml_list[i].VelDisp;) N
+(  my_fwrite\(tmp, ) S
+(sizeof) K
+(\() p
+(float) k
+(\), Nhsml, fd\);) p n
+() N
+(subfind_density.c) (Page 9/10) (Aug 16, 07 0:25) title
+border
+/v 1 store
+/x0 x v get 2.520000 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(  myfree\(tmp\);) p n
+() N
+(  fclose\(fd\);) N
+(}) N
+() N
+() N
+(#endif) K n
+(subfind_density.c) (Page 10/10) (Aug 16, 07 0:25) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(subfind_density.c) (5/5) (Wednesday October 17, 2007) footer
+end % of iso1dict
+pagesave restore
+showpage
+
+%%Trailer
+end
+%%EOF

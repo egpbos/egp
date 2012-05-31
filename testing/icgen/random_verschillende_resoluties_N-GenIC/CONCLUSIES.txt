@@ -1,0 +1,25 @@
+1. De N-GenIC runs op verschillende resoluties geven idd dezelfde LSS; N-GenIC
+   doet het dus goed.
+2. Als je de N-GenIC posities bekijkt (bijv in mayavi:
+     from mayavi import mlab
+     import gadgetio as io
+     ic64 = io.GadgetData('ICs/ic64.0')
+     ic64.loadPos()
+     ic128 = io.GadgetData('ICs/ic128.0')
+     ic128.loadPos()
+     mlab.figure()
+     mlab.points3d(ic64.pos[:,0],ic64.pos[:,1],ic64.pos[:,2],mode='point')
+     mlab.figure()
+     mlab.points3d(ic128.pos[:,0],ic128.pos[:,1],ic128.pos[:,2],mode='point')
+   ) en inzoomt in beide vensters, dan zie je dat de IC's idd gewoon ongeveer
+   hetzelfde zijn, op nyquist schaal fluctuaties na.
+3. Riens IC code met dezelfde plots, maar dan van de density (in pyplot:
+     rien32 = np.memmap('ICs/rien32.dat', dtype='float32')[9:].reshape(32**3,6)[:,1:5]
+     rien64 = np.memmap('ICs/rien64.dat', dtype='float32')[9:].reshape(64**3,6)[:,1:5]
+     pl.imshow(rien32[:,0].reshape((32,32,32))[16], interpolation='nearest')
+     pl.figure()
+     pl.imshow(rien64[:,0].reshape((64,64,64))[32], interpolation='nearest')
+   ) geeft een totaal ander beeld: deze lijken helemaal niet op elkaar. Dit is
+   natuurlijk geheel volgens verwachting. N.B.: dit is met de unconstrained
+   fieldgen64 code, misschien hebben andere versies wel een fix hiervoor?
+4. Mijn code doet het natuurlijk op de Rien manier, dus fout. Dit gaan we fixen.

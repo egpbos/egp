@@ -1,0 +1,3983 @@
+%!PS-Adobe-3.0
+%%Title: hydra.c
+%%For: Klaus Dolag
+%%Creator: a2ps version 4.10.4
+%%CreationDate: Thu Mar 13 23:45:59 2008
+%%BoundingBox: 24 24 571 818
+%%DocumentData: Clean7Bit
+%%Orientation: Landscape
+%%Pages: 16
+%%PageOrder: Ascend
+%%DocumentMedia: A4 595 842 0 () ()
+%%DocumentNeededResources: font Courier
+%%+ font Courier-Bold
+%%+ font Courier-BoldOblique
+%%+ font Courier-Oblique
+%%+ font Helvetica
+%%+ font Helvetica-Bold
+%%+ font Symbol
+%%+ font Times-Bold
+%%+ font Times-Roman
+%%DocumentProcessColors: Black 
+%%DocumentSuppliedResources: procset a2ps-a2ps-hdr
+%%+ procset a2ps-black+white-Prolog
+%%+ encoding ISO-8859-1Encoding
+%%EndComments
+/a2psdict 200 dict def
+a2psdict begin
+%%BeginProlog
+%%Copyright: (c) 1988, 89, 90, 91, 92, 93 Miguel Santana
+%%Copyright: (c) 1995, 96, 97, 98 Akim Demaille, Miguel Santana
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+
+% EPSF import as in the Red Book
+/BeginInclude {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack 
+  userdict begin
+    0 setgray 0 setlinecap
+    1 setlinewidth 0 setlinejoin
+    10 setmiterlimit [ ] 0 setdash newpath
+    gs_languagelevel 1 ne {
+      false setstrokeadjust false setoverprint 
+    } if
+} bind def
+
+/EndInclude {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+/BeginEPSF {
+  BeginInclude
+  /showpage { } def
+} bind def
+
+/EndEPSF {
+  EndInclude
+} bind def
+
+% Page prefeed
+/page_prefeed {         % bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} bind def
+
+/deffont {
+  findfont exch scalefont def
+} bind def
+
+/reencode_font {
+  findfont reencode 2 copy definefont pop def
+} bind def
+
+% Function c-show (str => -)
+% centers text only according to x axis.
+/c-show { 
+  dup stringwidth pop
+  2 div neg 0 rmoveto
+  show
+} bind def
+
+% Function l-show (str => -)
+% prints texts so that it ends at currentpoint
+/l-show {
+  dup stringwidth pop neg 
+  0 
+  rmoveto show
+} bind def
+
+% center-fit show (str w => -)
+% show centered, and scale currentfont so that the width is less than w
+/cfshow {
+  exch dup stringwidth pop
+  % If the title is too big, try to make it smaller
+  3 2 roll 2 copy
+  gt
+  { % if, i.e. too big
+    exch div
+    currentfont exch scalefont setfont
+  } { % ifelse
+    pop pop 
+  }
+  ifelse
+  c-show			% center title
+} bind def
+
+% Return the y size of the current font
+% - => fontsize
+/currentfontsize {
+  currentfont /FontMatrix get 3 get 1000 mul
+} bind def
+
+% reencode the font
+% <encoding-vector> <fontdict> -> <newfontdict>
+/reencode { %def
+  dup length 5 add dict begin
+    { %forall
+      1 index /FID ne 
+      { def }{ pop pop } ifelse
+    } forall
+    /Encoding exch def
+
+    % Use the font's bounding box to determine the ascent, descent,
+    % and overall height; don't forget that these values have to be
+    % transformed using the font's matrix.
+    % We use `load' because sometimes BBox is executable, sometimes not.
+    % Since we need 4 numbers an not an array avoid BBox from being executed
+    /FontBBox load aload pop
+    FontMatrix transform /Ascent exch def pop
+    FontMatrix transform /Descent exch def pop
+    /FontHeight Ascent Descent sub def
+
+    % Define these in case they're not in the FontInfo (also, here
+    % they're easier to get to.
+    /UnderlinePosition 1 def
+    /UnderlineThickness 1 def
+    
+    % Get the underline position and thickness if they're defined.
+    currentdict /FontInfo known {
+      FontInfo
+      
+      dup /UnderlinePosition known {
+	dup /UnderlinePosition get
+	0 exch FontMatrix transform exch pop
+	/UnderlinePosition exch def
+      } if
+      
+      dup /UnderlineThickness known {
+	/UnderlineThickness get
+	0 exch FontMatrix transform exch pop
+	/UnderlineThickness exch def
+      } if
+      
+    } if
+    currentdict 
+  end 
+} bind def
+
+% Function print line number (<string> # -)
+/# {
+  gsave
+    sx cw mul neg 2 div 0 rmoveto
+    f# setfont
+    c-show
+  grestore
+} bind def
+
+% -------- Some routines to enlight plain b/w printings ---------
+
+% Underline
+% width --
+/dounderline {
+  currentpoint
+  gsave
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    0 rlineto
+    stroke
+  grestore
+} bind def
+
+% Underline a string
+% string --
+/dounderlinestring {
+  stringwidth pop
+  dounderline
+} bind def
+
+/UL {
+  /ul exch store
+} bind def
+
+% Draw a box of WIDTH wrt current font
+% width --
+/dobox {
+  currentpoint
+  gsave
+    newpath
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    dup 0 rlineto
+    0 currentfont /FontHeight get currentfontsize mul rlineto
+    neg 0 rlineto
+    closepath
+    stroke
+  grestore
+} bind def
+
+/BX {
+  /bx exch store
+} bind def
+
+% Box a string
+% string --
+/doboxstring {
+  stringwidth pop
+  dobox
+} bind def
+
+%
+% ------------- Color routines ---------------
+%
+/FG /setrgbcolor load def
+
+% Draw the background
+% width --
+/dobackground {
+  currentpoint
+  gsave
+    newpath
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    dup 0 rlineto
+    0 currentfont /FontHeight get currentfontsize mul rlineto
+    neg 0 rlineto
+    closepath
+    bgcolor aload pop setrgbcolor
+    fill
+  grestore
+} bind def
+
+% Draw bg for a string
+% string --
+/dobackgroundstring {
+  stringwidth pop
+  dobackground
+} bind def
+
+
+/BG {
+  dup /bg exch store
+  { mark 4 1 roll ] /bgcolor exch store } if
+} bind def
+
+
+/Show {
+  bg { dup dobackgroundstring } if
+  ul { dup dounderlinestring } if
+  bx { dup doboxstring } if
+  show
+} bind def
+
+% Function T(ab), jumps to the n-th tabulation in the current line
+/T {
+  cw mul x0 add
+  bg { dup currentpoint pop sub dobackground } if
+  ul { dup currentpoint pop sub dounderline } if
+  bx { dup currentpoint pop sub dobox } if
+  y0 moveto
+} bind def
+
+% Function n: move to the next line
+/n {
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+% Function N: show and move to the next line
+/N {
+  Show
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+/S {
+  Show
+} bind def
+
+%%BeginResource: procset a2ps-a2ps-hdr 2.0 2
+%%Copyright: (c) 1988, 89, 90, 91, 92, 93 Miguel Santana
+%%Copyright: (c) 1995, 96, 97, 98 Akim Demaille, Miguel Santana
+% Function title: prints page header.
+% <ct> <rt> <lt> are passed as argument
+/title { 
+  % 1. Draw the background
+  x v get y v get moveto
+  gsave
+    0 th 2 div neg rmoveto 
+    th setlinewidth
+    0.95 setgray
+    pw 0 rlineto stroke
+  grestore
+  % 2. Border it
+  gsave
+    0.7 setlinewidth
+    pw 0 rlineto
+    0 th neg rlineto
+    pw neg 0 rlineto
+    closepath stroke
+  grestore
+  % stk: ct rt lt
+  x v get y v get th sub 1 add moveto
+%%IncludeResource: font Helvetica
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  % 3. The left title
+  gsave
+    dup stringwidth pop fnfs 0.8 mul add exch % leave space took on stack
+    fnfs 0.8 mul hm rmoveto
+    show			% left title
+  grestore
+  exch
+  % stk: ct ltw rt
+  % 4. the right title
+  gsave
+    dup stringwidth pop fnfs 0.8 mul add exch % leave space took on stack
+    dup
+    pw exch stringwidth pop fnfs 0.8 mul add sub
+    hm
+    rmoveto
+    show			% right title
+  grestore
+  % stk: ct ltw rtw
+  % 5. the center title
+  gsave
+    pw 3 1 roll
+    % stk: ct pw ltw rtw
+    3 copy 
+    % Move to the center of the left room
+    sub add 2 div hm rmoveto
+    % What is the available space in here?
+    add sub fnfs 0.8 mul sub fnfs 0.8 mul sub
+    % stk: ct space_left
+%%IncludeResource: font Helvetica-Bold
+  fHelvetica-Bold fnfs scalefont setfont
+    cfshow
+  grestore
+} bind def
+
+% Function border: prints virtual page border
+/border { %def
+  gsave				% print four sides
+    0 setgray
+    x v get y v get moveto
+    0.7 setlinewidth		% of the square
+    pw 0 rlineto
+    0 ph neg rlineto
+    pw neg 0 rlineto
+    closepath stroke
+  grestore
+} bind def
+
+% Function water: prints a water mark in background
+/water { %def
+  gsave
+    scx scy moveto rotate
+%%IncludeResource: font Times-Bold
+  fTimes-Bold 100 scalefont setfont
+    .97 setgray
+    dup stringwidth pop 2 div neg -50 rmoveto
+    show
+  grestore
+} bind def
+
+% Function rhead: prints the right header
+/rhead {  %def
+  lx ly moveto
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  l-show
+} bind def
+
+% Function footer (cf rf lf -> -)
+/footer {
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  dx dy moveto
+  show
+
+  snx sny moveto
+  l-show
+  
+  fnx fny moveto
+  c-show
+} bind def
+%%EndResource
+%%BeginResource: procset a2ps-black+white-Prolog 2.0 1
+
+% Function T(ab), jumps to the n-th tabulation in the current line
+/T { 
+  cw mul x0 add y0 moveto
+} bind def
+
+% Function n: move to the next line
+/n { %def
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+% Function N: show and move to the next line
+/N {
+  Show
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+}  bind def
+
+/S {
+  Show
+} bind def
+
+/p {
+  false UL
+  false BX
+  fCourier bfs scalefont setfont
+  Show
+} bind def
+
+/sy {
+  false UL
+  false BX
+  fSymbol bfs scalefont setfont
+  Show
+} bind def
+
+/k {
+  false UL
+  false BX
+  fCourier-Oblique bfs scalefont setfont
+  Show
+} bind def
+
+/K {
+  false UL
+  false BX
+  fCourier-Bold bfs scalefont setfont
+  Show
+} bind def
+
+/c {
+  false UL
+  false BX
+  fCourier-Oblique bfs scalefont setfont
+  Show
+} bind def
+
+/C {
+  false UL
+  false BX
+  fCourier-BoldOblique bfs scalefont setfont
+  Show 
+} bind def
+
+/l {
+  false UL
+  false BX
+  fHelvetica bfs scalefont setfont
+  Show
+} bind def
+
+/L {
+  false UL
+  false BX
+  fHelvetica-Bold bfs scalefont setfont
+  Show 
+} bind def
+
+/str{
+  false UL
+  false BX
+  fTimes-Roman bfs scalefont setfont
+  Show
+} bind def
+
+/e{
+  false UL
+  true BX
+  fHelvetica-Bold bfs scalefont setfont
+  Show
+} bind def
+
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier
+%%IncludeResource: font Courier-Oblique
+%%IncludeResource: font Courier-Bold
+%%IncludeResource: font Times-Roman
+%%IncludeResource: font Symbol
+%%IncludeResource: font Courier-BoldOblique
+%%BeginResource: encoding ISO-8859-1Encoding
+/ISO-8859-1Encoding [
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/space /exclam /quotedbl /numbersign /dollar /percent /ampersand /quoteright 
+/parenleft /parenright /asterisk /plus /comma /minus /period /slash 
+/zero /one /two /three /four /five /six /seven 
+/eight /nine /colon /semicolon /less /equal /greater /question 
+/at /A /B /C /D /E /F /G 
+/H /I /J /K /L /M /N /O 
+/P /Q /R /S /T /U /V /W 
+/X /Y /Z /bracketleft /backslash /bracketright /asciicircum /underscore 
+/quoteleft /a /b /c /d /e /f /g 
+/h /i /j /k /l /m /n /o 
+/p /q /r /s /t /u /v /w 
+/x /y /z /braceleft /bar /braceright /asciitilde /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/space /exclamdown /cent /sterling /currency /yen /brokenbar /section 
+/dieresis /copyright /ordfeminine /guillemotleft /logicalnot /hyphen /registered /macron 
+/degree /plusminus /twosuperior /threesuperior /acute /mu /paragraph /bullet 
+/cedilla /onesuperior /ordmasculine /guillemotright /onequarter /onehalf /threequarters /questiondown 
+/Agrave /Aacute /Acircumflex /Atilde /Adieresis /Aring /AE /Ccedilla 
+/Egrave /Eacute /Ecircumflex /Edieresis /Igrave /Iacute /Icircumflex /Idieresis 
+/Eth /Ntilde /Ograve /Oacute /Ocircumflex /Otilde /Odieresis /multiply 
+/Oslash /Ugrave /Uacute /Ucircumflex /Udieresis /Yacute /Thorn /germandbls 
+/agrave /aacute /acircumflex /atilde /adieresis /aring /ae /ccedilla 
+/egrave /eacute /ecircumflex /edieresis /igrave /iacute /icircumflex /idieresis 
+/eth /ntilde /ograve /oacute /ocircumflex /otilde /odieresis /divide 
+/oslash /ugrave /uacute /ucircumflex /udieresis /yacute /thorn /ydieresis 
+] def
+%%EndResource
+% Initialize page description variables.
+/sh 595 def
+/sw 842 def
+/llx 24 def
+/urx 818 def
+/ury 571 def
+/lly 24 def
+/#copies 1 def
+/th 15.000000 def
+/fnfs 11 def
+/bfs 8.005733 def
+/cw 4.803440 def
+
+% Dictionary for ISO-8859-1 support
+/iso1dict 8 dict begin
+  /fCourier ISO-8859-1Encoding /Courier reencode_font
+  /fCourier-Bold ISO-8859-1Encoding /Courier-Bold reencode_font
+  /fCourier-BoldOblique ISO-8859-1Encoding /Courier-BoldOblique reencode_font
+  /fCourier-Oblique ISO-8859-1Encoding /Courier-Oblique reencode_font
+  /fHelvetica ISO-8859-1Encoding /Helvetica reencode_font
+  /fHelvetica-Bold ISO-8859-1Encoding /Helvetica-Bold reencode_font
+  /fTimes-Bold ISO-8859-1Encoding /Times-Bold reencode_font
+  /fTimes-Roman ISO-8859-1Encoding /Times-Roman reencode_font
+currentdict end def
+/bgcolor [ 0 0 0 ] def
+/bg false def
+/ul false def
+/bx false def
+% The font for line numbering
+/f# /Helvetica findfont bfs .6 mul scalefont def
+/fSymbol /Symbol findfont def
+/hm fnfs 0.25 mul def
+/pw
+   cw 81.400000 mul
+def
+/ph
+   501.959430 th add
+def
+/pmw urx llx sub pw 2 mul sub 1 div def
+/pmh 0 def
+/v 0 def
+/x [
+  0
+  dup pmw add pw add
+] def
+/y [
+  pmh ph add 0 mul ph add
+  dup
+] def
+/scx sw 2 div def
+/scy sh 2 div def
+/snx urx def
+/sny lly 2 add def
+/dx llx def
+/dy sny def
+/fnx scx def
+/fny dy def
+/lx snx def
+/ly ury fnfs 0.8 mul sub def
+/sx 0 def
+/tab 8 def
+/x0 0 def
+/y0 0 def
+%%EndSetup
+
+%%Page: (1-2) 1
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#include) K
+( <mpi.h>) p n
+(#include) K
+( <stdio.h>) p n
+(#include) K
+( <stdlib.h>) p n
+(#include) K
+( <string.h>) p n
+(#include) K
+( <math.h>) p n
+(#include) K
+( <gsl/gsl_math.h>) p n
+() N
+() N
+(#include) K
+( ") p
+(allvars.h) str
+(") p n
+(#include) K
+( ") p
+(proto.h) str
+(") p n
+(#ifdef) K
+( COSMIC_RAYS) p n
+(#include) K
+( ") p
+(cosmic_rays.h) str
+(") p n
+(#endif) K n
+(#ifdef) S
+( MACH_NUM) p n
+(#include) K
+( ") p
+(machfinder.h) str
+(") p n
+(#endif) K n
+(#ifdef) S
+( CS_MODEL) p n
+(#include) K
+( ") p
+(cs_metals.h) str
+(") p n
+(#endif) K n
+() p n
+(#ifndef) K
+( DEBUG) p n
+(#define) K
+( NDEBUG) p n
+(#endif) K n
+(#include) S
+( <assert.h>) p n
+() N
+(/*! \\file hydra.c) c n
+(*  \\brief Computation of SPH forces and rate of entropy generation) N
+(*) N
+(*  This file contains the "second SPH loop", where the SPH forces are) N
+(*  computed, and where the rate of change of entropy due to the shock heating) N
+(*  \(via artificial viscosity\) is computed.) N
+(*/) N
+() p n
+() N
+(struct) k
+( hydrodata_in) p n
+({) N
+(  MyDouble Pos[3];) N
+(  MyFloat Vel[3];) N
+(  MyFloat Hsml;) N
+(  MyFloat Mass;) N
+(  MyFloat Density;) N
+(  MyFloat Pressure;) N
+(  MyFloat F1;) N
+(  MyFloat DhsmlDensityFactor;) N
+(  ) S
+(int) k
+( Timestep;) p n
+() N
+(#ifdef) K
+( CS_MODEL) p n
+(  MyFloat DensityNow;) N
+(  MyFloat Entropy;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( PARTICLE_DEBUG) p n
+(  MyIDType ID;) S 16 T () S 24 T () S 32 T () S
+(/*!< particle identifier */) c n
+(#endif) K n
+() p n
+(#ifdef) K
+( MAGNETIC) p n
+(  MyFloat BPred[3];) N
+(#ifdef) K
+( TIME_DEP_MAGN_DISP) p n
+(  MyFloat Balpha;) N
+(#endif) K n
+(#ifdef) S
+( DIVBCLEANING_DEDNER) p n
+(  MyFloat PhiPred;) N
+(hydra.c) (Page 1/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\) || ) p
+(defined) K
+(\(ROT_IN_MAG_DIS\)) p n
+(  MyFloat RotB[3];) N
+(#endif) K n
+(#endif) N
+(#ifdef) S
+( TIME_DEP_ART_VISC) p n
+(  MyFloat alpha;) N
+(#endif) K n
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(NAVIERSTOKES\)) p n
+(  MyFloat Entropy;) N
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( NAVIERSTOKES) p n
+(  MyFloat stressoffdiag[3];) N
+(  MyFloat stressdiag[3];) N
+(  MyFloat shear_viscosity;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+(  MyFloat divvel;) N
+(#endif) K n
+() p n
+(  ) S
+(int) k
+( NodeList[NODELISTLENGTH];) p n
+(}) N
+( *HydroDataIn, *HydroDataGet;) N
+() N
+() N
+(struct) k
+( hydrodata_out) p n
+({) N
+(  MyLongDouble Acc[3];) N
+(  MyLongDouble DtEntropy;) N
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+(  MyFloat MinViscousDt;) N
+(#else) K n
+(  MyFloat MaxSignalVel;) p n
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC\) && !) p
+(defined) K
+(\(EULERPOTENTIALS\)) p n
+(  MyFloat DtB[3];) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+(  MyFloat DtPhi;) N
+(#endif) K n
+(#endif) N
+() p n
+(#if) K
+(  ) p
+(defined) K
+(\(CR_SHOCK\)) p n
+(  MyFloat CR_EnergyChange;) N
+(  MyFloat CR_BaryonFractionChange;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( HYDRO_COST_FACTOR) p n
+(  ) S
+(int) k
+( Ninteractions;) p n
+(#endif) K n
+(}) p n
+( *HydroDataResult, *HydroDataOut;) N
+() N
+() N
+() N
+() N
+() N
+() N
+(#ifdef) K
+( MACHNUM) p n
+(hydra.c) (Page 2/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (1/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3-4) 2
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(double) k
+( hubble_a, atime, hubble_a2, fac_mu, fac_vsic_fix, a3inv, fac_egy;) p n
+(#else) K n
+(static) S
+( ) p
+(double) k
+( hubble_a, atime, hubble_a2, fac_mu, fac_vsic_fix, a3inv, fac_egy;) p n
+(#endif) K n
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(MAGNETIC\) && ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(ARTBPRES\)) p n
+(static) K
+( ) p
+(double) k
+( u1;) p n
+(#endif) K n
+() p n
+(/*! This function is the driver routine for the calculation of hydrodynamical) c n
+(*  force and rate of change of entropy due to shock heating for all active) N
+(*  particles .) N
+(*/) N
+(void) k
+( hydro_force\() p
+(void) k
+(\)) p n
+({) N
+(  ) S
+(int) k
+( i, j, k, ngrp, ndone, ndone_flag, dummy;) p n
+(  ) S
+(int) k
+( sendTask, recvTask, nexport, nimport, place;) p n
+(  ) S
+(double) k
+( soundspeed_i;) p n
+(  ) S
+(double) k
+( timeall = 0, timecomp1 = 0, timecomp2 = 0, timecommsumm1 = 0, timecomms) p n
+(umm2 = 0, timewait1 =) N
+(    0, timewait2 = 0;) N
+(  ) S
+(double) k
+( timecomp, timecomm, timewait, tstart, tend, t0, t1;) p n
+() N
+(#if) K
+( ) p
+(defined) K
+(\(WINDS\) || ) p
+(defined) K
+(\(TIME_DEP_ART_VISC\) || ) p
+(defined) K
+(\(MAGNETIC\)) p n
+(  ) S
+(double) k
+( dmax1, dmax2;) p n
+(#endif) K n
+(#ifdef) S
+( NAVIERSTOKES) p n
+(  ) S
+(double) k
+( fac;) p n
+(#endif) K n
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(CR_SHOCK\)) p n
+(  ) S
+(double) k
+( rShockEnergy;) p n
+(  ) S
+(double) k
+( rNonRethermalizedEnergy;) p n
+() N
+(#ifndef) K
+( COOLING) p n
+(  ) S
+(double) k
+( utherm;) p n
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( WINDS) p n
+(  ) S
+(double) k
+( windspeed, hsml_c;) p n
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( TIME_DEP_ART_VISC) p n
+(  ) S
+(double) k
+( f, cs_h;) p n
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC\) && ) p
+(defined) K
+(\(MAGFORCE\)) p n
+(#ifdef) K
+( TIME_DEP_MAGN_DISP) p n
+(  ) S
+(double) k
+( mu0 = 1;) p n
+(#endif) K n
+(#ifdef) S
+( ARTBPRES) p n
+(  ) S
+(/* mean particle placing */) c n
+(  ) p
+(/*) c n
+(     u1 = pow\(4. * M_PI / 3 / All.DesNumNgb, 1. / 3.\);) N
+(   */) N
+(  u1 = 0.3;) p n
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( WAKEUP) p n
+(  ) S
+(for) K
+(\(i = 0; i < NumPart; i++\)) p n
+(hydra.c) (Page 3/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(    {) p n
+(      ) S
+(if) K
+(\(P[i].Type == 0\)) p n
+() S 8 T (SphP[i].wakeup = 0;) N
+(    }) N
+(#endif) K n
+() p n
+(  ) S
+(if) K
+(\(All.ComovingIntegrationOn\)) p n
+(    {) N
+(      ) S
+(/* Factors for comoving integration of hydro */) c n
+(      hubble_a = hubble_function\(All.Time\);) p n
+(      hubble_a2 = All.Time * All.Time * hubble_a;) N
+() N
+(      fac_mu = pow\(All.Time, 3 * \(GAMMA - 1\) / 2\) / All.Time;) N
+() N
+(      fac_egy = pow\(All.Time, 3 * \(GAMMA - 1\)\);) N
+() N
+(      fac_vsic_fix = hubble_a * pow\(All.Time, 3 * GAMMA_MINUS1\);) N
+() N
+(      a3inv = 1 / \(All.Time * All.Time * All.Time\);) N
+(      atime = All.Time;) N
+(    }) N
+(  ) S
+(else) K n
+(    hubble_a = hubble_a2 = atime = fac_mu = fac_vsic_fix = a3inv = fac_egy = 1.0) p n
+(;) N
+() N
+(#if) K
+( ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(TIME_DEP_MAGN_DISP\)) p n
+(#ifndef) K
+( MU0_UNITY) p n
+(  mu0 *= \(4 * M_PI\);) N
+(  mu0 /= All.UnitTime_in_s * All.UnitTime_in_s *) N
+(    All.UnitLength_in_cm / \(All.UnitMass_in_g * All.HubbleParam * All.HubblePara) N
+(m\);) N
+(#endif) K n
+(#endif) N
+() p n
+() N
+(  ) S
+(/* allocate buffers to arrange communication */) c n
+() p n
+(  Ngblist = \() S
+(int) k
+( *\) mymalloc\(NumPart * ) p
+(sizeof) K
+(\() p
+(int) k
+(\)\);) p n
+() N
+(  All.BunchSize =) N
+(    \() S
+(int) k
+(\) \(\(All.BufferSize * 1024 * 1024\) / \() p
+(sizeof) K
+(\() p
+(struct) k
+( data_index\) + ) p
+(sizeof) K
+(\() p
+() k n
+(struct) S
+( data_nodelist\) +) p n
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_in\) +) p n
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_out\) +) p n
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     sizemax\() S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_in\)) p n
+(,) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T (     ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_out) p n
+(\)\)\)\);) N
+(  DataIndexTable = \() S
+(struct) k
+( data_index *\) mymalloc\(All.BunchSize * ) p
+(sizeof) K
+(\() p
+(struct) k
+( ) p n
+(data_index\)\);) N
+(  DataNodeList = \() S
+(struct) k
+( data_nodelist *\) mymalloc\(All.BunchSize * ) p
+(sizeof) K
+(\() p
+(struct) k
+() p n
+( data_nodelist\)\);) N
+() N
+() N
+(  CPU_Step[CPU_HYDMISC] += measure_time\(\);) N
+(  t0 = second\(\);) N
+() N
+(  i = FirstActiveParticle;) S 32 T () S
+(/* first particle for this task */) c n
+() p n
+(  ) S
+(do) K n
+(    {) p n
+(      ) S
+(for) K
+(\(j = 0; j < NTask; j++\)) p n
+(hydra.c) (Page 4/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (2/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (5-6) 3
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T ({) N
+() S 8 T (  Send_count[j] = 0;) N
+() S 8 T (  Exportflag[j] = -1;) N
+() S 8 T (}) N
+() N
+(      ) S
+(/* do local particles and prepare export list */) c n
+(      tstart = second\(\);) p n
+(      ) S
+(for) K
+(\(nexport = 0; i >= 0; i = NextActiveParticle[i]\)) p n
+() S 8 T () S
+(if) K
+(\(P[i].Type == 0\)) p n
+() S 8 T (  {) N
+() S 8 T (    ) S
+(if) K
+(\(hydro_evaluate\(i, 0, &nexport, Send_count\) < 0\)) p n
+() S 8 T (      ) S
+(break) K
+(;) p n
+() S 8 T (  }) N
+(      tend = second\(\);) N
+(      timecomp1 += timediff\(tstart, tend\);) N
+() N
+(#ifdef) K
+( MYSORT) p n
+(      mysort_dataindex\(DataIndexTable, nexport, ) S
+(sizeof) K
+(\() p
+(struct) k
+( data_index\), data_) p n
+(index_compare\);) N
+(#else) K n
+(      qsort\(DataIndexTable, nexport, ) p
+(sizeof) K
+(\() p
+(struct) k
+( data_index\), data_index_compa) p n
+(re\);) N
+(#endif) K n
+() p n
+(      tstart = second\(\);) N
+() N
+(      MPI_Allgather\(Send_count, NTask, MPI_INT, Sendcount_matrix, NTask, MPI_INT) N
+(, MPI_COMM_WORLD\);) N
+() N
+(      tend = second\(\);) N
+(      timewait1 += timediff\(tstart, tend\);) N
+() N
+(      ) S
+(for) K
+(\(j = 0, nimport = 0, Recv_offset[0] = 0, Send_offset[0] = 0; j < NTask;) p n
+( j++\)) N
+() S 8 T ({) N
+() S 8 T (  Recv_count[j] = Sendcount_matrix[j * NTask + ThisTask];) N
+() S 8 T (  nimport += Recv_count[j];) N
+() N
+() S 8 T (  ) S
+(if) K
+(\(j > 0\)) p n
+() S 8 T (    {) N
+() S 8 T (      Send_offset[j] = Send_offset[j - 1] + Send_count[j - 1];) N
+() S 8 T (      Recv_offset[j] = Recv_offset[j - 1] + Recv_count[j - 1];) N
+() S 8 T (    }) N
+() S 8 T (}) N
+() N
+(      HydroDataGet = \() S
+(struct) k
+( hydrodata_in *\) mymalloc\(nimport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( hy) p n
+(drodata_in\)\);) N
+(      HydroDataIn = \() S
+(struct) k
+( hydrodata_in *\) mymalloc\(nexport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( hyd) p n
+(rodata_in\)\);) N
+() N
+(      ) S
+(/* prepare particle data for export */) c n
+() p n
+(      ) S
+(for) K
+(\(j = 0; j < nexport; j++\)) p n
+() S 8 T ({) N
+() S 8 T (  place = DataIndexTable[j].Index;) N
+() N
+() S 8 T (  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (    {) N
+() S 8 T (      HydroDataIn[j].Pos[k] = P[place].Pos[k];) N
+() S 8 T (      HydroDataIn[j].Vel[k] = SphP[place].VelPred[k];) N
+() S 8 T (    }) N
+() S 8 T (  HydroDataIn[j].Hsml = PPP[place].Hsml;) N
+(hydra.c) (Page 5/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T (  HydroDataIn[j].Mass = P[place].Mass;) N
+() S 8 T (  HydroDataIn[j].DhsmlDensityFactor = SphP[place].h.DhsmlDensityFactor;) N
+() S 8 T (  HydroDataIn[j].Density = SphP[place].d.Density;) N
+() S 8 T (  HydroDataIn[j].Pressure = SphP[place].Pressure;) N
+() S 8 T (  HydroDataIn[j].Timestep = \(P[place].TimeBin ? \(1 << P[place].TimeBin\) ) N
+(: 0\);) N
+() N
+() S 8 T (  ) S
+(/* calculation of F1 */) c n
+(#ifndef) K
+( ALTVISCOSITY) p n
+() S 8 T (  soundspeed_i = sqrt\(GAMMA * SphP[place].Pressure / SphP[place].d.Densi) N
+(ty\);) N
+(#ifndef) K
+( NAVIERSTOKES) p n
+() S 8 T (  HydroDataIn[j].F1 = fabs\(SphP[place].v.DivVel\) /) N
+() S 8 T (    \(fabs\(SphP[place].v.DivVel\) + SphP[place].r.CurlVel +) N
+() S 8 T (     0.0001 * soundspeed_i / PPP[place].Hsml / fac_mu\);) N
+(#else) K n
+() p 8 T (  HydroDataIn[j].F1 = fabs\(SphP[place].v.DivVel\) /) N
+() S 8 T (    \(fabs\(SphP[place].v.DivVel\) + SphP[place].u.s.CurlVel +) N
+() S 8 T (     0.0001 * soundspeed_i / PPP[place].Hsml / fac_mu\);) N
+(#endif) K n
+() p n
+(#else) K n
+() p 8 T (  HydroDataIn[j].F1 = SphP[place].v.DivVel;) N
+(#endif) K n
+() p n
+() S 8 T (  memcpy\(HydroDataIn[j].NodeList,) N
+() S 8 T () S 16 T ( DataNodeList[DataIndexTable[j].IndexGet].NodeList, NODELISTLENG) N
+(TH * ) S
+(sizeof) K
+(\() p
+(int) k
+(\)\);) p n
+() N
+(#ifdef) K
+( CS_MODEL) p n
+() S 8 T (  HydroDataIn[j].DensityNow = SphP[place].d.Density;) N
+() S 8 T (  HydroDataIn[j].Entropy = SphP[place].Entropy;) N
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( MAGNETIC) p n
+() S 8 T (  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (    {) N
+() S 8 T (      HydroDataIn[j].BPred[k] = SphP[place].BPred[k];) N
+(#if) K
+( ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\) || ) p
+(defined) K
+(\(ROT_IN_MAG_DIS\)) p n
+(#ifdef) K
+( SMOOTH_ROTB) p n
+() S 8 T (      HydroDataIn[j].RotB[k] = SphP[i].SmoothedRotB[k];) N
+(#else) K n
+() p 8 T (      HydroDataIn[j].RotB[k] = SphP[i].RotB[k];) N
+(#endif) K n
+(#endif) N
+() p 8 T (    }) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+(#ifdef) K
+( SMOOTH_PHI) p n
+() S 8 T (  HydroDataIn[j].PhiPred = SphP[place].SmoothPhi;) N
+(#else) K n
+() p 8 T (  HydroDataIn[j].PhiPred = SphP[place].PhiPred;) N
+(#endif) K n
+(#endif) N
+(#endif) N
+() p n
+() N
+(#if) K
+( ) p
+(defined) K
+(\(NAVIERSTOKES\)) p n
+() S 8 T (  HydroDataIn[j].Entropy = SphP[place].Entropy;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( TIME_DEP_ART_VISC) p n
+(hydra.c) (Page 6/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (3/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (7-8) 4
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T (  HydroDataIn[j].alpha = SphP[place].alpha;) N
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( PARTICLE_DEBUG) p n
+() S 8 T (  HydroDataIn[j].ID = P[place].ID;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( NAVIERSTOKES) p n
+() S 8 T (  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (    {) N
+() S 8 T (      HydroDataIn[j].stressdiag[k] = SphP[i].u.s.StressDiag[k];) N
+() S 8 T (      HydroDataIn[j].stressoffdiag[k] = SphP[i].u.s.StressOffDiag[k];) N
+() S 8 T (    }) N
+() S 8 T (  HydroDataIn[j].shear_viscosity = get_shear_viscosity\(i\);) N
+() N
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+() S 8 T (  HydroDataIn[j].divvel = SphP[i].u.s.DivVel;) N
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( TIME_DEP_MAGN_DISP) p n
+() S 8 T (  HydroDataIn[j].Balpha = SphP[place].Balpha;) N
+(#endif) K n
+() p 8 T (}) N
+() N
+() N
+() N
+() N
+(      ) S
+(/* exchange particle data */) c n
+(      tstart = second\(\);) p n
+(      ) S
+(for) K
+(\(ngrp = 1; ngrp < \(1 << PTask\); ngrp++\)) p n
+() S 8 T ({) N
+() S 8 T (  sendTask = ThisTask;) N
+() S 8 T (  recvTask = ThisTask ^ ngrp;) N
+() N
+() S 8 T (  ) S
+(if) K
+(\(recvTask < NTask\)) p n
+() S 8 T (    {) N
+() S 8 T (      ) S
+(if) K
+(\(Send_count[recvTask] > 0 || Recv_count[recvTask] > 0\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  ) S
+(/* get the particles */) c n
+() p 8 T () S 16 T (  MPI_Sendrecv\(&HydroDataIn[Send_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T (       Send_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_in) p n
+(\), MPI_BYTE,) N
+() S 8 T () S 16 T () S 24 T (       recvTask, TAG_HYDRO_A,) N
+() S 8 T () S 16 T () S 24 T (       &HydroDataGet[Recv_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T (       Recv_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_in) p n
+(\), MPI_BYTE,) N
+() S 8 T () S 16 T () S 24 T (       recvTask, TAG_HYDRO_A, MPI_COMM_WORLD, MPI_STATUS) N
+(_IGNORE\);) N
+() S 8 T () S 16 T (}) N
+() S 8 T (    }) N
+() S 8 T (}) N
+(      tend = second\(\);) N
+(      timecommsumm1 += timediff\(tstart, tend\);) N
+() N
+() N
+(      myfree\(HydroDataIn\);) N
+(      HydroDataResult = \() S
+(struct) k
+( hydrodata_out *\) mymalloc\(nimport * ) p
+(sizeof) K
+(\() p
+(struc) k n
+(t) S
+( hydrodata_out\)\);) p n
+(      HydroDataOut = \() S
+(struct) k
+( hydrodata_out *\) mymalloc\(nexport * ) p
+(sizeof) K
+(\() p
+(struct) k
+( h) p n
+(ydrodata_out\)\);) N
+(hydra.c) (Page 7/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+() N
+() N
+(      ) S
+(/* now do the particles that were sent to us */) c n
+() p n
+(      tstart = second\(\);) N
+(      ) S
+(for) K
+(\(j = 0; j < nimport; j++\)) p n
+() S 8 T ({) N
+() S 8 T (  hydro_evaluate\(j, 1, &dummy, &dummy\);) N
+() S 8 T (}) N
+(      tend = second\(\);) N
+(      timecomp2 += timediff\(tstart, tend\);) N
+() N
+(      ) S
+(if) K
+(\(i < 0\)) p n
+() S 8 T (ndone_flag = 1;) N
+(      ) S
+(else) K n
+() p 8 T (ndone_flag = 0;) N
+() N
+(      tstart = second\(\);) N
+(      MPI_Allreduce\(&ndone_flag, &ndone, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD\);) N
+(      tend = second\(\);) N
+(      timewait2 += timediff\(tstart, tend\);) N
+() N
+() N
+(      ) S
+(/* get the result */) c n
+(      tstart = second\(\);) p n
+(      ) S
+(for) K
+(\(ngrp = 1; ngrp < \(1 << PTask\); ngrp++\)) p n
+() S 8 T ({) N
+() S 8 T (  sendTask = ThisTask;) N
+() S 8 T (  recvTask = ThisTask ^ ngrp;) N
+() S 8 T (  ) S
+(if) K
+(\(recvTask < NTask\)) p n
+() S 8 T (    {) N
+() S 8 T (      ) S
+(if) K
+(\(Send_count[recvTask] > 0 || Recv_count[recvTask] > 0\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  ) S
+(/* send the results */) c n
+() p 8 T () S 16 T (  MPI_Sendrecv\(&HydroDataResult[Recv_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T (       Recv_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_ou) p n
+(t\),) N
+() S 8 T () S 16 T () S 24 T (       MPI_BYTE, recvTask, TAG_HYDRO_B,) N
+() S 8 T () S 16 T () S 24 T (       &HydroDataOut[Send_offset[recvTask]],) N
+() S 8 T () S 16 T () S 24 T (       Send_count[recvTask] * ) S
+(sizeof) K
+(\() p
+(struct) k
+( hydrodata_ou) p n
+(t\),) N
+() S 8 T () S 16 T () S 24 T (       MPI_BYTE, recvTask, TAG_HYDRO_B, MPI_COMM_WORLD, ) N
+(MPI_STATUS_IGNORE\);) N
+() S 8 T () S 16 T (}) N
+() S 8 T (    }) N
+() S 8 T (}) N
+(      tend = second\(\);) N
+(      timecommsumm2 += timediff\(tstart, tend\);) N
+() N
+() N
+() N
+(      ) S
+(/* add the result to the local particles */) c n
+(      tstart = second\(\);) p n
+(      ) S
+(for) K
+(\(j = 0; j < nexport; j++\)) p n
+() S 8 T ({) N
+() S 8 T (  place = DataIndexTable[j].Index;) N
+() N
+() S 8 T (  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (    {) N
+() S 8 T (      SphP[place].a.dHydroAccel[k] += HydroDataOut[j].Acc[k];) N
+() S 8 T (    }) N
+(hydra.c) (Page 8/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (4/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (9-10) 5
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+() S 8 T (  SphP[place].e.dDtEntropy += HydroDataOut[j].DtEntropy;) N
+() N
+(#ifdef) K
+( HYDRO_COST_FACTOR) p n
+() S 8 T (  P[place].GravCost += HYDRO_COST_FACTOR * HydroDataOut[j].Ninteractions) N
+(;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+() S 8 T (  ) S
+(if) K
+(\(SphP[place].MinViscousDt > HydroDataOut[j].MinViscousDt\)) p n
+() S 8 T (    SphP[place].MinViscousDt = HydroDataOut[j].MinViscousDt;) N
+(#else) K n
+() p 8 T (  ) S
+(if) K
+(\(SphP[place].MaxSignalVel < HydroDataOut[j].MaxSignalVel\)) p n
+() S 8 T (    SphP[place].MaxSignalVel = HydroDataOut[j].MaxSignalVel;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( OUTPUTCOOLRATE) p n
+() S 8 T (  SphP[place].CondRate += HydroDataOut[j].CondRate;) N
+(#endif) K n
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(MAGNETIC\) && !) p
+(defined) K
+(\(EULERPOTENTIALS\)) p n
+() S 8 T (  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (    SphP[place].DtB[k] += HydroDataOut[j].DtB[k];) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+() S 8 T (  SphP[place].DtPhi += HydroDataOut[j].DtPhi;) N
+(#endif) K n
+(#endif) N
+() p 8 T (}) N
+(      tend = second\(\);) N
+(      timecomp1 += timediff\(tstart, tend\);) N
+() N
+(      myfree\(HydroDataOut\);) N
+(      myfree\(HydroDataResult\);) N
+(      myfree\(HydroDataGet\);) N
+(    }) N
+(  ) S
+(while) K
+(\(ndone < NTask\);) p n
+() N
+() N
+(  myfree\(DataNodeList\);) N
+(  myfree\(DataIndexTable\);) N
+() N
+(  myfree\(Ngblist\);) N
+() N
+() N
+(  ) S
+(/* do final operations on results */) c n
+() p n
+() N
+(#ifdef) K
+( FLTROUNDOFFREDUCTION) p n
+(  ) S
+(for) K
+(\(i = FirstActiveParticle; i >= 0; i = NextActiveParticle[i]\)) p n
+(    ) S
+(if) K
+(\(P[i].Type == 0\)) p n
+(      {) N
+() S 8 T (SphP[i].e.DtEntropy = FLT\(SphP[i].e.dDtEntropy\);) N
+() N
+() S 8 T () S
+(for) K
+(\(j = 0; j < 3; j++\)) p n
+() S 8 T (  SphP[i].a.HydroAccel[j] = FLT\(SphP[i].a.dHydroAccel[j]\);) N
+(      }) N
+(#endif) K n
+() p n
+() N
+() N
+(  ) S
+(for) K
+(\(i = FirstActiveParticle; i >= 0; i = NextActiveParticle[i]\)) p n
+(    ) S
+(if) K
+(\(P[i].Type == 0\)) p n
+(hydra.c) (Page 9/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(      {) p n
+(#ifdef) K
+( CR_SHOCK) p n
+() S 8 T () S
+(/* state right here:) c n
+() S 8 T ( *) N
+() S 8 T ( * _c denotes comoving quantities) N
+() S 8 T ( * _p denotes physical quantities) N
+() S 8 T ( *) N
+() S 8 T ( *) N
+() S 8 T ( * Delta u_p = rho_p^\(gamma-1\)/\(gamma-1\) Delta A) N
+() S 8 T ( *) N
+() S 8 T ( * Delta A = dA/dloga * Delta loga) N
+() S 8 T ( *) N
+() S 8 T ( * dA/dloga = DtE * \(gamma-1\) / \( H\(a\) a^2 rho_c^\(gamma-1\)) N
+() S 8 T ( *) N
+() S 8 T ( * => Delta u_p = DtE * dloga / \( H\(a\) a^2 a^\(3\(gamma-1\)\) \)) N
+() S 8 T ( */) N
+() p n
+() S 8 T () S
+(if) K
+(\(SphP[i].e.DtEntropy > 0.0\)) p n
+() S 8 T (  {) N
+() S 8 T (    rShockEnergy = SphP[i].e.DtEntropy *) N
+() S 8 T (      \(P[i].TimeBin ? \(1 << P[i].TimeBin\) : 0\) * All.Timebase_interval /) N
+( hubble_a2 / fac_egy;) N
+() S 8 T (  }) N
+() S 8 T () S
+(else) K n
+() p 8 T (  {) N
+() S 8 T (    rShockEnergy = 0.0;) N
+() S 8 T (  }) N
+() N
+(#endif) K
+( ) p
+(/* CR_SHOCK */) c n
+() p n
+(#ifndef) K
+( EOS_DEGENERATE) p n
+() S 8 T () S
+(/* Translate energy change rate into entropy change rate */) c n
+() p 8 T (SphP[i].e.DtEntropy *= GAMMA_MINUS1 / \(hubble_a2 * pow\(SphP[i].d.Density) N
+(, GAMMA_MINUS1\)\);) N
+(#else) K n
+(#ifdef) S
+( EOS_ENERGY) p n
+() S 8 T () S
+(/* DtEntropy stores the energy change rate in internal units */) c n
+() p 8 T (SphP[i].e.DtEntropy *= All.UnitEnergy_in_cgs / All.UnitTime_in_s;) N
+() S 8 T () S
+(/* DtEntropy stores the energy change rate in physical units */) c n
+(#else) K n
+() p 8 T () S
+(/* DtEntropy stores the energy change rate in internal units */) c n
+(#ifndef) K
+( WAKEUP) p n
+() S 8 T (eos_calc_dsdt\(SphP[i].temp, SphP[i].d.Density * All.UnitDensity_in_cgs, ) N
+(SphP[i].xnuc, SphP[i].u,) N
+() S 8 T () S 16 T (      SphP[i].Entropy, SphP[i].e.DtEntropy * All.UnitEnergy_in_c) N
+(gs / All.UnitTime_in_s,) N
+() S 8 T () S 16 T (      \(P[i].TimeBin ? \(1 << P[i].TimeBin\) : 0\) * All.Timebase_in) N
+(terval * All.UnitTime_in_s,) N
+() S 8 T () S 16 T (      &SphP[i].e.DtEntropy\);) N
+(#else) K n
+() p 8 T (eos_calc_dsdt\(SphP[i].temp, SphP[i].d.Density * All.UnitDensity_in_cgs, ) N
+(SphP[i].xnuc, SphP[i].u,) N
+() S 8 T () S 16 T (      SphP[i].Entropy, SphP[i].e.DtEntropy * All.UnitEnergy_in_c) N
+(gs / All.UnitTime_in_s,) N
+() S 8 T () S 16 T (      P[i].dt_step * All.Timebase_interval * All.UnitTime_in_s, ) N
+(&SphP[i].e.DtEntropy\);) N
+(#endif) K n
+() p 8 T () S
+(/* DtEntropy stores entropy change in physical units */) c n
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( MACHNUM) p n
+(hydra.c) (Page 10/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (5/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (11-12) 6
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+() S 8 T () S
+(/* Estimates the Mach number of particle i for non-radiative runs,) c n
+() S 8 T ( * or the Mach number, density jump and specific energy jump) N
+() S 8 T ( * in case of cosmic rays!) N
+() S 8 T ( */) N
+(#if) K
+( \(CR_SHOCK == 2\)) p n
+() S 8 T (GetMachNumberCR\(SphP + i\);) N
+(#else) K n
+() p n
+(#ifndef) K
+( CS_MODEL) p n
+() S 8 T (GetMachNumber\(SphP + i\);) N
+(#else) K n
+() p 8 T (GetMachNumber\(SphP + i, P + i\);) N
+(#endif) K
+( ) p
+(/* CS_MODEL */) c n
+(#endif) K
+( ) p
+(/* COSMIC_RAYS */) c n
+(#endif) K
+( ) p
+(/* MACHNUM */) c n
+(#ifdef) K
+( MACHSTATISTIC) p n
+() S 8 T (GetShock_DtEnergy\(SphP + i\);) N
+(#endif) K n
+() p n
+(#ifdef) K
+( CR_SHOCK) p n
+() S 8 T () S
+(if) K
+(\(rShockEnergy > 0.0\)) p n
+() S 8 T (  {) N
+() S 8 T (    ) S
+(/* Feed fraction "All.CR_ShockEfficiency" into CR and see what) c n
+() S 8 T (     * amount of energy instantly gets rethermalized) N
+() S 8 T (     *) N
+() S 8 T (     * for this, we need the physical time step, which is) N
+() S 8 T (     * Delta t_p = Delta t_c / hubble_a) N
+() S 8 T (     */) N
+() p n
+() S 8 T (    rNonRethermalizedEnergy =) N
+() S 8 T (      CR_Particle_ShockInject\(SphP + i,) N
+() S 8 T () S 16 T () S 24 T () S 32 T (      rShockEnergy,) N
+() S 8 T () S 16 T () S 24 T () S 32 T (      \(P[i].TimeBin ? \(1 << P[i].TimeBin\) : 0\) *) N
+( All.Timebase_interval /) N
+() S 8 T () S 16 T () S 24 T () S 32 T (      hubble_a\);) N
+() N
+() S 8 T (    ) S
+(/* Fraction of total energy that went and remained in CR is) c n
+() S 8 T (     * rNonRethermalizedEnergy / rShockEnergy,) N
+() S 8 T (     * hence, we conserve energy if we do:) N
+() S 8 T (     */) N
+(#ifndef) K
+( CR_NO_CHANGE) p n
+() S 8 T (    SphP[i].e.DtEntropy *= \(1.0 - rNonRethermalizedEnergy / rShockEnergy) N
+(\);) N
+(#endif) K
+( ) p
+(/* CR_NO_CHANGE */) c n
+() p n
+() S 8 T (    assert\(rNonRethermalizedEnergy >= 0.0\);) N
+() N
+() S 8 T (    assert\(rNonRethermalizedEnergy <= \(rShockEnergy * All.CR_ShockEffici) N
+(ency\)\);) N
+() N
+() N
+(#ifndef) K
+( COOLING) p n
+() S 8 T (    utherm = CR_Particle_ThermalizeAndDissipate\(SphP + i, \(P[i].TimeBin ) N
+(? \(1 << P[i].TimeBin\) : 0\) *) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T () S 56 T (All.Timebase_interval / ) N
+(hubble_a\);) N
+() N
+() S 8 T (    ) S
+(/* we need to add this thermalized energy to the internal energy */) c n
+() p n
+() S 8 T (    SphP[i].e.DtEntropy += GAMMA_MINUS1 * utherm * fac_egy / pow\(SphP[i]) N
+(.d.Density, GAMMA_MINUS1\) /) N
+(hydra.c) (Page 11/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T (      \(\(P[i].TimeBin ? \(1 << P[i].TimeBin\) : 0\) * All.Timebase_interval\)) N
+(;) N
+(#endif) K n
+() p n
+() S 8 T (  }) N
+(#endif) K
+( ) p
+(/* CR_SHOCK */) c n
+() p n
+() N
+(#ifdef) K
+( NAVIERSTOKES) p n
+() S 8 T () S
+(/* sigma_ab * sigma_ab */) c n
+() p 8 T () S
+(for) K
+(\(k = 0, fac = 0; k < 3; k++\)) p n
+() S 8 T (  {) N
+() S 8 T (    fac += SphP[i].u.s.StressDiag[k] * SphP[i].u.s.StressDiag[k] +) N
+() S 8 T (      2 * SphP[i].u.s.StressOffDiag[k] * SphP[i].u.s.StressOffDiag[k];) N
+() S 8 T (  }) N
+() N
+(#ifndef) K
+( NAVIERSTOKES_CONSTANT) p 32 T () S
+(/*entropy increase due to the shear viscosity */) c n
+(#ifdef) K
+( NS_TIMESTEP) p n
+() S 8 T (SphP[i].ViscEntropyChange = 0.5 * GAMMA_MINUS1 /) N
+() S 8 T (  \(hubble_a2 * pow\(SphP[i].d.Density, GAMMA_MINUS1\)\) *) N
+() S 8 T (  get_shear_viscosity\(i\) / SphP[i].d.Density * fac *) N
+() S 8 T (  pow\(\(SphP[i].Entropy * pow\(SphP[i].d.Density * a3inv, GAMMA_MINUS1\) / ) N
+(GAMMA_MINUS1\), 2.5\);) N
+() N
+() S 8 T (SphP[i].e.DtEntropy += SphP[i].ViscEntropyChange;) N
+(#else) K n
+() p 8 T (SphP[i].e.DtEntropy += 0.5 * GAMMA_MINUS1 /) N
+() S 8 T (  \(hubble_a2 * pow\(SphP[i].d.Density, GAMMA_MINUS1\)\) *) N
+() S 8 T (  get_shear_viscosity\(i\) / SphP[i].d.Density * fac *) N
+() S 8 T (  pow\(\(SphP[i].Entropy * pow\(SphP[i].d.Density * a3inv, GAMMA_MINUS1\) / ) N
+(GAMMA_MINUS1\), 2.5\);) N
+(#endif) K n
+() p n
+(#else) K n
+() p 8 T (SphP[i].e.DtEntropy += 0.5 * GAMMA_MINUS1 /) N
+() S 8 T (  \(hubble_a2 * pow\(SphP[i].d.Density, GAMMA_MINUS1\)\) *) N
+() S 8 T (  get_shear_viscosity\(i\) / SphP[i].d.Density * fac;) N
+() N
+(#ifdef) K
+( NS_TIMESTEP) p n
+() S 8 T (SphP[i].ViscEntropyChange = 0.5 * GAMMA_MINUS1 /) N
+() S 8 T (  \(hubble_a2 * pow\(SphP[i].d.Density, GAMMA_MINUS1\)\) *) N
+() S 8 T (  get_shear_viscosity\(i\) / SphP[i].d.Density * fac;) N
+(#endif) K n
+() p n
+(#endif) K n
+() p n
+(#ifdef) K
+( NAVIERSTOKES_BULK) p 32 T () S
+(/*entropy increase due to the bulk viscosity */) c n
+() p 8 T (SphP[i].e.DtEntropy += GAMMA_MINUS1 /) N
+() S 8 T (  \(hubble_a2 * pow\(SphP[i].d.Density, GAMMA_MINUS1\)\) *) N
+() S 8 T (  All.NavierStokes_BulkViscosity / SphP[i].d.Density * pow\(SphP[i].u.s.a) N
+(4.DivVel, 2\);) N
+() N
+(#ifdef) K
+( NS_TIMESTEP) p n
+() S 8 T (SphP[i].ViscEntropyChange = GAMMA_MINUS1 /) N
+() S 8 T (  \(hubble_a2 * pow\(SphP[i].d.Density, GAMMA_MINUS1\)\) *) N
+() S 8 T (  All.NavierStokes_BulkViscosity / SphP[i].d.Density * pow\(SphP[i].u.s.a) N
+(4.DivVel, 2\);) N
+(#endif) K n
+() p n
+(#endif) K n
+() p n
+(#endif) K
+( ) p
+(/* these entropy increases directly follow from the general heat transfer) c n
+(hydra.c) (Page 12/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (6/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (13-14) 7
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+( equation */) c n
+() p n
+() N
+(#if) K
+( ) p
+(defined) K
+(\(MAGNETIC\) && !) p
+(defined) K
+(\(EULERPOTENTIALS\)) p n
+() S 8 T () S
+(/* take care of cosmological dilution */) c n
+() p 8 T () S
+(if) K
+(\(All.ComovingIntegrationOn\)) p n
+() S 8 T (  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (    SphP[i].DtB[k] -= 2.0 * SphP[i].BPred[k];) N
+(#endif) K n
+() p n
+(#ifdef) K
+( WINDS) p n
+() S 8 T () S
+(/* if we have winds, we decouple particles briefly if delaytime>0 */) c n
+() p n
+() S 8 T () S
+(if) K
+(\(SphP[i].DelayTime > 0\)) p n
+() S 8 T (  {) N
+() S 8 T (    ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (      SphP[i].a.HydroAccel[k] = 0;) N
+() N
+() S 8 T (    SphP[i].e.DtEntropy = 0;) N
+() N
+(#ifdef) K
+( NOWINDTIMESTEPPING) p n
+() S 8 T (    SphP[i].MaxSignalVel = 2 * sqrt\(GAMMA * SphP[i].Pressure / SphP[i].d) N
+(.Density\);) N
+(#else) K n
+() p 8 T (    windspeed = sqrt\(2 * All.WindEnergyFraction * All.FactorSN *) N
+() S 8 T () S 16 T () S 24 T (     All.EgySpecSN / \(1 - All.FactorSN\) / All.WindEffici) N
+(ency\) * All.Time;) N
+() S 8 T (    windspeed *= fac_mu;) N
+() S 8 T (    hsml_c = pow\(All.WindFreeTravelDensFac * All.PhysDensThresh /) N
+() S 8 T () S 16 T () S 24 T ( \(SphP[i].d.Density * a3inv\), \(1. / 3.\)\);) N
+() S 8 T (    SphP[i].MaxSignalVel = hsml_c * DMAX\(\(2 * windspeed\), SphP[i].MaxSig) N
+(nalVel\);) N
+(#endif) K n
+() p 8 T (  }) N
+(#endif) K n
+() p n
+(#ifdef) K
+( SPH_BND_PARTICLES) p n
+() S 8 T () S
+(if) K
+(\(P[i].ID == 0\)) p n
+() S 8 T (  {) N
+() S 8 T (    SphP[i].e.DtEntropy = 0;) N
+(#ifdef) K
+( NS_TIMESTEP) p n
+() S 8 T (    SphP[i].ViscEntropyChange = 0;) N
+(#endif) K n
+() p 8 T (    ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (      SphP[i].a.HydroAccel[k] = 0;) N
+() S 8 T (  }) N
+(#endif) K n
+(#ifdef) S
+( TIME_DEP_ART_VISC) p n
+() S 8 T (cs_h = sqrt\(GAMMA * SphP[i].Pressure / SphP[i].d.Density\) / PPP[i].Hsml;) N
+() S 8 T (f = fabs\(SphP[i].v.DivVel\) / \(fabs\(SphP[i].v.DivVel\) + SphP[i].r.CurlVel) N
+( + 0.0001 * cs_h / fac_mu\);) N
+() S 8 T (SphP[i].Dtalpha = -\(SphP[i].alpha - All.AlphaMin\) * All.DecayTime *) N
+() S 8 T (  0.5 * SphP[i].MaxSignalVel / \(PPP[i].Hsml * fac_mu\)) N
+() S 8 T (  + f * All.ViscSource * DMAX\(0.0, -SphP[i].v.DivVel\);) N
+() S 8 T () S
+(if) K
+(\(All.ComovingIntegrationOn\)) p n
+() S 8 T (  SphP[i].Dtalpha /= \(hubble_a * All.Time * All.Time\);) N
+(#endif) K n
+(#ifdef) S
+( MAGNETIC) p n
+(#ifdef) K
+( TIME_DEP_MAGN_DISP) p n
+() S 8 T (SphP[i].DtBalpha = -\(SphP[i].Balpha - All.ArtMagDispMin\) * All.ArtMagDis) N
+(pTime *) N
+() S 8 T (  0.5 * SphP[i].MaxSignalVel / \(PPP[i].Hsml * fac_mu\)) N
+(hydra.c) (Page 13/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#ifndef) K
+( ROT_IN_MAG_DIS) p n
+() S 8 T (  + All.ArtMagDispSource * fabs\(SphP[i].divB\) / sqrt\(mu0 * SphP[i].d.Den) N
+(sity\);) N
+(#else) K n
+(#ifdef) S
+( SMOOTH_ROTB) p n
+() S 8 T (  + All.ArtMagDispSource / sqrt\(mu0 * SphP[i].d.Density\) *) N
+() S 8 T (  DMAX\(fabs\(SphP[i].divB\), fabs\(sqrt\(SphP[i].SmoothedRotB[0] * SphP[i].S) N
+(moothedRotB[0] +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     SphP[i].SmoothedRotB[1] * SphP[i].S) N
+(moothedRotB[1] +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     SphP[i].SmoothedRotB[2] * SphP[i].S) N
+(moothedRotB[2]\)\)\);) N
+(#else) K n
+() p 8 T (  + All.ArtMagDispSource / sqrt\(mu0 * SphP[i].d.Density\) *) N
+() S 8 T (  DMAX\(fabs\(SphP[i].divB\), fabs\(sqrt\(SphP[i].RotB[0] * SphP[i].RotB[0] +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     SphP[i].RotB[1] * SphP[i].RotB[1] +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     SphP[i].RotB[2] * SphP[i].RotB[2]\)\)) N
+(\);) N
+(#endif) K n
+(#endif) N
+(#endif) N
+(#ifdef) S
+( DIVBCLEANING_DEDNER) p n
+() S 8 T (SphP[i].DtPhi -=) N
+() S 8 T (  SphP[i].PhiPred * All.DivBcleanParabolicSigma * 0.5 * SphP[i].MaxSigna) N
+(lVel / \(PPP[i].Hsml * fac_mu\);) N
+(#endif) K n
+(#endif) N
+(      }) p n
+() N
+() N
+(#if) K
+( ) p
+(defined) K
+(\(CS_MODEL\) && ) p
+(defined) K
+(\(CS_FEEDBACK\)) p n
+(  ) S
+(for) K
+(\(i = FirstActiveParticle; i >= 0; i = NextActiveParticle[i]\)) p n
+(    ) S
+(if) K
+(\(P[i].Type == 0 && \(SphP[i].TempPromotion > 0 || SphP[i].DensPromotion > 0) p n
+(\)\)) N
+(      {) N
+() S 8 T (SphP[i].TempPromotion = 0;) N
+() S 8 T (SphP[i].DensPromotion = 0;) N
+(      }) N
+(#endif) K n
+() p n
+(  ) S
+(/* collect some timing information */) c n
+() p n
+(  t1 = WallclockTime = second\(\);) N
+(  timeall += timediff\(t0, t1\);) N
+() N
+(  timecomp = timecomp1 + timecomp2;) N
+(  timewait = timewait1 + timewait2;) N
+(  timecomm = timecommsumm1 + timecommsumm2;) N
+() N
+(  CPU_Step[CPU_HYDCOMPUTE] += timecomp;) N
+(  CPU_Step[CPU_HYDWAIT] += timewait;) N
+(  CPU_Step[CPU_HYDCOMM] += timecomm;) N
+(  CPU_Step[CPU_HYDMISC] += timeall - \(timecomp + timewait + timecomm\);) N
+(}) N
+() N
+() N
+() N
+() N
+(/*! This function is the 'core' of the SPH force computation. A target) c n
+(*  particle is specified which may either be local, or reside in the) N
+(*  communication buffer.) N
+(*/) N
+(hydra.c) (Page 14/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (7/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (15-16) 8
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(int) k
+( hydro_evaluate\() p
+(int) k
+( target, ) p
+(int) k
+( mode, ) p
+(int) k
+( *nexport, ) p
+(int) k
+( *nsend_local\)) p n
+({) N
+(  ) S
+(int) k
+( startnode, numngb, listindex = 0;) p n
+(  ) S
+(int) k
+( j, k, n, timestep;) p n
+(  MyDouble *pos;) N
+(  MyFloat *vel;) N
+(  MyFloat mass, h_i, dhsmlDensityFactor, rho, pressure, f1, f2;) N
+(  MyLongDouble acc[3], dtEntropy;) N
+() N
+(#ifdef) K
+( HYDRO_COST_FACTOR) p n
+(  ) S
+(int) k
+( ninteractions = 0;) p n
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+(  MyFloat minViscousDt;) N
+(#else) K n
+(  MyFloat maxSignalVel;) p n
+(#endif) K n
+(  ) p
+(double) k
+( dx, dy, dz, dvx, dvy, dvz;) p n
+(  ) S
+(double) k
+( h_i2, hinv, hinv4;) p n
+(  ) S
+(double) k
+( p_over_rho2_i, p_over_rho2_j, soundspeed_i, soundspeed_j;) p n
+(  ) S
+(double) k
+( hfc, dwk_i, vdotr, vdotr2, visc, mu_ij, rho_ij, vsig;) p n
+(  ) S
+(double) k
+( h_j, dwk_j;) p n
+(  ) S
+(double) k
+( r, r2, u;) p n
+(  ) S
+(double) k
+( hfc_visc;) p n
+(  ) S
+(double) k
+( dmin1, dmin2;) p n
+() N
+(#if) K
+( ) p
+(defined) K
+(\(MAGFORCE\)) p n
+(  ) S
+(double) k
+( dmax1, dmax2;) p n
+(#endif) K n
+(  ) p
+(double) k
+( BulkVisc_ij;) p n
+(  ) S
+(int) k
+( imax1, imax2;) p n
+() N
+(#ifdef) K
+( NAVIERSTOKES) p n
+(  ) S
+(double) k
+( faci, facj;) p n
+(  MyFloat *stressdiag;) N
+(  MyFloat *stressoffdiag;) N
+(  MyFloat shear_viscosity;) N
+() N
+(#ifdef) K
+( VISCOSITY_SATURATION) p n
+(  ) S
+(double) k
+( VelLengthScale_i, VelLengthScale_j;) p n
+(  ) S
+(double) k
+( IonMeanFreePath_i, IonMeanFreePath_j;) p n
+(#endif) K n
+(#ifdef) S
+( NAVIERSTOKES_BULK) p n
+(  ) S
+(double) k
+( facbi, facbj;) p n
+(  MyFloat divvel;) N
+(#endif) K n
+(#endif) N
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(NAVIERSTOKES\)) p n
+(  ) S
+(double) k
+( Entropy;) p n
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( TIME_DEP_ART_VISC) p n
+(  MyFloat alpha;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( ALTVISCOSITY) p n
+(  ) S
+(double) k
+( mu_i, mu_j;) p n
+(#endif) K n
+(hydra.c) (Page 15/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+(#ifndef) K
+( NOVISCOSITYLIMITER) p n
+(  ) S
+(double) k
+( dt;) p n
+(#endif) K n
+() p n
+(#ifdef) K
+( MAGNETIC) p n
+(  MyFloat *bpred;) N
+() N
+(#ifndef) K
+( EULERPOTENTIALS) p n
+(  ) S
+(double) k
+( dtB[3];) p n
+(#endif) K n
+(  ) p
+(double) k
+( dBx, dBy, dBz;) p n
+(  ) S
+(double) k
+( magfac, magfac_i, magfac_j, magfac_i_base;) p n
+(  ) S
+(double) k
+( mu0_1;) p n
+() N
+(#if) K
+( \() p
+(defined) K
+(\(ARTBPRES\) && ) p
+(defined) K
+(\(MAGFORCE\)\) || ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\)) p n
+(  ) S
+(double) k
+( wk_i, hinv3;) p n
+(#endif) K n
+() p n
+(#ifdef) K
+( MAGFORCE) p n
+(  ) S
+(double) k
+( mm_i[3][3], mm_j[3][3];) p n
+(  ) S
+(double) k
+( b2_i, b2_j;) p n
+(  ) S
+(int) k
+( l;) p n
+() N
+(#ifdef) K
+( ARTBPRES) p n
+(  ) S
+(double) k
+( wk_j;) p n
+(  ) S
+(double) k
+( w1_i, w1_j, R_abp_i, R_abp_j;) p n
+(  ) S
+(double) k
+( mm_abp_i[3][3], mm_abp_j[3][3];) p n
+(#endif) K n
+(#endif) N
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC_DISSIPATION\) || ) p
+(defined) K
+(\(DIVBCLEANING_DEDNER\)) p n
+(  ) S
+(double) k
+( magfac_sym;) p n
+(#endif) K n
+(#ifdef) S
+( MAGNETIC_DISSIPATION) p n
+(  ) S
+(double) k
+( dTu_diss_b, Balpha_ij;) p n
+() N
+(#ifdef) K
+( MAGDISSIPATION_PERPEN) p n
+(  ) S
+(double) k
+( mft, mvt[3];) p n
+(#endif) K n
+(#ifdef) S
+( TIME_DEP_MAGN_DISP) p n
+(  ) S
+(double) k
+( Balpha;) p n
+(#endif) K n
+(#endif) N
+(#ifdef) S
+( DIVBCLEANING_DEDNER) p n
+(  ) S
+(double) k
+( PhiPred, DtPhi, phifac;) p n
+(#endif) K n
+(#ifdef) S
+( MAGNETIC_SIGNALVEL) p n
+(  ) S
+(double) k
+( magneticspeed_i, magneticspeed_j, vcsa2_i, vcsa2_j, Bpro2_i, Bpro2_j;) p n
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\) || ) p
+(defined) K
+(\(ROT_IN_MAG_DIS\)) p n
+(  MyFloat *rotb;) N
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( PARTICLE_DEBUG) p n
+(  MyIDType ID;) S 16 T () S 24 T () S 32 T () S
+(/*!< particle identifier */) c n
+(#endif) K n
+() p n
+(#ifdef) K
+( CONVENTIONAL_VISCOSITY) p n
+(  ) S
+(double) k
+( c_ij, h_ij;) p n
+(#endif) K n
+() p n
+(hydra.c) (Page 16/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (8/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (17-18) 9
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#ifdef) K
+( CS_MODEL) p n
+(  ) S
+(double) k
+( density, entropy;) p n
+(#endif) K n
+() p n
+(  ) S
+(if) K
+(\(mode == 0\)) p n
+(    {) N
+(      pos = P[target].Pos;) N
+(      vel = SphP[target].VelPred;) N
+(      h_i = PPP[target].Hsml;) N
+(      mass = P[target].Mass;) N
+(      dhsmlDensityFactor = SphP[target].h.DhsmlDensityFactor;) N
+(      rho = SphP[target].d.Density;) N
+(      pressure = SphP[target].Pressure;) N
+(      timestep = \(P[target].TimeBin ? \(1 << P[target].TimeBin\) : 0\);) N
+(      soundspeed_i = sqrt\(GAMMA * pressure / rho\);) N
+() N
+(#ifdef) K
+( CS_MODEL) p n
+(      density = SphP[target].d.Density;) N
+(      entropy = SphP[target].Entropy;) N
+(#endif) K n
+() p n
+(#ifndef) K
+( ALTVISCOSITY) p n
+(#ifndef) K
+( NAVIERSTOKES) p n
+(      f1 = fabs\(SphP[target].v.DivVel\) /) N
+() S 8 T (\(fabs\(SphP[target].v.DivVel\) + SphP[target].r.CurlVel +) N
+() S 8 T ( 0.0001 * soundspeed_i / PPP[target].Hsml / fac_mu\);) N
+(#else) K n
+(      f1 = fabs\(SphP[target].v.DivVel\) /) p n
+() S 8 T (\(fabs\(SphP[target].v.DivVel\) + SphP[target].u.s.CurlVel +) N
+() S 8 T ( 0.0001 * soundspeed_i / PPP[target].Hsml / fac_mu\);) N
+(#endif) K n
+(#else) N
+(      f1 = SphP[target].v.DivVel;) p n
+(#endif) K n
+() p n
+(#ifdef) K
+( MAGNETIC) p n
+(      bpred = SphP[target].BPred;) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+(#ifdef) K
+( SMOOTH_PHI) p n
+(      PhiPred = SphP[target].SmoothPhi;) N
+(#else) K n
+(      PhiPred = SphP[target].PhiPred;) p n
+(#endif) K n
+(#endif) N
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\) || ) p
+(defined) K
+(\(ROT_IN_MAG_DIS\)) p n
+(#ifdef) K
+( SMOOTH_ROTB) p n
+(      rotb = SphP[target].SmoothedRotB;) N
+(#else) K n
+(      rotb = SphP[target].RotB;) p n
+(#endif) K n
+(#endif) N
+(#ifdef) S
+( TIME_DEP_MAGN_DISP) p n
+(      Balpha = SphP[target].Balpha;) N
+(#endif) K n
+(#endif) S
+( ) p
+(/*  MAGNETIC  */) c n
+() p n
+(#ifdef) K
+( TIME_DEP_ART_VISC) p n
+(      alpha = SphP[target].alpha;) N
+(#endif) K n
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(NAVIERSTOKES\)) p n
+(      Entropy = SphP[target].Entropy;) N
+(hydra.c) (Page 17/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( PARTICLE_DEBUG) p n
+(      ID = P[target].ID;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( NAVIERSTOKES) p n
+(      stressdiag = SphP[target].u.s.StressDiag;) N
+(      stressoffdiag = SphP[target].u.s.StressOffDiag;) N
+(      shear_viscosity = get_shear_viscosity\(target\);) N
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+(      divvel = SphP[target].u.s.a4.DivVel;) N
+(#endif) K n
+(#endif) N
+() p n
+(    }) N
+(  ) S
+(else) K n
+(    {) p n
+(      pos = HydroDataGet[target].Pos;) N
+(      vel = HydroDataGet[target].Vel;) N
+(      h_i = HydroDataGet[target].Hsml;) N
+(      mass = HydroDataGet[target].Mass;) N
+(      dhsmlDensityFactor = HydroDataGet[target].DhsmlDensityFactor;) N
+(      rho = HydroDataGet[target].Density;) N
+(      pressure = HydroDataGet[target].Pressure;) N
+(      timestep = HydroDataGet[target].Timestep;) N
+(      soundspeed_i = sqrt\(GAMMA * pressure / rho\);) N
+(      f1 = HydroDataGet[target].F1;) N
+() N
+(#ifdef) K
+( CS_MODEL) p n
+(      density = HydroDataGet[target].DensityNow;) N
+(      entropy = HydroDataGet[target].Entropy;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( MAGNETIC) p n
+(      bpred = HydroDataGet[target].BPred;) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+(      PhiPred = HydroDataGet[target].PhiPred;) N
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\) || ) p
+(defined) K
+(\(ROT_IN_MAG_DIS\)) p n
+(      rotb = HydroDataGet[target].RotB;) N
+(#endif) K n
+(#ifdef) S
+( TIME_DEP_MAGN_DISP) p n
+(      Balpha = HydroDataGet[target].Balpha;) N
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( TIME_DEP_ART_VISC) p n
+(      alpha = HydroDataGet[target].alpha;) N
+(#endif) K n
+() p n
+(#if) K
+( ) p
+(defined) K
+(\(NAVIERSTOKES\)) p n
+(      Entropy = HydroDataGet[target].Entropy;) N
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( PARTICLE_DEBUG) p n
+(      ID = HydroDataGet[target].ID;) N
+(#endif) K n
+() p n
+() N
+(hydra.c) (Page 18/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (9/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (19-20) 10
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#ifdef) K
+( NAVIERSTOKES) p n
+(      stressdiag = HydroDataGet[target].stressdiag;) N
+(      stressoffdiag = HydroDataGet[target].stressoffdiag;) N
+(      shear_viscosity = HydroDataGet[target].shear_viscosity;) N
+(#endif) K n
+(#ifdef) S
+( NAVIERSTOKES) p n
+(      stressdiag = HydroDataGet[target].stressdiag;) N
+(      stressoffdiag = HydroDataGet[target].stressoffdiag;) N
+(      shear_viscosity = HydroDataGet[target].shear_viscosity;) N
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+(      divvel = HydroDataGet[target].divvel;) N
+(#endif) K n
+(#endif) N
+(    }) p n
+() N
+() N
+(  ) S
+(/* initialize variables before SPH loop is started */) c n
+() p n
+(  acc[0] = acc[1] = acc[2] = dtEntropy = 0;) N
+() N
+() N
+() N
+(#ifdef) K
+( MAGNETIC) p n
+(#ifndef) K
+( EULERPOTENTIALS) p n
+(  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+(    dtB[k] = 0;) N
+(#endif) K n
+(  mu0_1 = 1;) p n
+(#ifndef) K
+( MU0_UNITY) p n
+(  mu0_1 /= \(4 * M_PI\);) N
+(  mu0_1 *= All.UnitTime_in_s * All.UnitTime_in_s *) N
+(    All.UnitLength_in_cm / \(All.UnitMass_in_g * All.HubbleParam * All.HubblePara) N
+(m\);) N
+(#endif) K n
+(#ifdef) S
+( DIVBCLEANING_DEDNER) p n
+(  DtPhi = 0;) N
+(#endif) K n
+(#ifdef) S
+( MAGFORCE) p n
+(  magfac_i_base = 1 / \(rho * rho\);) N
+(#ifndef) K
+( MU0_UNITY) p n
+(  magfac_i_base /= \(4 * M_PI\);) N
+(#endif) K n
+(#ifdef) S
+( CORRECTBFRC) p n
+(  magfac_i_base *= dhsmlDensityFactor;) N
+(#endif) K n
+(  ) p
+(for) K
+(\(k = 0, b2_i = 0; k < 3; k++\)) p n
+(    {) N
+(      b2_i += bpred[k] * bpred[k];) N
+(      ) S
+(for) K
+(\(l = 0; l < 3; l++\)) p n
+() S 8 T (mm_i[k][l] = bpred[k] * bpred[l];) N
+(    }) N
+(  ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+(    mm_i[k][k] -= 0.5 * b2_i;) N
+(#ifdef) K
+( MAGNETIC_SIGNALVEL) p n
+(#ifdef) K
+( ALFVEN_VEL_LIMITER) p n
+(  vcsa2_i = soundspeed_i * soundspeed_i +) N
+(    DMIN\(mu0_1 * b2_i / rho, ALFVEN_VEL_LIMITER * soundspeed_i * soundspeed_i\);) N
+(#else) K n
+(  vcsa2_i = soundspeed_i * soundspeed_i + mu0_1 * b2_i / rho;) p n
+(#endif) K n
+(#endif) N
+(#endif) S
+( ) p
+(/* end of MAGFORCE */) c n
+(hydra.c) (Page 19/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K
+( ) p
+(/* end of MAGNETIC */) c n
+() p n
+(  p_over_rho2_i = pressure / \(rho * rho\);) N
+(  p_over_rho2_i *= dhsmlDensityFactor;) N
+(  h_i2 = h_i * h_i;) N
+() N
+() N
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+(  minViscousDt = 1.0e32;) N
+(#else) K n
+(  maxSignalVel = soundspeed_i;) p n
+(#endif) K n
+() p n
+() N
+(  ) S
+(/* Now start the actual SPH computation for this particle */) c n
+() p n
+(  ) S
+(if) K
+(\(mode == 0\)) p n
+(    {) N
+(      startnode = All.MaxPart;) S 32 T () S
+(/* root node */) c n
+(    }) p n
+(  ) S
+(else) K n
+(    {) p n
+(      startnode = HydroDataGet[target].NodeList[0];) N
+(      startnode = Nodes[startnode].u.d.nextnode;) S 56 T () S
+(/* open it */) c n
+(    }) p n
+() N
+(  ) S
+(while) K
+(\(startnode >= 0\)) p n
+(    {) N
+(      ) S
+(while) K
+(\(startnode >= 0\)) p n
+() S 8 T ({) N
+(#ifdef) K
+( CS_MODEL) p n
+() S 8 T (  numngb =) N
+() S 8 T (    cs_ngb_treefind_pairs\(pos, h_i, target, &startnode, density, entropy) N
+(, &vel[0], mode, nexport,) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  nsend_local\);) N
+(#else) K n
+() p 8 T (  numngb = ngb_treefind_pairs\(pos, h_i, target, &startnode, mode, nexpor) N
+(t, nsend_local\);) N
+(#endif) K n
+() p n
+() S 8 T (  ) S
+(if) K
+(\(numngb < 0\)) p n
+() S 8 T (    ) S
+(return) K
+( -1;) p n
+() N
+() S 8 T (  ) S
+(for) K
+(\(n = 0; n < numngb; n++\)) p n
+() S 8 T (    {) N
+() S 8 T (      j = Ngblist[n];) N
+() N
+(#ifdef) K
+( HYDRO_COST_FACTOR) p n
+() S 8 T (      ninteractions++;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( BLACK_HOLES) p n
+() S 8 T (      ) S
+(if) K
+(\(P[j].Mass == 0\)) p n
+() S 8 T () S 16 T () S
+(continue) K
+(;) p n
+(#endif) K n
+() p n
+(#ifdef) K
+( NOWINDTIMESTEPPING) p n
+(#ifdef) K
+( WINDS) p n
+() S 8 T (      ) S
+(if) K
+(\(P[j].Type == 0\)) p n
+() S 8 T () S 16 T () S
+(if) K
+(\(SphP[j].DelayTime > 0\)) p 48 T () S
+(/* ignore the wind particles */) c n
+() p 8 T () S 16 T (  ) S
+(continue) K
+(;) p n
+(#endif) K n
+(hydra.c) (Page 20/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (10/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (21-22) 11
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K n
+() p 8 T (      dx = pos[0] - P[j].Pos[0];) N
+() S 8 T (      dy = pos[1] - P[j].Pos[1];) N
+() S 8 T (      dz = pos[2] - P[j].Pos[2];) N
+(#ifdef) K
+( PERIODIC) p 16 T () S 24 T () S 32 T () S
+(/*  now find the closest image in the given box ) c n
+(size  */) N
+() p 8 T (      ) S
+(if) K
+(\(dx > boxHalf_X\)) p n
+() S 8 T () S 16 T (dx -= boxSize_X;) N
+() S 8 T (      ) S
+(if) K
+(\(dx < -boxHalf_X\)) p n
+() S 8 T () S 16 T (dx += boxSize_X;) N
+() S 8 T (      ) S
+(if) K
+(\(dy > boxHalf_Y\)) p n
+() S 8 T () S 16 T (dy -= boxSize_Y;) N
+() S 8 T (      ) S
+(if) K
+(\(dy < -boxHalf_Y\)) p n
+() S 8 T () S 16 T (dy += boxSize_Y;) N
+() S 8 T (      ) S
+(if) K
+(\(dz > boxHalf_Z\)) p n
+() S 8 T () S 16 T (dz -= boxSize_Z;) N
+() S 8 T (      ) S
+(if) K
+(\(dz < -boxHalf_Z\)) p n
+() S 8 T () S 16 T (dz += boxSize_Z;) N
+(#endif) K n
+() p 8 T (      r2 = dx * dx + dy * dy + dz * dz;) N
+() S 8 T (      h_j = PPP[j].Hsml;) N
+() S 8 T (      ) S
+(if) K
+(\(r2 < h_i2 || r2 < h_j * h_j\)) p n
+() S 8 T () S 16 T ({) N
+() S 8 T () S 16 T (  r = sqrt\(r2\);) N
+() S 8 T () S 16 T (  ) S
+(if) K
+(\(r > 0\)) p n
+() S 8 T () S 16 T (    {) N
+() S 8 T () S 16 T (      p_over_rho2_j = SphP[j].Pressure / \(SphP[j].d.Density * Sp) N
+(hP[j].d.Density\);) N
+() S 8 T () S 16 T (      soundspeed_j = sqrt\(GAMMA * p_over_rho2_j * SphP[j].d.Dens) N
+(ity\);) N
+() S 8 T () S 16 T (      dvx = vel[0] - SphP[j].VelPred[0];) N
+() S 8 T () S 16 T (      dvy = vel[1] - SphP[j].VelPred[1];) N
+() S 8 T () S 16 T (      dvz = vel[2] - SphP[j].VelPred[2];) N
+() S 8 T () S 16 T (      vdotr = dx * dvx + dy * dvy + dz * dvz;) N
+() N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(All.ComovingIntegrationOn\)) p n
+() S 8 T () S 16 T () S 24 T (vdotr2 = vdotr + hubble_a2 * r2;) N
+() S 8 T () S 16 T (      ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (vdotr2 = vdotr;) N
+() N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(r2 < h_i2\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  hinv = 1.0 / h_i;) N
+(#ifndef) K
+(  TWODIMS) p n
+() S 8 T () S 16 T () S 24 T (  hinv4 = hinv * hinv * hinv * hinv;) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  hinv4 = hinv * hinv * hinv / boxSize_Z;) N
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (  u = r * hinv;) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(u < 0.5\)) p n
+() S 8 T () S 16 T () S 24 T (    dwk_i = hinv4 * u * \(KERNEL_COEFF_3 * u - KERNEL_COE) N
+(FF_4\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    dwk_i = hinv4 * KERNEL_COEFF_6 * \(1.0 - u\) * \(1.0 - ) N
+(u\);) N
+(#ifdef) K
+( MAGNETIC) p n
+(#if) K
+( \() p
+(defined) K
+(\(ARTBPRES\) && ) p
+(defined) K
+(\(MAGFORCE\)\) || ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\)) p n
+(#ifndef) K
+(  TWODIMS) p n
+() S 8 T () S 16 T () S 24 T (  hinv3 = hinv * hinv * hinv;) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  hinv3 = hinv * hinv / boxSize_Z;) N
+(#endif) K n
+(hydra.c) (Page 21/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(u <= 0.5\)) p n
+() S 8 T () S 16 T () S 24 T (    wk_i = hinv3 * \(KERNEL_COEFF_1 + KERNEL_COEFF_2 * \(u) N
+( - 1\) * u * u\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    wk_i = hinv3 * KERNEL_COEFF_5 * \(1.0 - u\) * \(1.0 - u) N
+(\) * \(1.0 - u\);) N
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(ARTBPRES\)) p n
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(u1 <= 0.5\)) p n
+() S 8 T () S 16 T () S 24 T (    w1_i = hinv3 * \(KERNEL_COEFF_1 + KERNEL_COEFF_2 * \(u) N
+(1 - 1\) * u1 * u1\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    w1_i = hinv3 * KERNEL_COEFF_5 * \(1.0 - u1\) * \(1.0 - ) N
+(u1\) * \(1.0 - u1\);) N
+(#endif) K n
+(#endif) N
+() p 8 T () S 16 T () S 24 T (}) N
+() S 8 T () S 16 T (      ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  dwk_i = 0;) N
+(#ifdef) K
+( MAGNETIC) p n
+(#if) K
+( \() p
+(defined) K
+(\(ARTBPRES\) && ) p
+(defined) K
+(\(MAGFORCE\)\) || ) p
+(defined) K
+(\(MAGNETIC_DIFFUSION\)) p n
+() S 8 T () S 16 T () S 24 T (  wk_i = 0;) N
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(ARTBPRES\)) p n
+() S 8 T () S 16 T () S 24 T (  w1_i = 1;) N
+(#endif) K n
+(#endif) N
+() p 8 T () S 16 T () S 24 T (}) N
+() N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(r2 < h_j * h_j\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  hinv = 1.0 / h_j;) N
+(#ifndef) K
+(  TWODIMS) p n
+() S 8 T () S 16 T () S 24 T (  hinv4 = hinv * hinv * hinv * hinv;) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  hinv4 = hinv * hinv * hinv / boxSize_Z;) N
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (  u = r * hinv;) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(u < 0.5\)) p n
+() S 8 T () S 16 T () S 24 T (    dwk_j = hinv4 * u * \(KERNEL_COEFF_3 * u - KERNEL_COE) N
+(FF_4\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    dwk_j = hinv4 * KERNEL_COEFF_6 * \(1.0 - u\) * \(1.0 - ) N
+(u\);) N
+(#if) K
+( ) p
+(defined) K
+(\(MAGNETIC\) && ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(ARTBPRES\)) p n
+(#ifndef) K
+(  TWODIMS) p n
+() S 8 T () S 16 T () S 24 T (  hinv3 = hinv * hinv * hinv;) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  hinv3 = hinv * hinv / boxSize_Z;) N
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(u <= 0.5\)) p n
+() S 8 T () S 16 T () S 24 T (    wk_j = hinv3 * \(KERNEL_COEFF_1 + KERNEL_COEFF_2 * \(u) N
+( - 1\) * u * u\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    wk_j = hinv3 * KERNEL_COEFF_5 * \(1.0 - u\) * \(1.0 - u) N
+(\) * \(1.0 - u\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(u1 <= 0.5\)) p n
+() S 8 T () S 16 T () S 24 T (    w1_j = hinv3 * \(KERNEL_COEFF_1 + KERNEL_COEFF_2 * \(u) N
+(1 - 1\) * u1 * u1\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    w1_j = hinv3 * KERNEL_COEFF_5 * \(1.0 - u1\) * \(1.0 - ) N
+(hydra.c) (Page 22/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (11/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (23-24) 12
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(u1\) * \(1.0 - u1\);) p n
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (}) N
+() S 8 T () S 16 T (      ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  dwk_j = 0;) N
+(#if) K
+( ) p
+(defined) K
+(\(MAGNETIC\) && ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(ARTBPRES\)) p n
+() S 8 T () S 16 T () S 24 T (  wk_j = 0;) N
+() S 8 T () S 16 T () S 24 T (  w1_j = 1.;) N
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (}) N
+() N
+(#ifdef) K
+( MAGNETIC) p n
+(#if) K
+( ) p
+(defined) K
+(\(MAGFORCE\) && ) p
+(defined) K
+(\(ARTBPRES\)) p n
+() S 8 T () S 16 T (      R_abp_i = 0.3 * pow\(wk_i / w1_i, 4\);) N
+() S 8 T () S 16 T (      R_abp_j = 0.3 * pow\(wk_j / w1_j, 4\);) N
+(#endif) K n
+() p 8 T () S 16 T (      dBx = bpred[0] - SphP[j].BPred[0];) N
+() S 8 T () S 16 T (      dBy = bpred[1] - SphP[j].BPred[1];) N
+() S 8 T () S 16 T (      dBz = bpred[2] - SphP[j].BPred[2];) N
+() S 8 T () S 16 T (      magfac = P[j].Mass / r;) S 48 T () S
+(/* we moved 'dwk_i / rho' down !) c n
+( */) N
+() p 8 T () S 16 T (      ) S
+(if) K
+(\(All.ComovingIntegrationOn\)) p n
+() S 8 T () S 16 T () S 24 T (magfac *= 1. / \(hubble_a * All.Time * All.Time\);) N
+() S 8 T () S 16 T (      ) S
+(/* last factor takes care of all cosmological prefactor */) c n
+(#ifdef) K
+( CORRECTDB) p n
+() S 8 T () S 16 T (      magfac *= dhsmlDensityFactor;) N
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC_DISSIPATION\) || ) p
+(defined) K
+(\(DIVBCLEANING_DEDNER\)) p n
+() S 8 T () S 16 T (      magfac_sym = magfac * dwk_i / rho;) N
+(#endif) K n
+(#ifdef) S
+( MAGNETIC_DISSIPATION) p n
+(#ifdef) K
+( TIME_DEP_MAGN_DISP) p n
+() S 8 T () S 16 T (      Balpha_ij = 0.5 * \(Balpha + SphP[j].Balpha\);) N
+(#else) K n
+() p 8 T () S 16 T (      Balpha_ij = All.ArtMagDispConst;) N
+(#endif) K n
+(#endif) N
+() p 8 T () S 16 T (      magfac *= dwk_i / rho;) N
+(#ifndef) K
+( EULERPOTENTIALS) p n
+() S 8 T () S 16 T (      dtB[0] +=) N
+() S 8 T () S 16 T () S 24 T (magfac * \(\(bpred[0] * dvy - bpred[1] * dvx\) * dy +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  \(bpred[0] * dvz - bpred[2] * dvx\) * dz\);) N
+() S 8 T () S 16 T (      dtB[1] +=) N
+() S 8 T () S 16 T () S 24 T (magfac * \(\(bpred[1] * dvz - bpred[2] * dvy\) * dz +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  \(bpred[1] * dvx - bpred[0] * dvy\) * dx\);) N
+() S 8 T () S 16 T (      dtB[2] +=) N
+() S 8 T () S 16 T () S 24 T (magfac * \(\(bpred[2] * dvx - bpred[0] * dvz\) * dx +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  \(bpred[2] * dvy - bpred[1] * dvz\) * dy\);) N
+(#ifdef) K
+( DIVBINDUCTION) p n
+() S 8 T () S 16 T (      dtB[0] += magfac * vel[0] * \(dBx * dx + dBy * dy + dBz * d) N
+(z\);) N
+() S 8 T () S 16 T (      dtB[1] += magfac * vel[1] * \(dBx * dx + dBy * dy + dBz * d) N
+(z\);) N
+() S 8 T () S 16 T (      dtB[2] += magfac * vel[2] * \(dBx * dx + dBy * dy + dBz * d) N
+(z\);) N
+(#endif) K n
+(#endif) N
+(#ifdef) S
+( MAGNETIC_DIFFUSION) p n
+() S 8 T () S 16 T (      magfac *= All.MagneticEta;) N
+() S 8 T () S 16 T (      dtB[0] += magfac * \(rotb[1] * dz - rotb[2] * dy\);) N
+() S 8 T () S 16 T (      dtB[1] += magfac * \(rotb[2] * dx - rotb[0] * dz\);) N
+(hydra.c) (Page 23/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T (      dtB[2] += magfac * \(rotb[0] * dy - rotb[1] * dx\);) N
+() S 8 T () S 16 T (      magfac *= \(r * wk_i / \(dwk_i * mu0_1\)\);) N
+() S 8 T () S 16 T (      dtEntropy += magfac * \(rotb[0] * rotb[0] + rotb[1] * rotb[) N
+(1] + rotb[2] * rotb[2]\);) N
+(#endif) K n
+(#ifdef) S
+( DIVBCLEANING_DEDNER) p n
+(#ifdef) K
+( SMOOTH_PHI) p n
+() S 8 T () S 16 T (      phifac = magfac_sym * \(PhiPred - SphP[j].SmoothPhi\);) N
+(#else) K n
+() p 8 T () S 16 T (      phifac = magfac_sym * \(PhiPred - SphP[j].PhiPred\);) N
+(#endif) K n
+() p 8 T () S 16 T (      dtB[0] -= phifac * dx;) N
+() S 8 T () S 16 T (      dtB[1] -= phifac * dy;) N
+() S 8 T () S 16 T (      dtB[2] -= phifac * dz;) N
+() S 8 T () S 16 T (      phifac = magfac_sym;) N
+(#endif) K n
+(#ifdef) S
+( MAGFORCE) p n
+() S 8 T () S 16 T (      magfac_j = 1 / \(SphP[j].d.Density * SphP[j].d.Density\);) N
+(#ifndef) K
+( MU0_UNITY) p n
+() S 8 T () S 16 T (      magfac_j /= \(4 * M_PI\);) N
+(#endif) K n
+(#ifdef) S
+( CORRECTBFRC) p n
+() S 8 T () S 16 T (      magfac_j *= dwk_j * SphP[j].h.DhsmlDensityFactor;) N
+() S 8 T () S 16 T (      magfac_i = dwk_i * magfac_i_base;) N
+(#else) K n
+() p 8 T () S 16 T (      magfac_i = magfac_i_base;) N
+(#endif) K n
+() p 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0, b2_j = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  b2_j += SphP[j].BPred[k] * SphP[j].BPred[k];) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(for) K
+(\(l = 0; l < 3; l++\)) p n
+() S 8 T () S 16 T () S 24 T (    mm_j[k][l] = SphP[j].BPred[k] * SphP[j].BPred[l];) N
+() S 8 T () S 16 T () S 24 T (}) N
+() S 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T (mm_j[k][k] -= 0.5 * b2_j;) N
+(#ifdef) K
+( MAGNETIC_SIGNALVEL) p n
+(#ifdef) K
+( ALFVEN_VEL_LIMITER) p n
+() S 8 T () S 16 T (      vcsa2_j = soundspeed_j * soundspeed_j +) N
+() S 8 T () S 16 T () S 24 T (DMIN\(mu0_1 * b2_j / SphP[j].d.Density,) N
+() S 8 T () S 16 T () S 24 T (     ALFVEN_VEL_LIMITER * soundspeed_j * soundspeed_j\);) N
+(#else) K n
+() p 8 T () S 16 T (      vcsa2_j = soundspeed_j * soundspeed_j + mu0_1 * b2_j / Sph) N
+(P[j].d.Density;) N
+(#endif) K n
+() p 8 T () S 16 T (      Bpro2_j = \(SphP[j].BPred[0] * dx + SphP[j].BPred[1] * dy +) N
+( SphP[j].BPred[2] * dz\) / r;) N
+() S 8 T () S 16 T (      Bpro2_j *= Bpro2_j;) N
+() S 8 T () S 16 T (      magneticspeed_j = sqrt\(vcsa2_j +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     sqrt\(DMAX\(\(vcsa2_j * vcsa2_j -) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T () S 56 T (4 * soundspeed_j * sound) N
+(speed_j * Bpro2_j) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T () S 56 T (* mu0_1 / SphP[j].d.Dens) N
+(ity\), 0\)\)\) / 1.4142136;) N
+() S 8 T () S 16 T (      Bpro2_i = \(bpred[0] * dx + bpred[1] * dy + bpred[2] * dz\) ) N
+(/ r;) N
+() S 8 T () S 16 T (      Bpro2_i *= Bpro2_i;) N
+() S 8 T () S 16 T (      magneticspeed_i = sqrt\(vcsa2_i +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     sqrt\(DMAX\(\(vcsa2_i * vcsa2_i -) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T () S 56 T (4 * soundspeed_i * sound) N
+(speed_i * Bpro2_i) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T () S 56 T (* mu0_1 / rho\), 0\)\)\) / 1) N
+(.4142136;) N
+(hydra.c) (Page 24/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (12/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (25-26) 13
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K n
+(#ifdef) S
+( MAGNETIC_DISSIPATION) p n
+(#ifdef) K
+( MAGDISSIPATION_PERPEN) p n
+() S 8 T () S 16 T (      dTu_diss_b = -magfac_sym * Balpha_ij * \(\(b2_i - Bpro2_i\) -) N
+( \(b2_j - Bpro2_j\)\);) N
+(#else) K n
+() p 8 T () S 16 T (      dTu_diss_b = -magfac_sym * Balpha_ij * \(dBx * dBx + dBy * ) N
+(dBy + dBz * dBz\);) N
+(#endif) K n
+(#endif) N
+(#ifdef) S
+( CORRECTBFRC) p n
+() S 8 T () S 16 T (      magfac = P[j].Mass / r;) N
+(#else) K n
+() p 8 T () S 16 T (      magfac = P[j].Mass * 0.5 * \(dwk_i + dwk_j\) / r;) N
+(#endif) K n
+() p 8 T () S 16 T (      ) S
+(if) K
+(\(All.ComovingIntegrationOn\)) p n
+() S 8 T () S 16 T () S 24 T (magfac *= pow\(All.Time, 3 * GAMMA\);) N
+() S 8 T () S 16 T (      ) S
+(/* last factor takes care of all cosmological prefactor */) c n
+(#ifndef) K
+( MU0_UNITY) p n
+() S 8 T () S 16 T (      magfac *= All.UnitTime_in_s * All.UnitTime_in_s *) N
+() S 8 T () S 16 T () S 24 T (All.UnitLength_in_cm / \(All.UnitMass_in_g * All.HubblePa) N
+(ram * All.HubbleParam\);) N
+() S 8 T () S 16 T (      ) S
+(/* take care of B unit conversion into GADGET units ! */) c n
+(#endif) K n
+() p 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T (acc[k] +=) N
+() S 8 T () S 16 T () S 24 T (  magfac * \(\(mm_i[k][0] * magfac_i + mm_j[k][0] * magfac) N
+(_j\) * dx +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    \(mm_i[k][1] * magfac_i + mm_j[k][1] * magfac) N
+(_j\) * dy +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    \(mm_i[k][2] * magfac_i + mm_j[k][2] * magfac) N
+(_j\) * dz\);) N
+(#ifdef) K
+( ARTBPRES) p n
+() S 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T () S
+(for) K
+(\(l = 0; l < 3; l++\)) p n
+() S 8 T () S 16 T () S 24 T (  mm_abp_j[k][l] = SphP[j].BPred[k] * SphP[j].BPred[l] *) N
+( R_abp_j / 2.0;) N
+() S 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T () S
+(for) K
+(\(l = 0; l < 3; l++\)) p n
+() S 8 T () S 16 T () S 24 T (  mm_abp_i[k][l] = bpred[k] * bpred[l] * R_abp_i / 2.0;) N
+() S 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T (acc[k] -= magfac * \(\(mm_abp_i[k][0] * magfac_i +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     mm_abp_j[k][0] * magfac_j\) * dx +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (    \(mm_abp_i[k][1] * magfac_i +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (     mm_abp_j[k][1] * magfac_j\) * dy +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (    \(mm_abp_i[k][2] * magfac_i + mm_abp_) N
+(j[k][2] * magfac_j\) * dz\);) N
+(#endif) K n
+(#ifdef) S
+( DIVBFORCE) p n
+() S 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T () S 16 T () S 24 T (acc[k] -=) N
+() S 8 T () S 16 T () S 24 T (  magfac * \(\(\(bpred[k] * bpred[0]\) * magfac_i) N
+() S 8 T () S 16 T () S 24 T () S 32 T (     + \(bpred[k] * SphP[j].BPred[0]\) * magfac_j\)) N
+( * dx) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    + \(\(bpred[k] * bpred[1]\) * magfac_i) N
+() S 8 T () S 16 T () S 24 T () S 32 T (       + \(bpred[k] * SphP[j].BPred[1]\) * magfac_) N
+(j\) * dy) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    + \(\(bpred[k] * bpred[2]\) * magfac_i +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (       \(bpred[k] * SphP[j].BPred[2]\) * magfac_j\)) N
+( * dz\);) N
+(#endif) K n
+(#endif) N
+(hydra.c) (Page 25/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K
+( ) p
+(/* end of MAGNETIC */) c n
+() p n
+() N
+(#ifndef) K
+( MAGNETIC_SIGNALVEL) p n
+() S 8 T () S 16 T (      vsig = soundspeed_i + soundspeed_j;) N
+(#else) K n
+() p 8 T () S 16 T (      vsig = magneticspeed_i + magneticspeed_j;) N
+(#endif) K n
+(#ifndef) S
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(vsig > maxSignalVel\)) p n
+() S 8 T () S 16 T () S 24 T (maxSignalVel = vsig;) N
+(#endif) K n
+() p 8 T () S 16 T (      ) S
+(if) K
+(\(vdotr2 < 0\)) p 40 T () S
+(/* ... artificial viscosity */) c n
+() p 8 T () S 16 T () S 24 T ({) N
+(#ifndef) K
+( ALTVISCOSITY) p n
+(#ifndef) K
+( CONVENTIONAL_VISCOSITY) p n
+() S 8 T () S 16 T () S 24 T (  mu_ij = fac_mu * vdotr2 / r;) S 56 T () S
+(/* note: this is negativ) c n
+(e! */) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  c_ij = 0.5 * \(soundspeed_i + soundspeed_j\);) N
+() S 8 T () S 16 T () S 24 T (  h_ij = 0.5 * \(h_i + h_j\);) N
+() S 8 T () S 16 T () S 24 T (  mu_ij = fac_mu * h_ij * vdotr2 / \(r2 + 0.0001 * h_ij *) N
+( h_ij\);) N
+(#endif) K n
+(#ifdef) S
+( MAGNETIC) p n
+() S 8 T () S 16 T () S 24 T (  vsig -= 1.5 * mu_ij;) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  vsig -= 3 * mu_ij;) N
+(#endif) K n
+(#ifndef) S
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(vsig > maxSignalVel\)) p n
+() S 8 T () S 16 T () S 24 T (    maxSignalVel = vsig;) N
+(#endif) K n
+() p n
+() S 8 T () S 16 T () S 24 T (  rho_ij = 0.5 * \(rho + SphP[j].d.Density\);) N
+(#ifndef) K
+( NAVIERSTOKES) p n
+() S 8 T () S 16 T () S 24 T (  f2 =) N
+() S 8 T () S 16 T () S 24 T (    fabs\(SphP[j].v.DivVel\) / \(fabs\(SphP[j].v.DivVel\) + S) N
+(phP[j].r.CurlVel +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T (      0.0001 * soundspeed_j / fa) N
+(c_mu / PPP[j].Hsml\);) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  f2 =) N
+() S 8 T () S 16 T () S 24 T (    fabs\(SphP[j].v.DivVel\) / \(fabs\(SphP[j].v.DivVel\) + S) N
+(phP[j].u.s.CurlVel +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T (      0.0001 * soundspeed_j / fa) N
+(c_mu / PPP[j].Hsml\);) N
+(#endif) K n
+() p n
+(#ifdef) K
+( NO_SHEAR_VISCOSITY_LIMITER) p n
+() S 8 T () S 16 T () S 24 T (  f1 = f2 = 1;) N
+(#endif) K n
+(#ifdef) S
+( TIME_DEP_ART_VISC) p n
+() S 8 T () S 16 T () S 24 T (  BulkVisc_ij = 0.5 * \(alpha + SphP[j].alpha\);) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  BulkVisc_ij = All.ArtBulkViscConst;) N
+(#endif) K n
+(#ifndef) S
+( CONVENTIONAL_VISCOSITY) p n
+() S 8 T () S 16 T () S 24 T (  visc = 0.25 * BulkVisc_ij * vsig * \(-mu_ij\) / rho_ij *) N
+( \(f1 + f2\);) N
+(#else) K n
+() p 8 T () S 16 T () S 24 T (  visc =) N
+(hydra.c) (Page 26/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (13/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (27-28) 14
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T () S 24 T (    \(-BulkVisc_ij * mu_ij * c_ij + 2 * BulkVisc_ij * mu_) N
+(ij * mu_ij\) /) N
+() S 8 T () S 16 T () S 24 T (    rho_ij * \(f1 + f2\) * 0.5;) N
+(#endif) K n
+() p n
+(#else) K
+( ) p
+(/* start of ALTVISCOSITY block */) c n
+() p 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(f1 < 0\)) p n
+() S 8 T () S 16 T () S 24 T (    mu_i = h_i * fabs\(f1\);) S 56 T () S
+(/* f1 hold here the velo) c n
+(city divergence of particle i */) N
+() p 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    mu_i = 0;) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(SphP[j].u.s.a4.DivVel < 0\)) p n
+() S 8 T () S 16 T () S 24 T (    mu_j = h_j * fabs\(SphP[j].u.s.a4.DivVel\);) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T (    mu_j = 0;) N
+() S 8 T () S 16 T () S 24 T (  visc = All.ArtBulkViscConst * \(\(soundspeed_i + mu_i\) *) N
+( mu_i / rho +) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T () S 48 T () S 56 T ( \(soundspeed_j + mu_j\) *) N
+( mu_j / SphP[j].d.Density\);) N
+(#endif) K
+( ) p
+(/* end of ALTVISCOSITY block */) c n
+() p n
+() N
+() S 8 T () S 16 T () S 24 T (  ) S
+(/* .... end artificial viscosity evaluation */) c n
+() p 8 T () S 16 T () S 24 T (  ) S
+(/* now make sure that viscous acceleration is not too ) c n
+(large */) N
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(visc > 0\)) p n
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      dt = fac_vsic_fix * vdotr2 /) N
+() S 8 T () S 16 T () S 24 T () S 32 T (\(0.5 * \(mass + P[j].Mass\) * \(dwk_i + dwk_j\) * r ) N
+(* visc\);) N
+() N
+() S 8 T () S 16 T () S 24 T (      dt /= hubble_a;) N
+() N
+() S 8 T () S 16 T () S 24 T (      ) S
+(if) K
+(\(dt < minViscousDt\)) p n
+() S 8 T () S 16 T () S 24 T () S 32 T (minViscousDt = dt;) N
+() S 8 T () S 16 T () S 24 T (    }) N
+(#endif) K n
+() p n
+(#ifndef) K
+( NOVISCOSITYLIMITER) p n
+() S 8 T () S 16 T () S 24 T (  dt =) N
+() S 8 T () S 16 T () S 24 T (    2 * IMAX\(timestep,) N
+() S 8 T () S 16 T () S 24 T () S 32 T (     \(P[j].TimeBin ? \(1 << P[j].TimeBin\) : 0\)\) *) N
+( All.Timebase_interval;) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(dt > 0 && \(dwk_i + dwk_j\) < 0\)) p n
+() S 8 T () S 16 T () S 24 T (    {) N
+(#ifdef) K
+( BLACK_HOLES) p n
+() S 8 T () S 16 T () S 24 T (      ) S
+(if) K
+(\(\(mass + P[j].Mass\) > 0\)) p n
+(#endif) K n
+() p 8 T () S 16 T () S 24 T () S 32 T (visc = DMIN\(visc, 0.5 * fac_vsic_fix * vdotr2 /) N
+() S 8 T () S 16 T () S 24 T () S 32 T () S 40 T (    \(0.5 * \(mass + P[j].Mass\) * \(dwk_i +) N
+( dwk_j\) * r * dt\)\);) N
+() S 8 T () S 16 T () S 24 T (    }) N
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (}) N
+() S 8 T () S 16 T (      ) S
+(else) K n
+() p 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  visc = 0;) N
+() S 8 T () S 16 T () S 24 T (}) N
+() N
+() S 8 T () S 16 T (      p_over_rho2_j *= SphP[j].h.DhsmlDensityFactor;) N
+() N
+(hydra.c) (Page 27/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T (      hfc_visc = 0.5 * P[j].Mass * visc * \(dwk_i + dwk_j\) / r;) N
+() S 8 T () S 16 T (      ) S
+(/* Formulation derived from the Lagrangian */) c n
+() p 8 T () S 16 T (      hfc = hfc_visc + P[j].Mass * \(p_over_rho2_i * dwk_i + p_ov) N
+(er_rho2_j * dwk_j\) / r;) N
+(#ifdef) K
+( WINDS) p n
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(P[j].Type == 0\)) p n
+() S 8 T () S 16 T () S 24 T () S
+(if) K
+(\(SphP[j].DelayTime > 0\)) p 56 T () S
+(/* No force by wind part) c n
+(icles */) N
+() p 8 T () S 16 T () S 24 T (  {) N
+() S 8 T () S 16 T () S 24 T (    hfc = hfc_visc = 0;) N
+() S 8 T () S 16 T () S 24 T (  }) N
+(#endif) K n
+() p n
+(#ifndef) K
+( NOACCEL) p n
+() S 8 T () S 16 T (      acc[0] += FLT\(-hfc * dx\);) N
+() S 8 T () S 16 T (      acc[1] += FLT\(-hfc * dy\);) N
+() S 8 T () S 16 T (      acc[2] += FLT\(-hfc * dz\);) N
+(#endif) K n
+() p n
+(#ifndef) K
+( EOS_ENERGY) p n
+() S 8 T () S 16 T (      dtEntropy += FLT\(0.5 * hfc_visc * vdotr2\);) N
+(#else) K n
+() p 8 T () S 16 T (      dtEntropy += FLT\(0.5 * hfc * vdotr2\);) N
+(#endif) K n
+() p n
+() N
+(#ifdef) K
+( NAVIERSTOKES) p n
+() S 8 T () S 16 T (      faci = mass * shear_viscosity / \(rho * rho\) * dwk_i / r;) N
+() N
+(#ifndef) K
+( NAVIERSTOKES_CONSTANT) p n
+() S 8 T () S 16 T (      faci *= pow\(\(Entropy * pow\(rho * a3inv, GAMMA_MINUS1\) / GA) N
+(MMA_MINUS1\), 2.5\);) S 24 T () S
+(/*multiplied by E^5/2 */) c n
+(#endif) K n
+() p 8 T () S 16 T (      facj = P[j].Mass * get_shear_viscosity\(j\) /) N
+() S 8 T () S 16 T () S 24 T (\(SphP[j].d.Density * SphP[j].d.Density\) * dwk_j / r;) N
+() N
+(#ifndef) K
+( NAVIERSTOKES_CONSTANT) p n
+() S 8 T () S 16 T (      facj *= pow\(\(SphP[j].Entropy * pow\(SphP[j].d.Density * a3i) N
+(nv, GAMMA_MINUS1\) / GAMMA_MINUS1\), 2.5\);) S 48 T () S
+(/*multiplied by E^5/2 */) c n
+(#endif) K n
+() p n
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+() S 8 T () S 16 T (      facbi = mass * All.NavierStokes_BulkViscosity / \(rho * rho) N
+(\) * dwk_i / r;) N
+() S 8 T () S 16 T (      facbj = P[j].Mass * All.NavierStokes_BulkViscosity /) N
+() S 8 T () S 16 T () S 24 T (\(SphP[j].d.Density * SphP[j].d.Density\) * dwk_j / r;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( WINDS) p n
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(P[j].Type == 0\)) p n
+() S 8 T () S 16 T () S 24 T () S
+(if) K
+(\(SphP[j].DelayTime > 0\)) p 56 T () S
+(/* No visc for wind part) c n
+(icles */) N
+() p 8 T () S 16 T () S 24 T (  {) N
+() S 8 T () S 16 T () S 24 T (    faci = facj = 0;) N
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+() S 8 T () S 16 T () S 24 T (    facbi = facbj = 0;) N
+(#endif) K n
+() p 8 T () S 16 T () S 24 T (  }) N
+(#endif) K n
+() p n
+(#ifdef) K
+( VISCOSITY_SATURATION) p n
+() S 8 T () S 16 T (      IonMeanFreePath_i = All.IonMeanFreePath * pow\(\(Entropy * p) N
+(hydra.c) (Page 28/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (14/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (29-30) 15
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(ow\(rho * a3inv, GAMMA_MINUS1\) / GAMMA_MINUS1\), 2.0\) / rho;) p 64 T () S
+(/* u^2/rho */) c n
+() p n
+() S 8 T () S 16 T (      IonMeanFreePath_j = All.IonMeanFreePath * pow\(\(SphP[j].Ent) N
+(ropy * pow\(SphP[j].d.Density * a3inv, GAMMA_MINUS1\) / GAMMA_MINUS1\), 2.0\) / SphP) N
+([j].d.Density;) S 16 T () S
+(/* u^2/rho */) c n
+() p n
+() S 8 T () S 16 T (      ) S
+(for) K
+(\(k = 0, VelLengthScale_i = 0, VelLengthScale_j = 0; k <) p n
+( 3; k++\)) N
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(fabs\(stressdiag[k]\) > 0\)) p n
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      VelLengthScale_i = 2 * soundspeed_i / fabs\(stressd) N
+(iag[k]\);) N
+() N
+() S 8 T () S 16 T () S 24 T (      ) S
+(if) K
+(\(VelLengthScale_i < IonMeanFreePath_i && VelLeng) p n
+(thScale_i > 0\)) N
+() S 8 T () S 16 T () S 24 T () S 32 T ({) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  stressdiag[k] = stressdiag[k] * \(VelLengthScal) N
+(e_i / IonMeanFreePath_i\);) N
+() N
+() S 8 T () S 16 T () S 24 T () S 32 T (}) N
+() S 8 T () S 16 T () S 24 T (    }) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(fabs\(SphP[j].u.s.StressDiag[k]\) > 0\)) p n
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      VelLengthScale_j = 2 * soundspeed_j / fabs\(SphP[j]) N
+(.u.s.StressDiag[k]\);) N
+() N
+() S 8 T () S 16 T () S 24 T (      ) S
+(if) K
+(\(VelLengthScale_j < IonMeanFreePath_j && VelLeng) p n
+(thScale_j > 0\)) N
+() S 8 T () S 16 T () S 24 T () S 32 T ({) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  SphP[j].u.s.StressDiag[k] = SphP[j].u.s.Stress) N
+(Diag[k] *) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    \(VelLengthScale_j / IonMeanFreePath_j\);) N
+() N
+() S 8 T () S 16 T () S 24 T () S 32 T (}) N
+() S 8 T () S 16 T () S 24 T (    }) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(fabs\(stressoffdiag[k]\) > 0\)) p n
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      VelLengthScale_i = 2 * soundspeed_i / fabs\(stresso) N
+(ffdiag[k]\);) N
+() N
+() S 8 T () S 16 T () S 24 T (      ) S
+(if) K
+(\(VelLengthScale_i < IonMeanFreePath_i && VelLeng) p n
+(thScale_i > 0\)) N
+() S 8 T () S 16 T () S 24 T () S 32 T ({) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  stressoffdiag[k] =) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    stressoffdiag[k] * \(VelLengthScale_i / IonMe) N
+(anFreePath_i\);) N
+() S 8 T () S 16 T () S 24 T () S 32 T (}) N
+() S 8 T () S 16 T () S 24 T (    }) N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(fabs\(SphP[j].u.s.StressOffDiag[k]\) > 0\)) p n
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      VelLengthScale_j = 2 * soundspeed_j / fabs\(SphP[j]) N
+(.u.s.StressOffDiag[k]\);) N
+() N
+() S 8 T () S 16 T () S 24 T (      ) S
+(if) K
+(\(VelLengthScale_j < IonMeanFreePath_j && VelLeng) p n
+(thScale_j > 0\)) N
+() S 8 T () S 16 T () S 24 T () S 32 T ({) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  SphP[j].u.s.StressOffDiag[k] = SphP[j].u.s.Str) N
+(essOffDiag[k] *) N
+() S 8 T () S 16 T () S 24 T () S 32 T (    \(VelLengthScale_j / IonMeanFreePath_j\);) N
+() S 8 T () S 16 T () S 24 T () S 32 T (}) N
+() S 8 T () S 16 T () S 24 T (    }) N
+(hydra.c) (Page 29/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 8 T () S 16 T () S 24 T (}) N
+(#endif) K n
+() p n
+() S 8 T () S 16 T (      ) S
+(/* Acceleration due to the shear viscosity */) c n
+() p 8 T () S 16 T (      acc[0] += faci * \(stressdiag[0] * dx + stressoffdiag[0] * ) N
+(dy + stressoffdiag[1] * dz\)) N
+() S 8 T () S 16 T () S 24 T (+ facj * \(SphP[j].u.s.StressDiag[0] * dx + SphP[j].u.s.S) N
+(tressOffDiag[0] * dy +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  SphP[j].u.s.StressOffDiag[1] * dz\);) N
+() N
+() S 8 T () S 16 T (      acc[1] += faci * \(stressoffdiag[0] * dx + stressdiag[1] * ) N
+(dy + stressoffdiag[2] * dz\)) N
+() S 8 T () S 16 T () S 24 T (+ facj * \(SphP[j].u.s.StressOffDiag[0] * dx + SphP[j].u.) N
+(s.StressDiag[1] * dy +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  SphP[j].u.s.StressOffDiag[2] * dz\);) N
+() N
+() S 8 T () S 16 T (      acc[2] += faci * \(stressoffdiag[1] * dx + stressoffdiag[2]) N
+( * dy + stressdiag[2] * dz\)) N
+() S 8 T () S 16 T () S 24 T (+ facj * \(SphP[j].u.s.StressOffDiag[1] * dx + SphP[j].u.) N
+(s.StressOffDiag[2] * dy +) N
+() S 8 T () S 16 T () S 24 T () S 32 T (  SphP[j].u.s.StressDiag[2] * dz\);) N
+() N
+() S 8 T () S 16 T (      ) S
+(/*Acceleration due to the bulk viscosity */) c n
+(#ifdef) K
+( NAVIERSTOKES_BULK) p n
+(#ifdef) K
+( VISCOSITY_SATURATION) p n
+() S 8 T () S 16 T (      VelLengthScale_i = 0;) N
+() S 8 T () S 16 T (      VelLengthScale_j = 0;) N
+() N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(fabs\(divvel\) > 0\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  VelLengthScale_i = 3 * soundspeed_i / fabs\(divvel\);) N
+() N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(VelLengthScale_i < IonMeanFreePath_i && VelLengthSc) p n
+(ale_i > 0\)) N
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      divvel = divvel * \(VelLengthScale_i / IonMeanFreeP) N
+(ath_i\);) N
+() S 8 T () S 16 T () S 24 T (    }) N
+() S 8 T () S 16 T () S 24 T (}) N
+() N
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(fabs\(SphP[j].u.s.a4.DivVel\) > 0\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  VelLengthScale_j = 3 * soundspeed_j / fabs\(SphP[j].u.s) N
+(.a4.DivVel\);) N
+() N
+() S 8 T () S 16 T () S 24 T (  ) S
+(if) K
+(\(VelLengthScale_j < IonMeanFreePath_j && VelLengthSc) p n
+(ale_j > 0\)) N
+() S 8 T () S 16 T () S 24 T (    {) N
+() S 8 T () S 16 T () S 24 T (      SphP[j].u.s.a4.DivVel = SphP[j].u.s.a4.DivVel *) N
+() S 8 T () S 16 T () S 24 T () S 32 T (\(VelLengthScale_j / IonMeanFreePath_j\);) N
+() N
+() S 8 T () S 16 T () S 24 T (    }) N
+() S 8 T () S 16 T () S 24 T (}) N
+(#endif) K n
+() p n
+() N
+() S 8 T () S 16 T (      acc[0] += facbi * divvel * dx + facbj * SphP[j].u.s.a4.Div) N
+(Vel * dx;) N
+() S 8 T () S 16 T (      acc[1] += facbi * divvel * dy + facbj * SphP[j].u.s.a4.Div) N
+(Vel * dy;) N
+() S 8 T () S 16 T (      acc[2] += facbi * divvel * dz + facbj * SphP[j].u.s.a4.Div) N
+(Vel * dz;) N
+(hydra.c) (Page 30/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (15/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (31-32) 16
+%%BeginPageSetup
+/pagesave save def
+sh 0 translate
+90 rotate
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 12 add translate
+/v 0 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#endif) K n
+(#endif) S
+( ) p
+(/* end NAVIERSTOKES */) c n
+() p n
+() N
+(#ifdef) K
+( MAGNETIC) p n
+(#ifdef) K
+( MAGNETIC_DISSIPATION) p n
+() S 8 T () S 16 T (      magfac_sym *= vsig * 0.5 * Balpha_ij;) N
+() S 8 T () S 16 T (      dtEntropy += dTu_diss_b * 0.25 * vsig * mu0_1 * r2;) N
+(#ifdef) K
+( MAGDISSIPATION_PERPEN) p n
+() S 8 T () S 16 T (      mft = \(dBx * dx + dBy * dy + dBz * dz\) / r;) N
+() S 8 T () S 16 T (      mvt[0] = dBx - mft * dx / r;) N
+() S 8 T () S 16 T (      mvt[1] = dBy - mft * dy / r;) N
+() S 8 T () S 16 T (      mvt[2] = dBz - mft * dz / r;) N
+() S 8 T () S 16 T (      mft = \(mvt[0] * dx + mvt[1] * dy + mvt[2] * dy\) / r;) N
+() S 8 T () S 16 T (      dtB[0] += magfac_sym * mft * dx;) N
+() S 8 T () S 16 T (      dtB[1] += magfac_sym * mft * dy;) N
+() S 8 T () S 16 T (      dtB[2] += magfac_sym * mft * dz;) N
+(#else) K n
+() p 8 T () S 16 T (      magfac_sym *= \(dBx * dx + dBy * dy + dBz * dz\) / r;) N
+() S 8 T () S 16 T (      dtB[0] += magfac_sym * dx;) N
+() S 8 T () S 16 T (      dtB[1] += magfac_sym * dy;) N
+() S 8 T () S 16 T (      dtB[2] += magfac_sym * dz;) N
+(#endif) K n
+(#endif) N
+(#ifdef) S
+( DIVBCLEANING_DEDNER) p n
+() S 8 T () S 16 T (      DtPhi -= All.DivBcleanHyperbolicSigma * phifac * 0.25 * vs) N
+(ig * vsig *) N
+() S 8 T () S 16 T () S 24 T (\(dBx * dx + dBy * dy + dBz * dz\) / \(fac_mu * fac_mu\);) N
+(#endif) K n
+(#endif) N
+() p n
+(#ifdef) K
+( WAKEUP) p n
+() S 8 T () S 16 T (      ) S
+(if) K
+(\(maxSignalVel > 1.1 * SphP[j].MaxSignalVel\)) p n
+() S 8 T () S 16 T () S 24 T ({) N
+() S 8 T () S 16 T () S 24 T (  SphP[j].wakeup = 1;) N
+() S 8 T () S 16 T () S 24 T (}) N
+(#endif) K n
+() p 8 T () S 16 T (    }) N
+() S 8 T () S 16 T (}) N
+() S 8 T (    }) N
+() S 8 T (}) N
+() N
+(      ) S
+(if) K
+(\(mode == 1\)) p n
+() S 8 T ({) N
+() S 8 T (  listindex++;) N
+() S 8 T (  ) S
+(if) K
+(\(listindex < NODELISTLENGTH\)) p n
+() S 8 T (    {) N
+() S 8 T (      startnode = HydroDataGet[target].NodeList[listindex];) N
+() S 8 T (      ) S
+(if) K
+(\(startnode >= 0\)) p n
+() S 8 T () S 16 T (startnode = Nodes[startnode].u.d.nextnode;) S 64 T () S
+(/* open it */) c n
+() p 8 T (    }) N
+() S 8 T (}) N
+(    }) N
+() N
+() N
+(  ) S
+(/* Now collect the result at the right place */) c n
+(  ) p
+(if) K
+(\(mode == 0\)) p n
+(    {) N
+(      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (SphP[target].a.dHydroAccel[k] = acc[k];) N
+(      SphP[target].e.dDtEntropy = dtEntropy;) N
+(#ifdef) K
+( HYDRO_COST_FACTOR) p n
+(hydra.c) (Page 31/32) (Mar 12, 08 15:17) title
+border
+/v 1 store
+/x0 x v get 3.362408 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(      P[target].GravCost += HYDRO_COST_FACTOR * ninteractions;) p n
+(#endif) K n
+() p n
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+(      SphP[target].MinViscousDt = minViscousDt;) N
+(#else) K n
+(      SphP[target].MaxSignalVel = maxSignalVel;) p n
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC\) && !) p
+(defined) K
+(\(EULERPOTENTIALS\)) p n
+(      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (SphP[target].DtB[k] = dtB[k];) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+(      SphP[target].DtPhi = DtPhi;) N
+(#endif) K n
+(#endif) N
+(    }) p n
+(  ) S
+(else) K n
+(    {) p n
+(      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (HydroDataResult[target].Acc[k] = acc[k];) N
+(      HydroDataResult[target].DtEntropy = dtEntropy;) N
+(#ifdef) K
+( HYDRO_COST_FACTOR) p n
+(      HydroDataResult[target].Ninteractions = ninteractions;) N
+(#endif) K n
+() p n
+(#ifdef) K
+( ALTERNATIVE_VISCOUS_TIMESTEP) p n
+(      HydroDataResult[target].MinViscousDt = minViscousDt;) N
+(#else) K n
+(      HydroDataResult[target].MaxSignalVel = maxSignalVel;) p n
+(#endif) K n
+(#if) S
+( ) p
+(defined) K
+(\(MAGNETIC\) && !) p
+(defined) K
+(\(EULERPOTENTIALS\)) p n
+(      ) S
+(for) K
+(\(k = 0; k < 3; k++\)) p n
+() S 8 T (HydroDataResult[target].DtB[k] = dtB[k];) N
+(#ifdef) K
+( DIVBCLEANING_DEDNER) p n
+(      HydroDataResult[target].DtPhi = DtPhi;) N
+(#endif) K n
+(#endif) N
+(    }) p n
+() N
+(  ) S
+(return) K
+( 0;) p n
+(}) N
+(hydra.c) (Page 32/32) (Mar 12, 08 15:17) title
+border
+% End of virtual page
+grestore
+(Printed by Klaus Dolag) rhead
+(hydra.c) (16/16) (Thursday March 13, 2008) footer
+end % of iso1dict
+pagesave restore
+showpage
+
+%%Trailer
+end
+%%EOF

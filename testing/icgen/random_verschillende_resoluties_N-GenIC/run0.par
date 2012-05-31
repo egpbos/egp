@@ -1,0 +1,163 @@
+InitCondFile  		/home/p252012/ICs/ic6_300_256
+OutputDir               run6-291320
+
+SnapshotFileBase        snap
+ 
+
+EnergyFile        energy.txt
+InfoFile          info.txt
+TimingsFile       timings.txt
+CpuFile           cpu.txt
+
+RestartFile       restart
+
+
+
+% CPU-time limit
+
+TimeLimitCPU      21000
+ResubmitOn        1
+ResubmitCommand   qsub run6-restart.sh
+
+
+% Code options
+
+ICFormat              1
+ComovingIntegrationOn 1
+
+NumFilesPerSnapshot       1
+NumFilesWrittenInParallel 1
+SnapFormat                2
+
+CoolingOn 0
+
+%  Caracteristics of run
+
+
+TimeBegin             0.016393443
+TimeMax	              1.0
+
+Omega0	              0.268
+OmegaLambda           0.732
+
+OmegaBaryon           0.044
+HubbleParam           0.704   ; only needed for cooling
+
+BoxSize                300000.0
+PeriodicBoundariesOn   1
+
+
+% Output frequency
+
+OutputListFilename  outputs_main.txt
+OutputListOn        1
+
+TimeBetSnapshot        1.04912649189365
+TimeOfFirstSnapshot    0.090909091
+ 
+CpuTimeBetRestartFile    21600 % every ~6 hour
+
+TimeBetStatistics      0.02
+
+
+% Accuracy of time integration
+
+TypeOfTimestepCriterion 0
+ErrTolIntAccuracy       0.05
+MaxSizeTimestep        0.1
+MinSizeTimestep        0
+MaxRMSDisplacementFac  0.25
+
+% Tree algorithm and force accuracy
+
+ErrTolTheta            0.45
+TypeOfOpeningCriterion 1
+ErrTolForceAcc         0.005
+TreeDomainUpdateFrequency    0.025
+
+
+%  Parameters of SPH
+
+DesNumNgb           64
+MaxNumNgbDeviation  1
+
+ArtBulkViscConst    0.75
+InitGasTemp         166.53
+MinGasTemp          100.    
+CourantFac          0.2
+
+
+% Further code parameters
+
+PartAllocFactor       1.4
+TreeAllocFactor       0.8
+
+BufferSize             100
+
+% DomainUpdateFrequency   0.2
+                           
+
+% System of units
+
+UnitLength_in_cm         3.085678e21        ;  1.0 kpc /h
+UnitMass_in_g            1.989e43           ;  solar masses
+UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
+GravityConstantInternal  0
+
+
+% Softening lengths
+
+MinGasHsmlFractional     0.5  % minimum csfc smoothing in terms of the gravitational softening length
+
+SofteningGas       67.5 % voor 768^3 was het 22.5
+SofteningHalo      67.5
+SofteningDisk      0.0
+SofteningBulge     0.0        
+SofteningStars     67.5
+SofteningBndry     0
+
+SofteningGasMaxPhys       22.5 % voor 768^3 was het 7.5
+SofteningHaloMaxPhys      22.5
+SofteningDiskMaxPhys      0.0  % corr.to EE81_soft = 70.0
+SofteningBulgeMaxPhys     0.0         
+SofteningStarsMaxPhys     22.5
+SofteningBndryMaxPhys     0
+
+% Quantities for star formation and feedback
+
+StarformationOn 0
+CritPhysDensity     0.     %  critical physical density for star formation in
+                            %  hydrogen number density in cm^(-3)
+MaxSfrTimescale     1.5     % in internal time units
+CritOverDensity      57.7    %  overdensity threshold value
+TempSupernova        1.0e8   %  in Kelvin
+TempClouds           1000.0   %  in Kelvin
+FactorSN             0.1
+FactorEVP            1000.0
+
+WindEfficiency    2.0
+WindFreeTravelLength 10.0
+WindEnergyFraction  1.0
+WindFreeTravelDensFac 0.5
+
+
+%additional things for Gadget XXL:
+
+%ViscositySourceScaling 0.7
+%ViscosityDecayLength   2.0
+
+
+%DarkEnergyParam        -0.4
+DarkEnergyFile          wdHdGHz_LCDM_bos.txt
+
+VelIniScale		1.0
+
+%ConductionEfficiency     0.33
+
+Shock_LengthScale 2.0
+Shock_DeltaDecayTimeMax  0.02
+
+
+ErrTolThetaSubfind  	 0.1
+DesLinkNgb 	 	32
+

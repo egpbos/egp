@@ -1,0 +1,129 @@
+InitCondFile  		/Users/users/pbos/code/egpTesting/icgen/random_verschillende_resoluties_N-GenIC/ICs/ic64
+OutputDir               run0_64
+
+SnapshotFileBase        snap
+ 
+
+EnergyFile        energy.txt
+InfoFile          info.txt
+TimingsFile       timings.txt
+CpuFile           cpu.txt
+
+RestartFile       restart
+
+
+
+% CPU-time limit
+
+TimeLimitCPU      21000
+ResubmitOn        1
+ResubmitCommand   echo "Geen restart"
+
+
+% Code options
+
+ICFormat              1
+ComovingIntegrationOn 1
+
+NumFilesPerSnapshot       1
+NumFilesWrittenInParallel 1
+SnapFormat                2
+
+CoolingOn 0
+
+%  Caracteristics of run
+
+
+TimeBegin             0.015625
+TimeMax	              1.0
+
+Omega0	              0.3
+OmegaLambda           0.7
+
+OmegaBaryon           0.0
+HubbleParam           0.7   ; only needed for cooling
+
+BoxSize                150000.0
+PeriodicBoundariesOn   1
+
+
+% Output frequency
+
+OutputListFilename  outputs_main.txt
+OutputListOn        1
+
+TimeBetSnapshot        1.04912649189365
+TimeOfFirstSnapshot    0.090909091
+ 
+CpuTimeBetRestartFile    21600 % every ~6 hour
+
+TimeBetStatistics      0.02
+
+
+% Accuracy of time integration
+
+TypeOfTimestepCriterion 0
+ErrTolIntAccuracy       0.05
+MaxSizeTimestep        0.1
+MinSizeTimestep        0
+MaxRMSDisplacementFac  0.25
+
+% Tree algorithm and force accuracy
+
+ErrTolTheta            0.45
+TypeOfOpeningCriterion 1
+ErrTolForceAcc         0.005
+TreeDomainUpdateFrequency    0.025
+
+
+%  Parameters of SPH
+
+DesNumNgb           64
+MaxNumNgbDeviation  1
+
+ArtBulkViscConst    0.75
+InitGasTemp         166.53
+MinGasTemp          100.    
+CourantFac          0.2
+
+
+% Further code parameters
+
+PartAllocFactor       1.4
+%TreeAllocFactor       0.8
+
+BufferSize             100
+
+% DomainUpdateFrequency   0.2
+                           
+
+% System of units
+
+UnitLength_in_cm         3.085678e21        ;  1.0 kpc /h
+UnitMass_in_g            1.989e43           ;  solar masses
+UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
+GravityConstantInternal  0
+
+
+% Softening lengths
+
+MinGasHsmlFractional     0.5  % minimum csfc smoothing in terms of the gravitational softening length
+
+SofteningGas       135.0 % voor 768^3 was het 22.5
+SofteningHalo      135.0
+SofteningDisk      0.0
+SofteningBulge     0.0        
+SofteningStars     135.0
+SofteningBndry     0
+
+SofteningGasMaxPhys       45.0 % voor 768^3 was het 7.5
+SofteningHaloMaxPhys      45.0
+SofteningDiskMaxPhys      0.0  % corr.to EE81_soft = 70.0
+SofteningBulgeMaxPhys     0.0         
+SofteningStarsMaxPhys     45.0
+SofteningBndryMaxPhys     0
+
+% Quantities for star formation and feedback
+
+StarformationOn 0
+
