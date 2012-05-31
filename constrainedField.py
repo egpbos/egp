@@ -115,7 +115,6 @@ class ConstraintCorrelations(object):
             self.xi_ij_inverse = np.matrix(xi_ij).I
         else:
             self.xi_ij_inverse = np.empty((len(self.constraints), len(self.constraints)))
-            t0 = time()
             for i, coni in enumerate(self.constraints):
                 Hi = coni.H(ki)
                 for j, conj in enumerate(self.constraints):
@@ -124,7 +123,6 @@ class ConstraintCorrelations(object):
                     # plus k_z = 0 and nyquist planes:
                     xi_ij += np.sum( Hi[...,(0,-1)].conj()*Hj[...,(0,-1)]*power[...,(0,-1)] ).real
                     self.xi_ij_inverse[i,j] = xi_ij # first store xi_ij
-            print time()-t0
             self.xi_ij_inverse = np.matrix(self.xi_ij_inverse).I # then invert
     
     def calculate_field_constraint_correlations(self, k, ki):
@@ -355,13 +353,21 @@ def euler_matrix(alpha, beta, psi):
 # ---------------------------- FACTORIES  ----------------------------
 
 def constraints_from_csv(filename, power_spectrum, boxlen):
-    """Load a csv-file containing constraints and convert it into a list of
+    """Loads the table needed for constraints_from_table from a csv-file."""
+    f = open(filename)
+    table = csvreader(f)
+    # Skip header:
+    table.next()
+    return constraints_from_table(table, power_spectrum, boxlen)
+
+def constraints_from_table(table, power_spectrum, boxlen):
+    """Load a table containing constraints and convert it into a list of
     Constraint objects. Also needs the power spectrum of the CRF that you're 
     going to build, because it needs to determine the spectral parameters.
     Finally, we need the boxsize (in Mpc h^-1) of the random field that we're
     going to build, also needed for the spectral parameters.
     
-    The structure of the csv-file needs to be:
+    The structure of each table row needs to be:
     
     1.  x-location (Mpc h^-1)
     2.  y-location (Mpc h^-1)
@@ -397,10 +403,7 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
     will be put on them as well (this is necessary, because they are correlated
     in some complicated way that is hard to disentangle).
     """
-    f = open(filename)
-    table = csvreader(f)
-    
-    cosmo = power_spectrum.cosmo
+    cosmo = power_spectrum.cosmology
     
     locations = {}
     scales = {}
@@ -413,7 +416,7 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
     
     for row in table:
         # ----- Location
-        pos = tuple(row[:3]) # tuple needed; lists cannot be dictionary keys
+        pos = (float(row[0]), float(row[1]), float(row[2])) # tuple needed; lists cannot be dictionary keys
         if pos in locations:
             location = locations[pos]
         else:
@@ -443,7 +446,7 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
         # ----- Peak height
         height = row[4]
         if height:
-            constraints.append(HeightConstraint(location, scale, height))
+            constraints.append(HeightConstraint(location, scale, float(height)))
         
         # ----- Extrema
         x_extremum = row[5]
@@ -479,6 +482,8 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
                 # within numerical precision, so no interpolation is possible. 
                 # This means that the curvature will never be higher than the
                 # corresponding value at which the PDF flattens.
+            else:
+                curvature = float(curvature)
             if not a21 or not a31:
                 # For the shape distribution we apply the rejection method (see
                 # e.g. sect. 7.3.6 of Press+07) because we cannot easily
@@ -500,18 +505,27 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
                 # Convert to a21 and a31:
                 a21 = np.sqrt((1-2*p)/(1+p-3*e))
                 a31 = np.sqrt((1+p+3*e)/(1+p-3*e))
+            else:
+                a21 = float(a21)
+                a31 = float(a31)
             if not density_phi:
                 density_phi = 180*np.random.random()
+            else:
+                density_phi = float(density_phi)
             if not density_theta:
                 density_theta = 180/np.pi*np.arccos(1-np.random.random())
+            else:
+                density_theta = float(density_theta)
             if not density_psi:
                 density_psi = 180*np.random.random()
+            else:
+                density_psi = float(density_psi)
             
             # Convert stuff and calculate matrix coefficients (= 2nd derivs)...
             a12 = 1/a21
             a13 = 1/a31
             A = euler_matrix(density_phi, density_theta, density_psi)
-            lambda1 = x_d * sigma2 / (1 + a12**2 + a13**2)
+            lambda1 = curvature * sigma2 / (1 + a12**2 + a13**2)
             lambda2 = lambda1 * a12**2
             lambda3 = lambda1 * a13**2
             d11 = - lambda1*A[0,0]*A[0,0] - lambda2*A[1,0]*A[1,0] - lambda3*A[2,0]*A[2,0]
@@ -535,13 +549,13 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
         
         # Convert to gravity:
         if vx:
-            gx = velocity_to_gravity*vx
+            gx = velocity_to_gravity*float(vx)
             constraints.append(GravityConstraint(location, scale, gx*sigma_g_peak, 0, cosmo))
         if vy:
-            gy = velocity_to_gravity*vy
+            gy = velocity_to_gravity*float(vy)
             constraints.append(GravityConstraint(location, scale, gy*sigma_g_peak, 1, cosmo))
         if vz:
-            gz = velocity_to_gravity*vz
+            gz = velocity_to_gravity*float(vz)
             constraints.append(GravityConstraint(location, scale, gz*sigma_g_peak, 2, cosmo))
         
         # ----- Shear/tidal field
@@ -554,14 +568,22 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
         if ev1 or ev2 or shear_phi or shear_theta or shear_psi:
             if not ev1 or not ev2: # No random distribution known for this
                 raise Exception("Must define both shear eigenvalues or none at all!")
+            ev1 = float(ev1)
+            ev2 = float(ev2)
             ev3 = -(ev1 + ev2)
             
             if not shear_phi:
                 shear_phi = 180*np.random.random()
+            else:
+                shear_phi = float(shear_phi)
             if not shear_theta:
                 shear_theta = 180/np.pi*np.arccos(1-np.random.random())
+            else:
+                shear_theta = float(shear_theta)
             if not shear_psi:
                 shear_psi = 180*np.random.random()
+            else:
+                shear_psi = float(shear_psi)
             
             T = euler_matrix(shear_phi, shear_theta, shear_psi)
             
@@ -576,7 +598,6 @@ def constraints_from_csv(filename, power_spectrum, boxlen):
             constraints.append(TidalConstraint(location, scale, E12, 0, 1, cosmo))
             constraints.append(TidalConstraint(location, scale, E13, 0, 2, cosmo))
             constraints.append(TidalConstraint(location, scale, E23, 1, 2, cosmo))
-    
     
     return constraints
 
@@ -668,111 +689,115 @@ ps.normalize(boxlen**3)
 rhoU = GRF(ps, boxlen, gridsize, seed=None)
 
 # Constraint Locations/Scales
-location1 = ConstraintLocation(np.array((50,50,50))/cosmo.h) # Mpc
-location2 = ConstraintLocation(np.array((50,75,75))/cosmo.h) # Mpc
-scale1 = ConstraintScale(8/cosmo.h) # Mpc
+#~ location1 = ConstraintLocation(np.array((50,50,50))/cosmo.h) # Mpc
+#~ location2 = ConstraintLocation(np.array((50,75,75))/cosmo.h) # Mpc
+#~ scale1 = ConstraintScale(8/cosmo.h) # Mpc
 
 # Spectral parameters (for easier constraint value definition, at least in case
 # of gaussian random field):
-sigma0 = ps.moment(0, scale1.scale, boxlen**3)
-sigma1 = ps.moment(1, scale1.scale, boxlen**3)
-sigma2 = ps.moment(2, scale1.scale, boxlen**3)
-
-sigma_min1 = ps.moment(-1, scale1.scale, boxlen**3)
-gamma_nu = sigma0**2 / sigma_min1 / sigma1
-sigma_g = 3./2 * cosmo.omegaM * (cosmo.h*100)**2 * sigma_min1
-sigma_g_peak = sigma_g * np.sqrt(1 - gamma_nu**2)
-
-gamma = sigma1**2/sigma0/sigma2
-sigma_E = 3./2*cosmo.omegaM*(cosmo.h*100)**2 * sigma0 * np.sqrt((1-gamma**2)/15)
+#~ sigma0 = ps.moment(0, scale1.scale, boxlen**3)
+#~ sigma1 = ps.moment(1, scale1.scale, boxlen**3)
+#~ sigma2 = ps.moment(2, scale1.scale, boxlen**3)
+#~ 
+#~ sigma_min1 = ps.moment(-1, scale1.scale, boxlen**3)
+#~ gamma_nu = sigma0**2 / sigma_min1 / sigma1
+#~ sigma_g = 3./2 * cosmo.omegaM * (cosmo.h*100)**2 * sigma_min1
+#~ sigma_g_peak = sigma_g * np.sqrt(1 - gamma_nu**2)
+#~ 
+#~ gamma = sigma1**2/sigma0/sigma2
+#~ sigma_E = 3./2*cosmo.omegaM*(cosmo.h*100)**2 * sigma0 * np.sqrt((1-gamma**2)/15)
 
 # Constraints ...
 # ... height (positive for peak, negative for void) ...
-heightVal = 5*sigma0
-height = HeightConstraint(location1, scale1, heightVal)
-height2 = HeightConstraint(location2, scale1, heightVal)
+#~ heightVal = 5*sigma0
+#~ height = HeightConstraint(location1, scale1, heightVal)
+#~ height2 = HeightConstraint(location2, scale1, heightVal)
 
 # ... extrema ...
-extre1 = ExtremumConstraint(location1, scale1, 0)
-extre2 = ExtremumConstraint(location1, scale1, 1)
-extre3 = ExtremumConstraint(location1, scale1, 2)
+#~ extre1 = ExtremumConstraint(location1, scale1, 0)
+#~ extre2 = ExtremumConstraint(location1, scale1, 1)
+#~ extre3 = ExtremumConstraint(location1, scale1, 2)
 
 # ... gravity ...
-g1 = GravityConstraint(location1, scale1, 3*sigma_g_peak, 0, cosmo)
-g2 = GravityConstraint(location1, scale1, 3*sigma_g_peak, 1, cosmo)
-g3 = GravityConstraint(location1, scale1, 3*sigma_g_peak, 2, cosmo)
+#~ g1 = GravityConstraint(location1, scale1, 3*sigma_g_peak, 0, cosmo)
+#~ g2 = GravityConstraint(location1, scale1, 3*sigma_g_peak, 1, cosmo)
+#~ g3 = GravityConstraint(location1, scale1, 3*sigma_g_peak, 2, cosmo)
 
 # ... shape ...
-x_d = 5. # steepness
-a12 = 8. # first axial ratio
-a13 = 1. # second axial ratio
-alpha = 0. # Euler angle (w.r.t box axes)
-beta  = 0. # Euler angle
-psi   = 0. # Euler angle
+#~ x_d = 5. # steepness
+#~ a12 = 8. # first axial ratio
+#~ a13 = 1. # second axial ratio
+#~ alpha = 0. # Euler angle (w.r.t box axes)
+#~ beta  = 0. # Euler angle
+#~ psi   = 0. # Euler angle
 
 # BEGIN factory voor shape:
-A = euler_matrix(alpha, beta, psi)
-lambda1 = x_d * sigma2 / (1 + a12**2 + a13**2)
-lambda2 = lambda1 * a12**2
-lambda3 = lambda1 * a13**2
-
-d11 = - lambda1*A[0,0]*A[0,0] - lambda2*A[1,0]*A[1,0] - lambda3*A[2,0]*A[2,0]
-d22 = - lambda1*A[0,1]*A[0,1] - lambda2*A[1,1]*A[1,1] - lambda3*A[2,1]*A[2,1]
-d33 = - lambda1*A[0,2]*A[0,2] - lambda2*A[1,2]*A[1,2] - lambda3*A[2,2]*A[2,2]
-d12 = - lambda1*A[0,0]*A[0,1] - lambda2*A[1,0]*A[1,1] - lambda3*A[2,0]*A[2,1]
-d13 = - lambda1*A[0,0]*A[0,2] - lambda2*A[1,0]*A[1,2] - lambda3*A[2,0]*A[2,2]
-d23 = - lambda1*A[0,1]*A[0,2] - lambda2*A[1,1]*A[1,2] - lambda3*A[2,1]*A[2,2]
-
-shape1 = []
-shape1.append(ShapeConstraint(location1, scale1, d11, 0, 0))
-shape1.append(ShapeConstraint(location1, scale1, d22, 1, 1))
-shape1.append(ShapeConstraint(location1, scale1, d33, 2, 2))
-shape1.append(ShapeConstraint(location1, scale1, d12, 0, 1))
-shape1.append(ShapeConstraint(location1, scale1, d13, 0, 2))
-shape1.append(ShapeConstraint(location1, scale1, d23, 1, 2))
+#~ A = euler_matrix(alpha, beta, psi)
+#~ lambda1 = x_d * sigma2 / (1 + a12**2 + a13**2)
+#~ lambda2 = lambda1 * a12**2
+#~ lambda3 = lambda1 * a13**2
+#~ 
+#~ d11 = - lambda1*A[0,0]*A[0,0] - lambda2*A[1,0]*A[1,0] - lambda3*A[2,0]*A[2,0]
+#~ d22 = - lambda1*A[0,1]*A[0,1] - lambda2*A[1,1]*A[1,1] - lambda3*A[2,1]*A[2,1]
+#~ d33 = - lambda1*A[0,2]*A[0,2] - lambda2*A[1,2]*A[1,2] - lambda3*A[2,2]*A[2,2]
+#~ d12 = - lambda1*A[0,0]*A[0,1] - lambda2*A[1,0]*A[1,1] - lambda3*A[2,0]*A[2,1]
+#~ d13 = - lambda1*A[0,0]*A[0,2] - lambda2*A[1,0]*A[1,2] - lambda3*A[2,0]*A[2,2]
+#~ d23 = - lambda1*A[0,1]*A[0,2] - lambda2*A[1,1]*A[1,2] - lambda3*A[2,1]*A[2,2]
+#~ 
+#~ shape1 = []
+#~ shape1.append(ShapeConstraint(location1, scale1, d11, 0, 0))
+#~ shape1.append(ShapeConstraint(location1, scale1, d22, 1, 1))
+#~ shape1.append(ShapeConstraint(location1, scale1, d33, 2, 2))
+#~ shape1.append(ShapeConstraint(location1, scale1, d12, 0, 1))
+#~ shape1.append(ShapeConstraint(location1, scale1, d13, 0, 2))
+#~ shape1.append(ShapeConstraint(location1, scale1, d23, 1, 2))
 # END shape factory
 
 # ... and tidal field.
-epsilon = 10. # strength of the tidal field
-pomega  = 0.25*np.pi # parameter for relative strength along axes (0, 2*pi)
-alphaE = 0.5*np.pi # Euler angle (w.r.t box axes)
-betaE  = 0.25*np.pi # Euler angle
-psiE   = 0. # Euler angle
+#~ epsilon = 10. # strength of the tidal field
+#~ pomega  = 0.25*np.pi # parameter for relative strength along axes (0, 2*pi)
+#~ alphaE = 0.5*np.pi # Euler angle (w.r.t box axes)
+#~ betaE  = 0.25*np.pi # Euler angle
+#~ psiE   = 0. # Euler angle
 
 # BEGIN factory voor tidal field:
-T = euler_matrix(alphaE, betaE, psiE)
-L1 = np.cos((pomega + 2*np.pi)/3)
-L2 = np.cos((pomega - 2*np.pi)/3)
-L3 = np.cos(pomega/3)
-fac = epsilon*sigma_E
-
-E11 = fac*(L1*T[0,0]*T[0,0] + L2*T[1,0]*T[1,0] + L3*T[2,0]*T[2,0])
+#~ T = euler_matrix(alphaE, betaE, psiE)
+#~ L1 = np.cos((pomega + 2*np.pi)/3)
+#~ L2 = np.cos((pomega - 2*np.pi)/3)
+#~ L3 = np.cos(pomega/3)
+#~ fac = epsilon*sigma_E
+#~ 
+#~ E11 = fac*(L1*T[0,0]*T[0,0] + L2*T[1,0]*T[1,0] + L3*T[2,0]*T[2,0])
 # Note that in these values the epsilon*f_G term (whatever f_G might have been)
 # is neglected due to the field being linear (see vdW&B96).
-E22 = fac*(L1*T[0,1]*T[0,1] + L2*T[1,1]*T[1,1] + L3*T[2,1]*T[2,1])
-E12 = fac*(L1*T[0,0]*T[0,1] + L2*T[1,0]*T[1,1] + L3*T[2,0]*T[2,1])
-E13 = fac*(L1*T[0,0]*T[0,2] + L2*T[1,0]*T[1,2] + L3*T[2,0]*T[2,2])
-E23 = fac*(L1*T[0,1]*T[0,2] + L2*T[1,1]*T[1,2] + L3*T[2,1]*T[2,2])
-
-tidal1 = []
-tidal1.append(TidalConstraint(location1, scale1, E11, 0, 0, cosmo))
-tidal1.append(TidalConstraint(location1, scale1, E22, 1, 1, cosmo))
-tidal1.append(TidalConstraint(location1, scale1, E12, 0, 1, cosmo))
-tidal1.append(TidalConstraint(location1, scale1, E13, 0, 2, cosmo))
-tidal1.append(TidalConstraint(location1, scale1, E23, 1, 2, cosmo))
+#~ E22 = fac*(L1*T[0,1]*T[0,1] + L2*T[1,1]*T[1,1] + L3*T[2,1]*T[2,1])
+#~ E12 = fac*(L1*T[0,0]*T[0,1] + L2*T[1,0]*T[1,1] + L3*T[2,0]*T[2,1])
+#~ E13 = fac*(L1*T[0,0]*T[0,2] + L2*T[1,0]*T[1,2] + L3*T[2,0]*T[2,2])
+#~ E23 = fac*(L1*T[0,1]*T[0,2] + L2*T[1,1]*T[1,2] + L3*T[2,1]*T[2,2])
+#~ 
+#~ tidal1 = []
+#~ tidal1.append(TidalConstraint(location1, scale1, E11, 0, 0, cosmo))
+#~ tidal1.append(TidalConstraint(location1, scale1, E22, 1, 1, cosmo))
+#~ tidal1.append(TidalConstraint(location1, scale1, E12, 0, 1, cosmo))
+#~ tidal1.append(TidalConstraint(location1, scale1, E13, 0, 2, cosmo))
+#~ tidal1.append(TidalConstraint(location1, scale1, E23, 1, 2, cosmo))
 # END tidal field factory
 
 
 # Constrained fields, 21-23 February 2012:
-rhoC1 = ConstrainedField(rhoU, [height,])
-rhoC2 = ConstrainedField(rhoU, [height, extre1, extre2, extre3])
-rhoC3 = ConstrainedField(rhoU, [height, height2])
+#~ rhoC1 = ConstrainedField(rhoU, [height,])
+#~ rhoC2 = ConstrainedField(rhoU, [height, extre1, extre2, extre3])
+#~ rhoC3 = ConstrainedField(rhoU, [height, height2])
 
 
 # Constrained fields, 9 March 2012:
 #rhoC4 = ConstrainedField(rhoU, [height, g1, g2, g3]) # gravity/velocity werkt
 #rhoC4 = ConstrainedField(rhoU, [height] + shape1) # shape werkt
-rhoC4 = ConstrainedField(rhoU, [height] + tidal1)
+#~ rhoC4 = ConstrainedField(rhoU, [height] + tidal1)
+
+# Constrained fields, 22 May 2012:
+constraints1 = constraints_from_csv("/Users/users/pbos/code/egpTesting/icgen/constraints1.csv", ps, boxlen)
+rhoC1 = ConstrainedField(rhoU, constraints1)
 
 # ---- PLOTTING ----
 # SyncMaster 2443 dpi:
@@ -791,9 +816,9 @@ ax5 = fig.add_subplot(3,2,5)
 
 ax1.imshow(rhoU.t[halfgrid], interpolation='nearest')
 ax2.imshow(rhoC1.t[halfgrid], interpolation='nearest')
-ax3.imshow(rhoC2.t[halfgrid], interpolation='nearest')
-ax4.imshow(rhoC3.t[halfgrid], interpolation='nearest')
-ax5.imshow(rhoC4.t[halfgrid], interpolation='nearest')
+#~ ax3.imshow(rhoC2.t[halfgrid], interpolation='nearest')
+#~ ax4.imshow(rhoC3.t[halfgrid], interpolation='nearest')
+#~ ax5.imshow(rhoC4.t[halfgrid], interpolation='nearest')
 pl.show()
 
 

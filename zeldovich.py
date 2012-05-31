@@ -11,8 +11,7 @@ This is an extension of the cosmoICs.py code from my Master's research.
 """
 
 import numpy as np
-from scipy.integrate import quadrature as quad
-from numpy import sqrt, log, sin, cos, exp, pi
+from scipy.integrate import quadrature as integrate
 
 def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
     """
@@ -56,7 +55,7 @@ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
     vx, vy, vz = np.zeros(n1**3), np.zeros(n1**3), np.zeros(n1**3)
     
     # Velocity correction, needed in GADGET for comoving (cosm.) simulation
-    vgad = sqrt(1+redshift)
+    vgad = np.sqrt(1+redshift)
     
     xfact = boxlen*D/D0
     vfact = vgad*D/D0*H*f*boxlen/(1+redshift)
@@ -91,24 +90,24 @@ def fpeebl(z, h, omegaR, omegaM, omegaL):
     # lambda+matter-dominated cosmology.
     # Omega0 := Omega today (a=1) in matter only.  Omega_lambda = 1 - Omega0.
     omegaK = 1.0 - omegaM - omegaL
-    eta = sqrt(omegaM*(1+z) + omegaL/(1+z)/(1+z) + omegaK)
+    eta = np.sqrt(omegaM*(1+z) + omegaL/(1+z)/(1+z) + omegaK)
     return ( 2.5/grow(z, omegaR, omegaM, omegaL) - 1.5*omegaM*(1+z) - omegaK)/eta**2
 
 def hubble(z, h, omegar, omegam, omegal):
     """Hubble constant at arbitrary redshift"""
-    return 100*h*sqrt((1+z)**4*omegar + (1+z)**3*omegam + omegal + (1+z)**2*(1-omegar-omegam-omegal))
+    return 100*h*np.sqrt((1+z)**4*omegar + (1+z)**3*omegam + omegal + (1+z)**2*(1-omegar-omegam-omegal))
 
 def growIntgt(a, omegar, omegam, omegal):
     """Integrand for the linear growth factor D(z) (function grow())"""
     if a == 0: return 0
     
-    eta = sqrt(omegam/a + omegal*a*a + 1 - omegam - omegal)
+    eta = np.sqrt(omegam/a + omegal*a*a + 1 - omegam - omegal)
     return 2.5/eta**3
   
 def grow(z, omegar, omegam, omegal):
     a = 1./(1+z)
-    integral = quad(growIntgt, 0, a, args=(omegar, omegam, omegal), vec_func = False)[0]
-    eta = sqrt(omegam/a + omegal*a*a + 1 - omegam - omegal)
+    integral = integrate(growIntgt, 0, a, args=(omegar, omegam, omegal), vec_func = False)[0]
+    eta = np.sqrt(omegam/a + omegal*a*a + 1 - omegam - omegal)
     return eta/a*integral
 
 
