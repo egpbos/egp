@@ -71,7 +71,7 @@ PrimordialIndex  1.0       % may be used to tilt the primordial index,
 Seed             123456    %  seed for IC-generator
 
 
-NumFilesWrittenInParallel 2  % limits the number of files that are
+NumFilesWrittenInParallel 1  % limits the number of files that are
                              % written in parallel when outputting
 
 

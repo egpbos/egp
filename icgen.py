@@ -11,14 +11,15 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import numpy as np
+import pyublas
 from numpy.random import random as rnd, seed as setseed
 from scipy.integrate import quadrature as integrate
 from scipy.interpolate import InterpolatedUnivariateSpline as Interpolator
-from periodic import PeriodicArray
-import pyublas
-from egp.crunch import resolution_independent_random_grid
-from csv import reader as csvreader
 from scipy.special import erf
+from csv import reader as csvreader
+
+from egp.crunch import resolution_independent_random_grid
+from egp.types import Field, VectorField, ParticleSet, PeriodicArray
 
 
 # constants
@@ -316,82 +317,6 @@ class EstimatedPowerSpectrum(InterpolatedPowerSpectrum):
     """
     def __init__(self, density):
         pass
-
-
-class Field(object):
-    """
-    Contains a field itself, given on a discrete 3D numpy.array, and the field's
-    discrete fourier space representation. N.B.: the discrete fourier space
-    representation is not the true fourier space representation; these differ by
-    a factor proportional to dk**3 (c.f. Press+07, eqn. 12.1.8).
-    If you manually set only one of the two, the other will automatically be
-    calculated once it is called upon. If you set both, no automatic checks are
-    done, so make sure that the fields are the correct corresponding ones!
-    """
-    def __init__(self, true=None, fourier=None):
-        if np.any(true):
-            self.t = true
-        if np.any(fourier):
-            self.f = fourier
-    
-    t, f = property(), property()
-    
-    @t.getter
-    def t(self):
-        try:
-            return self._true
-        except AttributeError:
-            self.t = self._ifft(self.f)
-            self.t *= np.size(self.t) # factor from discrete to true Fourier transform
-            return self._true
-    @t.setter
-    def t(self, field):
-        self._true = field
-    @f.getter
-    def f(self):
-        try:
-            return self._fourier
-        except AttributeError:
-            self._fourier = np.fft.rfftn(self.t)/np.size(self.t)
-            return self._fourier
-    @f.setter
-    def f(self, field):
-        self._fourier = field
-        if field is None:
-            self._ifft = np.fft.irfftn
-        elif field.shape[0] == field.shape[2]:
-            self._ifft = np.fft.ifftn
-        elif field.shape[0] == (field.shape[2]-1)*2:
-            self._ifft = np.fft.irfftn
-    
-    @property
-    def periodic(self):
-        """The true fields are all defined on periodic grids, so here's a
-        convenience function for it."""
-        # N.B.: PeriodicArray is not settable, so no need for setter (yet).
-        try:
-            return self._periodic
-        except AttributeError:
-            self._periodic = PeriodicArray(self.t)
-            return self._periodic
-
-
-class VectorField(object):
-    """
-    A three component vector field, containing three Field instances as
-    attributes x, y and z.
-    Initialization parameter true must have shape (3,N,N,N) and fourier must
-    have shape (3,N,N,N/2+1).
-    """
-    def __init__(self, true=None, fourier=None):
-        if np.any(true):
-            self.x = Field(true=true[0])
-            self.y = Field(true=true[1])
-            self.z = Field(true=true[2])
-        if np.any(fourier):
-            self.x = Field(fourier=fourier[0])
-            self.y = Field(fourier=fourier[1])
-            self.z = Field(fourier=fourier[2])
 
 
 class DensityField(Field):
