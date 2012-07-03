@@ -1132,6 +1132,23 @@ def f_BBKS(x):
 
 
 # Zel'dovich approximation
+def zeldovich_new(redshift, psi, cosmo):
+    """
+    Like zeldovich(), but takes a DisplacementField and Cosmology object that in
+    themselves already contain all necessary parameters for zeldovich().
+    """
+    psi1 = psi.x.t
+    psi2 = psi.y.t
+    psi3 = psi.z.t
+    
+    omegaM = cosmo.omegaM
+    omegaL = cosmo.omegaL
+    omegaR = cosmo.omegaR
+    h = cosmo.h
+    boxlen = psi.boxlen
+    
+    return zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen)
+    
 def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
     """
     Use the Zel'dovich approximation to calculate positions and velocities at
@@ -1154,7 +1171,7 @@ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
     - x,y,z:     Particle coordinates (Mpc)
     - vx,vy,vz:  Particle velocities (km/s)
     """
-    
+        
     n1 = len(psi1)
     boxlen = boxlen / h
     print "Boxlen:    ",boxlen
