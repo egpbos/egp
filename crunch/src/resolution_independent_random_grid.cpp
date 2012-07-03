@@ -179,3 +179,5 @@ double_vector crunch::resolution_independent_random_grid_seedtable(int gridsize,
     out.reshape(3, dims);
     return out;
 }
+
+// t3 = Timer("array=c.naive_random_grid(32,0)", "import pyublas; import egp.crunch as c")
