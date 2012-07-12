@@ -70,13 +70,15 @@ scale_mpc = (3*(m500*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
 # gebruiken het nergens)...
 
 scale = ConstraintScale(scale_mpc[0])
-location = ConstraintLocation(pos[0])
+#~ location = ConstraintLocation(pos[0])
+pos0 = np.array([75,50,50])
+location = ConstraintLocation(pos0)
 
 constraints = []
 
 # first guess for height:
 sigma0 = ps.moment(0, scale_mpc[0]/cosmo.h, (boxlen/cosmo.h)**3)
-height = 10.*sigma0
+height = 5.*sigma0
 
 constraints.append(HeightConstraint(location, scale, height))
 
@@ -122,7 +124,7 @@ dpi = y/yInch
 #quiver = mlab.quiver3d(X,Y,Z,vx,vy,vz, opacity=0.3)
 
 points = mlab.points3d(X*cosmo.h,Y*cosmo.h,Z*cosmo.h, mode='point', opacity=0.5)
-cluster = mlab.points3d(pos[0,0], pos[0,1], pos[0,2], mode='sphere', color=(1,0,0), scale_factor=scale_mpc[0], opacity=0.3)
+cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=scale_mpc[0], opacity=0.3)
 
 #vol = mlab.pipeline.volume(mlab.pipeline.scalar_field(rhoC1.t), vmin=0, vmax=1) # volume rendering
 

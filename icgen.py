@@ -1132,6 +1132,23 @@ def f_BBKS(x):
 
 
 # Zel'dovich approximation
+def zeldovich_langzaam_new(redshift, psi, cosmo):
+    """
+    Like zeldovich(), but takes a DisplacementField and Cosmology object that in
+    themselves already contain all necessary parameters for zeldovich().
+    """
+    psi1 = psi.x.t
+    psi2 = psi.y.t
+    psi3 = psi.z.t
+    
+    omegaM = cosmo.omegaM
+    omegaL = cosmo.omegaL
+    omegaR = cosmo.omegaR
+    h = cosmo.h
+    boxlen = psi.boxlen
+    
+    return zeldovich_langzaam(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen)
+    
 def zeldovich_new(redshift, psi, cosmo):
     """
     Like zeldovich(), but takes a DisplacementField and Cosmology object that in
@@ -1148,8 +1165,8 @@ def zeldovich_new(redshift, psi, cosmo):
     boxlen = psi.boxlen
     
     return zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen)
-    
-def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
+
+def zeldovich_langzaam(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
     """
     Use the Zel'dovich approximation to calculate positions and velocities at
     certain redshift, based on the displacement vector field of e.g. a Gaussian
@@ -1208,6 +1225,55 @@ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
                 vz[x*n1**2 + y*n1 + z] = vfact*psi3[x][y][z]
     
     return [X,Y,Z,vx,vy,vz]
+
+def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen):
+    """
+    Use the Zel'dovich approximation to calculate positions and velocities at
+    certain redshift, based on the displacement vector field of e.g. a Gaussian
+    random density field. A displacement vector field can be generated using
+    the fieldgen function. Any other field in the same format can be used by
+    this function as well.
+    
+    Input:
+    - redshift:  Redshift to which the Zel'dovich approximation must be made
+    - psiN:      Nth component of the displacement vector field.
+    - omegaM:    Cosmological matter density parameter
+    - omegaL:    Cosmological dark energy density parameter
+    - omegaR:    Cosmological radiation density parameter
+    - h:         Hubble constant in units of 100 km/s/Mpc
+    - boxlen:    Length of the sides of the box that will be produced, in
+                 units of h^{-1} Mpc
+                 
+    Output:      [x,y,z,vx,vy,vz]
+    - x,y,z:     Particle coordinates (Mpc)
+    - vx,vy,vz:  Particle velocities (km/s)
+    """
+        
+    n1 = len(psi1)
+    boxlen = boxlen / h
+    print "Boxlen:    ",boxlen
+    dx = boxlen/n1
+    print "dx:        ",dx
+    f = fpeebl(redshift, h, omegaR, omegaM, omegaL )
+    print "fpeebl:    ",f
+    D = grow(redshift, omegaR, omegaM, omegaL)
+    D0 = grow(0, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
+    print "D+(z):     ",D
+    print "D+(0):     ",D0
+    print "D(z)/D(0): ",D/D0
+    H = hubble(redshift, h, omegaR, omegaM, omegaL)
+    print "H(z):      ",H
+    
+    # Velocity correction, needed in GADGET for comoving (cosm.) simulation
+    vgad = np.sqrt(1+redshift)
+    
+    xfact = boxlen*D/D0
+    vfact = vgad*D/D0*H*f*boxlen/(1+redshift)
+    
+    v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
+    X,Y,Z = (np.mgrid[0:boxlen:dx,0:boxlen:dx,0:boxlen:dx] + xfact*(v/vfact))%boxlen
+    
+    return [X,Y,Z,v[0],v[1],v[2]]
 
 
 # Cosmological variables

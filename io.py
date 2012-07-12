@@ -649,32 +649,33 @@ class SubFindHaloes(object):
 
 
 class WVFEllipses(object):
-	def __init__(self, filename, boxsize, bins=None):
-		self.filename = abspath(filename)
-		self.boxsize = boxsize
-		self.bins = bins
-		self.loadData()
-		self.calcShapes()
-	
-	def loadData(self):
-		self.N = np.memmap(self.filename, dtype='int32')[0]
-		self.data = np.memmap(self.filename, dtype='float32')[1:].reshape((self.N,25))
-		if self.bins:
-			self.x = self.data[:,1]/self.bins*self.boxsize
-			self.y = self.data[:,2]/self.bins*self.boxsize
-			self.z = self.data[:,3]/self.bins*self.boxsize
-		self.a = self.boxsize/np.sqrt(np.abs(self.data[:,4]))
-		self.b = self.boxsize/np.sqrt(np.abs(self.data[:,5]))
-		self.c = self.boxsize/np.sqrt(np.abs(self.data[:,6]))
-		self.inertia = self.data[:,16:25].reshape((self.N,3,3))
-	
-	def calcShapes(self):
-		self.vol = 4.*np.pi/3*self.a*self.b*self.c
-		self.r = (self.vol*3/4/np.pi)**(1/3.)
-		self.nu = self.c/self.a
-		self.e = 1 - self.nu
-		self.p = self.b/self.a	# "oblateness"
-		self.q = self.c/self.b	# "prolateness"
+    def __init__(self, filename, boxsize, bins=None):
+        self.filename = abspath(filename)
+        self.boxsize = boxsize
+        self.bins = bins
+        self.loadData()
+        self.calcShapes()
+    
+    def loadData(self):
+        self.N = np.memmap(self.filename, dtype='int32')[0]
+        self.data = np.memmap(self.filename, dtype='float32')[1:].reshape((self.N,25))
+        if self.bins:
+            self.pos = self.data[:,1:4]/self.bins*self.boxsize
+            self.x = self.data[:,1]/self.bins*self.boxsize
+            self.y = self.data[:,2]/self.bins*self.boxsize
+            self.z = self.data[:,3]/self.bins*self.boxsize
+        self.a = self.boxsize/np.sqrt(np.abs(self.data[:,4]))
+        self.b = self.boxsize/np.sqrt(np.abs(self.data[:,5]))
+        self.c = self.boxsize/np.sqrt(np.abs(self.data[:,6]))
+        self.inertia = self.data[:,16:25].reshape((self.N,3,3))
+    
+    def calcShapes(self):
+        self.vol = 4.*np.pi/3*self.a*self.b*self.c
+        self.r = (self.vol*3/4/np.pi)**(1/3.)
+        self.nu = self.c/self.a
+        self.e = 1 - self.nu
+        self.p = self.b/self.a	# "oblateness"
+        self.q = self.c/self.b	# "prolateness"
 
 
 # functions:
