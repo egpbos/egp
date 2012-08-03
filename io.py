@@ -455,77 +455,77 @@ class GadgetData(object):
 		self.posZSliced = True
 		
 	
-	def calcDensity(self, gridsize):
-		"""Calculate density on a regular grid of gridsize cubed based on
-		particle positions in regular space. Uses TSC algorithm."""
-		
-		if not self.posloaded:
-			self.loadPos()
-		
-		mass = sum(self.header[0]['Massarr']) # FIX!!! Very dangerous!
-		
-		self.rho = TSCDensity(self.pos, gridsize, self.header[0]['BoxSize'], mass)
-		self.densityGridsize = gridsize
-	
-	def calcDensityOld(self, gridsize):
-		"""Calculate density on a regular grid of gridsize cubed based on
-		particle positions in regular space. Uses TSC algorithm."""
-
-		if not self.posloaded:
-			self.loadPos()
-
-		mass = sum(self.header[0]['Massarr']) # FIX!!! Very dangerous!
-
-		self.rhoOld = TSCDensityOld(self.pos, gridsize, self.header[0]['BoxSize'], mass)
-		self.densityGridsizeOld = gridsize
-	
-	def calcDensityZ(self, gridsize):
-		"""Calculate density on a regular grid of gridsize cubed based on
-		particle positions in redshift space. Uses TSC algorithm."""
-		
-		if not self.posZCalculated:
-			self.calcRedshiftSpace()
-		
-		mass = sum(self.header[0]['Massarr']) # FIX!!! Very dangerous!
-		
-		self.rhoZ = TSCDensity(self.posZ, gridsize, self.header[0]['BoxSize'], mass)
-		self.densityZGridsize = gridsize
-	
-	def sliceDensity(self, origin=None, thickness = 1, plane=None):
-		"""Same as slicePos, but for density. Sums over planes in cube and
-		returns slices as sums. Thickness is given in absolute number of
-		slices."""
-		# N.B.: density slices seem to be transposed compared to the position
-		# arrays! For comparison in Gnuplot, the density slice is transposed.
-		if not self.densityGridsize:
-			print "Density needs to be calculated first!"
-			raise SystemExit
-		
-		rhodim = self.densityGridsize
-		if not origin:
-			origin = np.array([rhodim/2, rhodim/2, rhodim/2])
-		
-		self.rhoSlice1 = np.sum(self.rho[origin[0] - (thickness+1)/2 : origin[0] + thickness/2, :, :], axis=0).T
-		self.rhoSlice2 = np.sum(self.rho[:, origin[1] - (thickness+1)/2 : origin[1] + thickness/2, :], axis=1).T
-		self.rhoSlice3 = np.sum(self.rho[:, :, origin[2] - (thickness+1)/2 : origin[2] + thickness/2], axis=2).T
-	
-	def sliceDensityZ(self, origin=None, thickness = 1, plane=None):
-		"""Same as slicePosZ, but for density. Sums over planes in cube and
-		returns slices as sums. Thickness is given in absolute number of
-		slices."""
-		# N.B.: density slices seem to be transposed compared to the position
-		# arrays! For comparison in Gnuplot, the density slice is transposed.
-		if not self.densityZGridsize:
-			print "Density needs to be calculated first!"
-			raise SystemExit
-
-		rhodim = self.densityZGridsize
-		if not origin:
-			origin = np.array([rhodim/2, rhodim/2, rhodim/2])
-
-		self.rhoZSlice1 = np.sum(self.rhoZ[origin[0] - (thickness+1)/2 : origin[0] + thickness/2, :, :], axis=0).T
-		self.rhoZSlice2 = np.sum(self.rhoZ[:, origin[1] - (thickness+1)/2 : origin[1] + thickness/2, :], axis=1).T
-		self.rhoZSlice3 = np.sum(self.rhoZ[:, :, origin[2] - (thickness+1)/2 : origin[2] + thickness/2], axis=2).T
+	#~ def calcDensity(self, gridsize):
+		#~ """Calculate density on a regular grid of gridsize cubed based on
+		#~ particle positions in regular space. Uses TSC algorithm."""
+		#~ 
+		#~ if not self.posloaded:
+			#~ self.loadPos()
+		#~ 
+		#~ mass = sum(self.header[0]['Massarr']) # FIX!!! Very dangerous!
+		#~ 
+		#~ self.rho = TSCDensity(self.pos, gridsize, self.header[0]['BoxSize'], mass)
+		#~ self.densityGridsize = gridsize
+	#~ 
+	#~ def calcDensityOld(self, gridsize):
+		#~ """Calculate density on a regular grid of gridsize cubed based on
+		#~ particle positions in regular space. Uses TSC algorithm."""
+#~ 
+		#~ if not self.posloaded:
+			#~ self.loadPos()
+#~ 
+		#~ mass = sum(self.header[0]['Massarr']) # FIX!!! Very dangerous!
+#~ 
+		#~ self.rhoOld = TSCDensityOld(self.pos, gridsize, self.header[0]['BoxSize'], mass)
+		#~ self.densityGridsizeOld = gridsize
+	#~ 
+	#~ def calcDensityZ(self, gridsize):
+		#~ """Calculate density on a regular grid of gridsize cubed based on
+		#~ particle positions in redshift space. Uses TSC algorithm."""
+		#~ 
+		#~ if not self.posZCalculated:
+			#~ self.calcRedshiftSpace()
+		#~ 
+		#~ mass = sum(self.header[0]['Massarr']) # FIX!!! Very dangerous!
+		#~ 
+		#~ self.rhoZ = TSCDensity(self.posZ, gridsize, self.header[0]['BoxSize'], mass)
+		#~ self.densityZGridsize = gridsize
+	#~ 
+	#~ def sliceDensity(self, origin=None, thickness = 1, plane=None):
+		#~ """Same as slicePos, but for density. Sums over planes in cube and
+		#~ returns slices as sums. Thickness is given in absolute number of
+		#~ slices."""
+		#~ # N.B.: density slices seem to be transposed compared to the position
+		#~ # arrays! For comparison in Gnuplot, the density slice is transposed.
+		#~ if not self.densityGridsize:
+			#~ print "Density needs to be calculated first!"
+			#~ raise SystemExit
+		#~ 
+		#~ rhodim = self.densityGridsize
+		#~ if not origin:
+			#~ origin = np.array([rhodim/2, rhodim/2, rhodim/2])
+		#~ 
+		#~ self.rhoSlice1 = np.sum(self.rho[origin[0] - (thickness+1)/2 : origin[0] + thickness/2, :, :], axis=0).T
+		#~ self.rhoSlice2 = np.sum(self.rho[:, origin[1] - (thickness+1)/2 : origin[1] + thickness/2, :], axis=1).T
+		#~ self.rhoSlice3 = np.sum(self.rho[:, :, origin[2] - (thickness+1)/2 : origin[2] + thickness/2], axis=2).T
+	#~ 
+	#~ def sliceDensityZ(self, origin=None, thickness = 1, plane=None):
+		#~ """Same as slicePosZ, but for density. Sums over planes in cube and
+		#~ returns slices as sums. Thickness is given in absolute number of
+		#~ slices."""
+		#~ # N.B.: density slices seem to be transposed compared to the position
+		#~ # arrays! For comparison in Gnuplot, the density slice is transposed.
+		#~ if not self.densityZGridsize:
+			#~ print "Density needs to be calculated first!"
+			#~ raise SystemExit
+#~ 
+		#~ rhodim = self.densityZGridsize
+		#~ if not origin:
+			#~ origin = np.array([rhodim/2, rhodim/2, rhodim/2])
+#~ 
+		#~ self.rhoZSlice1 = np.sum(self.rhoZ[origin[0] - (thickness+1)/2 : origin[0] + thickness/2, :, :], axis=0).T
+		#~ self.rhoZSlice2 = np.sum(self.rhoZ[:, origin[1] - (thickness+1)/2 : origin[1] + thickness/2, :], axis=1).T
+		#~ self.rhoZSlice3 = np.sum(self.rhoZ[:, :, origin[2] - (thickness+1)/2 : origin[2] + thickness/2], axis=2).T
 	
 	def saveNormalPosAsErwin(self, filename):
 		"""Save the position data as an Erwin-type binary file (Npart|x|y|z|
@@ -687,15 +687,14 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
       parameter is therefore one number, not an array of masses for each
       particle.
     - The pos and vel arrays must have (Python) shape (N,3), where pos[:,0] will
-      then be all the X coordinates, pos[:,1] the Y, etc. The array must be in
-      default C-order!
+      then be all the X coordinates, pos[:,1] the Y, etc.
     - pos and boxsize are in units of kpc h^-1, vel is in units of km/s, mass
       is in units of 10^10 M_sol h^-1
     Note: this function writes "type 2" Gadget files, i.e. with 4 character
     block names before each block (see section 6.2 of Gadget manual).
     """
-    pos = pos.astype('f')
-    vel = vel.astype('f')
+    pos = np.array(pos, dtype='float32', order='F')
+    vel = np.array(vel, dtype='float32', order='F')
     f = open(filename,'wb')
     BS = {}
     BS['desc'] = '=I4sII'
