@@ -10,7 +10,7 @@ from matplotlib import pyplot as pl
 cosmo = Cosmology('wmap7')
 cosmo.trans = 8
 
-boxlen = 100/cosmo.h
+boxlen = 100 # (10 Aug 2012)
 gridsize = 64
 
 dk = 2*np.pi/boxlen

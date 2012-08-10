@@ -17,7 +17,7 @@ import crunch
 
 
 # constants
-__version__ = "0.2, August 2012"
+__version__ = "0.3, August 2012"
 
 
 # exception classes
@@ -36,9 +36,6 @@ class GadgetData(object):
 		self.detectGType()
 		self.loadHeaders()
 		self.Ntotal = sum(self.header[0]['Nall'])
-		self.ordered = False
-		self.posloaded = False
-		self.velloaded = False
 		self.posSphCalculated = False
 		self.velSphCalculated = False
 		self.redshiftCalculated = False
@@ -49,6 +46,101 @@ class GadgetData(object):
 		self.densityZGridsize = None
 		self.originCentered = True
 	
+    order = property()
+    @order.getter
+    def order(self):
+        try:
+            return self._order
+        except AttributeError:
+            # Load particle IDs and use them to build an ordering array that
+		    # will be used to order the other data by ID.
+            idarray = np.empty(self.Ntotal, dtype='uint32')
+            
+            Ncount = 0
+            
+            for header in self.header:
+                Npart = sum(header['Npart'])
+                if self.gtype == 2:
+                    offset = (4*16 + (8 + 256) + (8 + Npart*3*4)*2)
+                else:
+                    offset = ((8 + 256) + (8 + Npart*3*4)*2)
+                
+                memmap = np.memmap(header['filename'], dtype='uint32', mode='r', offset=offset)
+                
+                idarray[Ncount:Ncount+Npart] = memmap[1:1+Npart]
+                Ncount += Npart
+                del memmap
+            
+            self.order = np.argsort(idarray).astype('uint32')
+            del idarray
+            return self._order
+    @order.setter
+    def order(self, order):
+        self._order = order
+    
+    pos = property()
+    @pos.getter
+    def pos(self):
+        try:
+            return self._pos
+        except AttributeError:
+            # Load the particle positions into a NumPy array called self._pos,
+            # ordered by ID number.
+            self.pos = np.empty((3,self.Ntotal), dtype='float32').T
+            Ncount = 0
+            
+            for header in self.header:
+                if self.gtype == 2:
+                    offset = (2*16 + (8 + 256))
+                else:
+                    offset = (8 + 256)
+                
+                memmap = np.memmap(header['filename'], dtype='float32', mode='r', offset=offset)
+                
+                self.pos[Ncount:Ncount+Npart] = memmap[1:1+3*Npart].reshape((Npart,3))
+                Ncount += Npart
+                del memmap
+            
+            self.pos = self.pos[self.order]
+            return self._pos
+    @pos.setter
+    def pos(self, pos):
+        self._pos = pos
+    def loadPos(self, forced=False):
+		pass
+
+    vel = property()
+    @vel.getter
+    def vel(self):
+        try:
+            return self._vel
+        except AttributeError:
+            # Load the particle velocities into a NumPy array called self._vel,
+            # ordered by ID number.
+            self.vel = np.empty((3,self.Ntotal), dtype='float32').T
+            Ncount = 0
+            
+            for header in self.header:
+                Npart = sum(header['Npart'])
+                if self.gtype == 2:
+                    offset = 3*16 + (8 + 256) + (8 + 3*4*Npart)
+                else:
+                    offset = (8 + 256) + (8 + 3*4*Npart)
+                
+                memmap = np.memmap(header['filename'], dtype='float32', mode='r', offset=offset)
+                
+                self.vel[Ncount:Ncount+Npart] = memmap[1:1+3*Npart].reshape((Npart,3))
+                Ncount += Npart
+                del memmap
+            
+            self.vel = self.vel[self.order]
+            return self._vel
+    @vel.setter
+    def vel(self, vel):
+        self._vel = vel
+    def loadVel(self, forced=False):
+		pass
+    
 	def detectGType(self):
 		"""Detects Gadget file type (type 1 or 2; resp. without or with the 16
 		byte block headers)."""
@@ -70,123 +162,7 @@ class GadgetData(object):
 			basename = filename[:-1]
 			for filenr in range(self.header[0]['NumFiles'])[1:]:
 				self.header.append(getheader(basename+str(filenr), self.gtype))
-	
-	def loadOrderStruct(self):
-		"""Loads the particle IDs and uses them to build an ordering array that
-		will be used to order the other data by ID. The ordering array will be
-		stored as self.order."""
-		
-		print "Function loadOrderStruct is deprecated! Use loadOrder (which uses NumPy memory maps)."
-		
-		ID = '=I'+('%iI'%self.Ntotal)+'I' 				# struct formatting string
-		
-		idarray = np.empty(self.Ntotal, dtype='uint32')
-		
-		Ncount = 0
-		
-		for header in self.header:
-			f = open(header['filename'], 'rb')
-			Npart = sum(header['Npart'])
-			if self.gtype == 2:
-				f.seek(4*16 + (8 + 256) + (8 + Npart*3*4)*2)
-			else:
-				f.seek((8 + 256) + (8 + Npart*3*4)*2)
-				
-			idarray[Ncount:Ncount+Npart] = np.array(struct.unpack(ID,f.read(4*Npart + 8)))[1:-1]
-			Ncount += Npart
-			f.close()
-		
-		self.order = np.argsort(idarray).astype('uint32')
-		del idarray
-		self.ordered = True
-	
-	def loadOrder(self):
-		"""Loads the particle IDs and uses them to build an ordering array that
-		will be used to order the other data by ID. The ordering array will be
-		stored as self.order."""
-		
-		idarray = np.empty(self.Ntotal, dtype='uint32')
-		Ncount = 0
-		
-		for header in self.header:
-			Npart = sum(header['Npart'])
-			if self.gtype == 2:
-				offset = (4*16 + (8 + 256) + (8 + Npart*3*4)*2)
-			else:
-				offset = ((8 + 256) + (8 + Npart*3*4)*2)
-			
-			memmap = np.memmap(header['filename'], dtype='uint32', mode='r', offset=offset)
-			
-			idarray[Ncount:Ncount+Npart] = memmap[1:1+Npart]
-			Ncount += Npart
-			del memmap
-		
-		self.order = np.argsort(idarray).astype('uint32')
-		del idarray
-		self.ordered = True
-	
-	def loadPos(self, forced=False):
-		"""Loads the particle positions into a NumPy array called self.pos,
-		ordered by ID number. When you want to reload after the positions
-		have already been loaded, provide the forced=True argument."""
-
-		if self.posloaded and not forced:
-			print "Positions already loaded; use forced=True argument to force loading again."
-			return
-			
-		if not self.ordered:
-			self.loadOrder()
-		
-		self.pos = np.empty((3,self.Ntotal), dtype='float32').T
-		Ncount = 0
-		
-		for header in self.header:
-			Npart = sum(header['Npart'])
-			if self.gtype == 2:
-				offset = (2*16 + (8 + 256))
-			else:
-				offset = (8 + 256)
-			
-			memmap = np.memmap(header['filename'], dtype='float32', mode='r', offset=offset)
-			
-			self.pos[Ncount:Ncount+Npart] = memmap[1:1+3*Npart].reshape((Npart,3))
-			Ncount += Npart
-			del memmap
-		
-		self.pos = self.pos[self.order]
-		self.posloaded = True
-	
-	def loadVel(self, forced=False):
-		"""Loads the particle velocities into a NumPy array called self.vel,
-		ordered by ID number. When you want to reload after the velocities
-		have already been loaded, provide the forced=True argument."""
-		
-		if self.velloaded and not forced:
-			print "Velocities already loaded; use forced=True argument to force loading again."
-			return
-		
-		if not self.ordered:
-			self.loadOrder()
-		
-		self.vel = np.empty((3,self.Ntotal), dtype='float32').T
-		Ncount = 0
-		
-		for header in self.header:
-			Npart = sum(header['Npart'])
-			if self.gtype == 2:
-				offset = 3*16 + (8 + 256) + (8 + 3*4*Npart)
-			else:
-				offset = (8 + 256) + (8 + 3*4*Npart)
-			
-			memmap = np.memmap(header['filename'], dtype='float32', mode='r', offset=offset)
-			
-			self.vel[Ncount:Ncount+Npart] = memmap[1:1+3*Npart].reshape((Npart,3))
-			Ncount += Npart
-			del memmap
-		
-		self.vel = self.vel[self.order]
-		self.velloaded = True
-	
+    
 	def calcPosSph(self, origin=None, centerOrigin=True):
 		"""Calculate the positions of particles in spherical coordinates. The
 		origin is by default at the center of the box, but can be specified by
@@ -688,12 +664,13 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
       particle.
     - The pos and vel arrays must have (Python) shape (N,3), where pos[:,0] will
       then be all the X coordinates, pos[:,1] the Y, etc.
-    - pos and boxsize are in units of kpc h^-1, vel is in units of km/s, mass
+    - pos and boxsize are in units of Mpc h^-1, vel is in units of km/s, mass
       is in units of 10^10 M_sol h^-1
     Note: this function writes "type 2" Gadget files, i.e. with 4 character
     block names before each block (see section 6.2 of Gadget manual).
     """
-    pos = np.array(pos, dtype='float32', order='F')
+    # Position is converted to kpc h^-1, the default unit in Gadget simulations.
+    pos = 1000*np.array(pos, dtype='float32', order='F')
     vel = np.array(vel, dtype='float32', order='F')
     # Velocity correction, needed in GADGET for comoving (cosm.) simulation
     # See thread: http://www.mpa-garching.mpg.de/gadget/gadget-list/0111.html
@@ -748,7 +725,7 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
 
 def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 864000, resubmit_on = 0, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.4, tree_alloc_factor = 0.8, buffer_size = 100, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512"):
     """Arguments:
-    boxlen (kpc h^-1)
+    boxlen (Mpc h^-1)
     cosmo (Cosmology object)
     ic_file (path)
     redshift_begin
@@ -773,6 +750,9 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     run; that is run_dir_base+run_name; the run_name directory will be created
     by this function.
     """
+    # Length units are converted to kpc h^-1, the default Gadget unit.
+    boxlen *= 1000
+    
     output_dir = run_dir_base+'/'+run_name
     os.mkdir(output_dir)
     

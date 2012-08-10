@@ -1,12 +1,13 @@
+import numpy as np
+
 N = 3
-gridsize = 64
+gridsize = 64 # vreemd verband hiermee ook... niet lineair, beetje onregelmatig zelfs
 a_inv_for = np.empty((N, N), dtype=np.complex256)
 a_for = np.empty((N, N), dtype=np.complex256)
 b_for = np.empty((N, N), dtype=np.complex256)
 np.random.seed(0)
 constraints = np.sqrt(2)*(np.random.randn(N, gridsize, gridsize, gridsize/2+1) + 1j* np.random.randn(N, gridsize, gridsize, gridsize/2+1)).astype(np.complex256)
 
-#constraints[
 
 for i, Hi in enumerate(constraints):
     for j, Hj in enumerate(constraints):

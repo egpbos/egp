@@ -37,7 +37,7 @@ mass0 = np.array([x[12] for x in clusters], dtype='float64')[0] # 10^14 Msun
 # ---- CALCULATE STUFF ----
 
 ps = CosmoPowerSpectrum(cosmo)
-ps.normalize((boxlen/cosmo.h)**3)
+ps.normalize(boxlen**3)
 
 # Unconstrained field
 rhoU = GaussianRandomField(ps, boxlen, gridsize_iter, seed=seed)
@@ -50,8 +50,7 @@ iteration_mean(result[0], mass0, boxlen, gridsize_iter, rhoU, ps, cosmo, True, p
 
 # ---- OUTPUT to Gadget IC files ----
 
-rhoc = critical_density(cosmo) # M_sun Mpc^-3
-rhoc = rhoc/cosmo.h**2 # M_sun Mpc^-3 h^2 (boxlen is in Mpc h^-1 too, so must convert)
+rhoc = critical_density(cosmo) # M_sun Mpc^-3 h^2
 particle_mass = cosmo.omegaM * rhoc * boxlen**3 / gridsize**3 / 1e10 # 10^10 M_sun h^-1
 
 rhoU_out = GaussianRandomField(ps, boxlen, gridsize, seed=seed)
@@ -61,9 +60,9 @@ print "Building and saving iterated version..."
 irhoC = constrain_field(result[0], mass0, boxlen, rhoU_out, ps, cosmo)
 ipsiC = DisplacementField(irhoC)
 del irhoC
-ipos, ivel = zeldovich_new(redshift, ipsiC, cosmo) # Mpc, not h^-1!
+ipos, ivel = zeldovich(redshift, ipsiC, cosmo) # Mpc, not h^-1!
 del ipsiC
-io.write_gadget_ic_dm("/Users/users/pbos/dataserver/sims/ICs/ic_icon_%iMpc_%i_1_%i.dat" % (boxlen, gridsize, seed), 1000*ipos.reshape((3,gridsize**3)).T*cosmo.h, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+io.write_gadget_ic_dm("/Users/users/pbos/dataserver/sims/ICs/ic_icon_%iMpc_%i_1_%i.dat" % (boxlen, gridsize, seed), ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
 del ipos, ivel
 
 # non-iterated version (for comparison):
@@ -71,9 +70,9 @@ print "Building and saving non-iterated version..."
 no_irhoC = constrain_field(pos0, mass0, boxlen, rhoU_out, ps, cosmo)
 no_ipsiC = DisplacementField(no_irhoC)
 del no_irhoC
-no_ipos, no_ivel = zeldovich_new(redshift, no_ipsiC, cosmo) # Mpc, not h^-1!
+no_ipos, no_ivel = zeldovich(redshift, no_ipsiC, cosmo) # Mpc, not h^-1!
 del no_ipsiC
-io.write_gadget_ic_dm("/Users/users/pbos/dataserver/sims/ICs/ic_noicon_%iMpc_%i_1_%i.dat" % (boxlen, gridsize, seed), 1000*no_ipos.reshape((3,gridsize**3)).T*cosmo.h, no_ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+io.write_gadget_ic_dm("/Users/users/pbos/dataserver/sims/ICs/ic_noicon_%iMpc_%i_1_%i.dat" % (boxlen, gridsize, seed), no_ipos.reshape((3,gridsize**3)).T, no_ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
 del no_ipos, no_ivel
 
 print "Done!"

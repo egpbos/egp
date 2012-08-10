@@ -34,6 +34,7 @@ cluster_table.next() # skip header
 clusters = []
 for cluster in cluster_table:
     clusters.append(cluster)
+
 cluster_table_file.close()
 mass0 = np.array([x[12] for x in clusters], dtype='float64')[0] # 10^14 Msun
 
@@ -54,8 +55,7 @@ iteration_mean(result, mass0, boxlen, gridsize_iter, rhoU, ps, cosmo, True, pos0
 
 # ---- OUTPUT to Gadget IC files ----
 
-rhoc = critical_density(cosmo) # M_sun Mpc^-3
-rhoc = rhoc/cosmo.h**2 # M_sun Mpc^-3 h^2 (boxlen is in Mpc h^-1 too, so must convert)
+rhoc = critical_density(cosmo) # M_sun Mpc^-3 h^2
 particle_mass = cosmo.omegaM * rhoc * boxlen**3 / gridsize**3 / 1e10 # 10^10 M_sun h^-1
 
 rhoU_out = GaussianRandomField(ps, boxlen, gridsize, seed=seed)
@@ -65,16 +65,17 @@ print "Building and saving iterated version..."
 irhoC = constrain_field(result, mass0, boxlen, rhoU_out, ps, cosmo)
 ipsiC = DisplacementField(irhoC)
 del irhoC
-ipos, ivel = zeldovich_new(redshift, ipsiC, cosmo) # Mpc, not h^-1!
+ipos, ivel = zeldovich(redshift, ipsiC, cosmo) # Mpc, not h^-1!
 del ipsiC
 ic_file = "/Users/users/pbos/dataserver/sims/ICs/ic_icon_%iMpc_%i_%s_%i.dat" % (boxlen, gridsize, test_id, seed)
-io.write_gadget_ic_dm(ic_file, 1000*ipos.reshape((3,gridsize**3)).T*cosmo.h, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+#~ io.write_gadget_ic_dm(ic_file, 1000*ipos.reshape((3,gridsize**3)).T*cosmo.h, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+io.write_gadget_ic_dm(ic_file, ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
 del ipos, ivel
 
 # non-iterated version (for comparison):
 print "Not building and saving non-iterated version, because that's the same as in test1."
 
 print "Preparing for gadget run %(run_name)s..."
-io.prepare_gadget_run(boxlen*1000, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc)
+io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc)
 
 print "Done!"

@@ -13,12 +13,13 @@ cosmo.trans = 8
 boxlen = 100. # Mpc h^-1
 gridsize = 64
 
-dk = 2*np.pi/boxlen*cosmo.h # here you do need to put the actual physical size!
+#~ dk = 2*np.pi/boxlen*cosmo.h # here you do need to put the actual physical size!
+dk = 2*np.pi/boxlen # but not anymore in the new code (10 Aug 2012)
 kmax = gridsize*dk
 halfgrid = gridsize/2
 
 ps = CosmoPowerSpectrum(cosmo)
-ps.normalize((boxlen/cosmo.h)**3)
+ps.normalize(boxlen**3) # (10 Aug 2012)
 
 # ---- FIELDS & CONSTRAINTS ----
 # Unconstrained field
@@ -58,9 +59,9 @@ center = (subpos.max(axis=0) + subpos.min(axis=0))/2
 pos = subpos - center + boxlen/2
 #boxlen = subsize + boxlen
 
-hubble_constant = cosmo.h*100 * 3.24077649e-20 # s^-1
+hubble_constant = 100 * 3.24077649e-20 # h s^-1 (10 Aug 2012)
 gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31 # Mpc^3 Msun^-1 s^-2
-rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (Msun Mpc^-3)
+rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3) (10 Aug 2012)
 # Derive a rough estimate for the peak scale, based on uniform density (~ true
 # at z = \inf):
 scale_mpc = (3*(m500*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
@@ -78,7 +79,7 @@ location = ConstraintLocation(pos0)
 constraints = []
 
 # first guess for height:
-sigma0 = ps.moment(0, scale_mpc[0]/cosmo.h, (boxlen/cosmo.h)**3)
+sigma0 = ps.moment(0, scale_mpc[0], boxlen**3) # (10 Aug 2012)
 height = 3.*sigma0
 
 constraints.append(HeightConstraint(location, scale, height))
@@ -122,8 +123,8 @@ spheregrid = r2grid < scale_mpc[0]**2
 
 # finally calculate the "new position" of the peak:
 #~ POS = np.array([X,Y,Z])
-mean_peak_pos = POS[:,spheregrid].mean(axis=1)*cosmo.h
-median_peak_pos = np.median(POS[:,spheregrid],axis=1)*cosmo.h
+mean_peak_pos = POS[:,spheregrid].mean(axis=1) # (10 Aug 2012)
+median_peak_pos = np.median(POS[:,spheregrid],axis=1) # (10 Aug 2012)
 
 # <end find mean position of particles>
 
@@ -152,7 +153,7 @@ scale_i = ConstraintScale(scale_mpc_i[0])
 constraints_i = []
 
 # first guess for height:
-sigma0_i = ps.moment(0, scale_mpc_i[0]/cosmo.h, (boxlen/cosmo.h)**3)
+sigma0_i = ps.moment(0, scale_mpc_i[0], boxlen**3) # (10 Aug 2012)
 height_i = 3.*sigma0_i
 
 constraints_i.append(HeightConstraint(location_i, scale_i, height_i))
@@ -195,8 +196,8 @@ spheregrid_i = r2grid < scale_mpc_i[0]**2
 
 # finally calculate the "new position" of the peak:
 #~ POS_i = np.array([X_i,Y_i,Z_i])
-mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1)*cosmo.h
-median_peak_pos_i = np.median(POS_i[:,spheregrid_i],axis=1)*cosmo.h
+mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1) # (10 Aug 2012)
+median_peak_pos_i = np.median(POS_i[:,spheregrid_i],axis=1) # (10 Aug 2012)
 
 # <end find mean position of particles>
 
@@ -220,7 +221,7 @@ def plot_positions(pos_i):
     constraints_i = []
     
     # first guess for height:
-    sigma0_i = ps.moment(0, scale_mpc_i[0]/cosmo.h, (boxlen/cosmo.h)**3)
+    sigma0_i = ps.moment(0, scale_mpc_i[0], boxlen**3) # (10 Aug 2012)
     height_i = 3.*sigma0_i
     
     constraints_i.append(HeightConstraint(location_i, scale_i, height_i))
@@ -235,7 +236,7 @@ def plot_positions(pos_i):
     
     # Now, Zel'dovich it:
     psiC1_i = DisplacementField(rhoC1_i)
-    POS_i, v_i = zeldovich_new(0., psiC1_i, cosmo) # Mpc, not h^-1!
+    POS_i, v_i = zeldovich_new(0., psiC1_i, cosmo) # Mpc h^-1! (10 Aug 2012)
     
     # <begin find mean position of particles>
     
@@ -263,10 +264,10 @@ def plot_positions(pos_i):
     
     # finally calculate the "new position" of the peak:
     #~ POS_i = np.array([X_i,Y_i,Z_i])
-    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1)*cosmo.h
-    points = mlab.points3d(POS_i[0]*cosmo.h,POS_i[1]*cosmo.h,POS_i[2]*cosmo.h, mode='point', opacity=0.5)
+    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1) # (10 Aug 2012)
+    points = mlab.points3d(POS_i[0],POS_i[1],POS_i[2], mode='point', opacity=0.5) # (10 Aug 2012)
     cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=scale_mpc[0], opacity=0.3)
-    peak_points = mlab.points3d(POS_i[0][spheregrid]*cosmo.h, POS_i[1][spheregrid]*cosmo.h, POS_i[2][spheregrid]*cosmo.h, opacity=0.5, mode='point', color=(0,1,0))
+    peak_points = mlab.points3d(POS_i[0][spheregrid], POS_i[1][spheregrid], POS_i[2][spheregrid], opacity=0.5, mode='point', color=(0,1,0)) # (10 Aug 2012)
     mlab.show()
 
 
@@ -285,7 +286,7 @@ def iterate_mean(pos_i):
     constraints_i = []
     
     # first guess for height:
-    sigma0_i = ps.moment(0, scale_mpc_i[0]/cosmo.h, (boxlen/cosmo.h)**3)
+    sigma0_i = ps.moment(0, scale_mpc_i[0], boxlen**3) # (10 Aug 2012)
     height_i = 3.*sigma0_i
     
     constraints_i.append(HeightConstraint(location_i, scale_i, height_i))
@@ -300,7 +301,7 @@ def iterate_mean(pos_i):
     
     # Now, Zel'dovich it:
     psiC1_i = DisplacementField(rhoC1_i)
-    POS_i, v_i = zeldovich_new(0., psiC1_i, cosmo) # Mpc, not h^-1!
+    POS_i, v_i = zeldovich_new(0., psiC1_i, cosmo) # Mpc h^-1 (10 Aug 2012)
     
     # <begin find mean position of particles>
     
@@ -328,7 +329,7 @@ def iterate_mean(pos_i):
     
     # finally calculate the "new position" of the peak:
     #~ POS_i = np.array([X_i,Y_i,Z_i])
-    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1)*cosmo.h
+    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1) # (10 Aug 2012)
     return mean_peak_pos_i
 
 def difference(pos_iter, boxlen):

@@ -21,23 +21,19 @@ from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, Ext
 from matplotlib import pyplot as pl
 from mayavi import mlab
 import egp.toolbox
+critical_density = egp.toolbox.critical_density
 
 # Decide which one to use!
 from scipy.optimize import fmin_l_bfgs_b as solve
 from scipy.optimize import anneal
 
 # constants
-__version__ = "0.1, July 2012"
+__version__ = "0.1.1, August 2012"
 
 # exception classes
 # interface functions
 # classes
 # functions
-def critical_density(cosmo):
-    hubble_constant = cosmo.h*100 * 3.24077649e-20 # s^-1
-    gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31 # Mpc^3 Msun^-1 s^-2
-    rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (Msun Mpc^-3)
-    return rhoc
 
 def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo):
     location = ConstraintLocation(pos)
@@ -57,7 +53,8 @@ def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo):
     constraints = []
     
     # first guess for height: # DIT LATER OOK ITEREREN DOOR MASSA TE CHECKEN
-    sigma0 = ps.moment(0, scale_mpc/cosmo.h, (boxlen/cosmo.h)**3)
+    #~ sigma0 = ps.moment(0, scale_mpc/cosmo.h, (boxlen/cosmo.h)**3)
+    sigma0 = ps.moment(0, scale_mpc, boxlen**3)
     height = 3.*sigma0
     
     constraints.append(HeightConstraint(location, scale, height))
@@ -77,7 +74,7 @@ def iteration_mean(pos_i, mass_i, boxlen, gridsize, rhoU, ps, cosmo, plot=False,
     
     # Now, Zel'dovich it:
     psiC_i = DisplacementField(rhoC_i)
-    POS_i, v_i = zeldovich_new(0., psiC_i, cosmo) # Mpc, not h^-1!
+    POS_i, v_i = zeldovich(0., psiC_i, cosmo) # Mpc, not h^-1!
     
     # Find the mean position of the particles that were originally in the peak (or
     # at least in a sphere with radius of the peak scale):
@@ -105,12 +102,12 @@ def iteration_mean(pos_i, mass_i, boxlen, gridsize, rhoU, ps, cosmo, plot=False,
     
     # finally calculate the "new position" of the peak:
     #~ POS_i = np.array([X_i,Y_i,Z_i])
-    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1)*cosmo.h
+    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1)
     
     if plot:
-        points = mlab.points3d(POS_i[0]*cosmo.h,POS_i[1]*cosmo.h,POS_i[2]*cosmo.h, mode='point', opacity=0.5)
+        points = mlab.points3d(POS_i[0],POS_i[1],POS_i[2], mode='point', opacity=0.5)
         cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=scale_mpc_i, opacity=0.3)
-        peak_points = mlab.points3d(POS_i[0,spheregrid_i]*cosmo.h, POS_i[1,spheregrid_i]*cosmo.h, POS_i[2,spheregrid_i]*cosmo.h, opacity=0.5, mode='point', color=(0,1,0))
+        peak_points = mlab.points3d(POS_i[0,spheregrid_i], POS_i[1,spheregrid_i], POS_i[2,spheregrid_i], opacity=0.5, mode='point', color=(0,1,0))
         mlab.show()
     
     return mean_peak_pos_i
@@ -135,7 +132,7 @@ def sphere_grid(pos, radius, boxlen, gridsize):
     # Find the mean position of the particles that were originally in the peak (or
     # at least in a sphere with radius of the peak scale), or MEDIAN position:
     xgrid, ygrid, zgrid = np.mgrid[0:boxlen:boxlen/gridsize, 0:boxlen:boxlen/gridsize, 0:boxlen:boxlen/gridsize] + boxlen/gridsize/2 - boxlen/2
-
+    
     # determine roll needed to get peak position back to where it should be:
     floor_cell = np.int32(pos/boxlen*gridsize) # "closest" cell (not really of course in half of the cases...)
     roll = floor_cell - gridsize/2
@@ -144,13 +141,13 @@ def sphere_grid(pos, radius, boxlen, gridsize):
     xgrid -= diff[0]/gridsize*boxlen
     ygrid -= diff[1]/gridsize*boxlen
     zgrid -= diff[2]/gridsize*boxlen
-
+    
     # (to be rolled) distance function (squared!):
     r2grid = xgrid**2 + ygrid**2 + zgrid**2
     # roll it:
     r2grid = np.roll(r2grid, -roll[0], axis=0) # roll negatively, because element[0,0,0]
     r2grid = np.roll(r2grid, -roll[1], axis=1) # is not x=0,0,0 but x=boxlen,boxlen,boxlen
     r2grid = np.roll(r2grid, -roll[2], axis=2) # (due to changing around in zeldovich)
-
+    
     spheregrid = r2grid < radius**2
     return spheregrid

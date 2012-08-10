@@ -73,3 +73,13 @@ def k_i_grid(gridsize, boxlen):
     k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
     k2 -= kmax*(k2 > dk*(halfgrid - 1))
     return np.array((k1,k2,k3))
+
+
+# Cosmology
+def critical_density(cosmo):
+    """Gives the critical density, given Cosmology /cosmo/, in units of
+    h^2 Msun Mpc^-3."""
+    hubble_constant = 100 * 3.24077649e-20 # h s^-1
+    gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31 # Mpc^3 Msun^-1 s^-2
+    rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3)
+    return rhoc
