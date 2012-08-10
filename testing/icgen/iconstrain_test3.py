@@ -41,7 +41,7 @@ mass0 = np.array([x[12] for x in clusters], dtype='float64')[0] # 10^14 Msun
 # ---- CALCULATE STUFF ----
 
 ps = CosmoPowerSpectrum(cosmo)
-ps.normalize((boxlen/cosmo.h)**3)
+ps.normalize(boxlen**3)
 
 # Unconstrained field
 rhoU = GaussianRandomField(ps, boxlen, gridsize_iter, seed=seed)
