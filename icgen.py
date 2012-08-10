@@ -20,6 +20,7 @@ from csv import reader as csvreader
 
 from egp.crunch import resolution_independent_random_grid
 from egp.types import Field, VectorField, ParticleSet, PeriodicArray
+from egp import toolbox
 
 
 # constants
@@ -123,7 +124,8 @@ class PowerSpectrum(object):
     
     def normalize(self, volume, Rth, sigma0, maxiter=100):
         """Normalize the power spectrum for the periodic field in box of
-        /volume/ that it will be used on, on a top-hat scale Rth with sigma0."""
+        /volume/ that it will be used on, on a top-hat scale Rth with sigma0.
+        /volume/ must have units h^-3 Mpc^3."""
         
         self.Rth = Rth
         self.sigma0 = sigma0
@@ -350,15 +352,16 @@ class DisplacementField(VectorField):
         k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
         k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
         k2 -= kmax*(k2 > dk*(halfgrid - 1))
-        k = np.sqrt(k1**2 + k2**2 + k3**2)
-        k[0,0,0] = 1 # to avoid division by zero
+        k_sq = k1**2 + k2**2 + k3**2
+        k_sq[0,0,0] = 1 # to avoid division by zero
 
         # Indices for the 7 real, independent, non-zero grid values:
         real7x,real7y,real7z = np.mgrid[0:2,0:2,0:2]*halfgrid
         real7x,real7y,real7z = real7x.ravel()[1:],real7y.ravel()[1:],real7z.ravel()[1:]
         
         # Then, the actual displacement field:
-        Z = 1.0j/k**2/self.boxlen * self.density.f
+        #~ Z = 1.0j/k_sq/self.boxlen * self.density.f
+        Z = 1.0j/k_sq * self.density.f
         Z[real7x,real7y,real7z] = 0.0 # waarom dit eigenlijk?
         Z[0,0,0] = 0.0
         VectorField.__init__(self, fourier = (k1*Z, k2*Z, k3*Z))
@@ -379,8 +382,8 @@ class GaussianRandomField(DensityField):
     
     Input for initialization:
     - power:     A PowerSpectrum, defining the Gaussian random DensityField.
-    - boxlen:    Length of the sides of the box that will be produced. Not in
-                 units of h^{-1} Mpc, so divide by h before input if necessary!
+    - boxlen:    Length of the sides of the box that will be produced.
+                 Units of h^{-1} Mpc.
     - gridsize:  Number of grid points in one direction
     - seed:      If given, a random seed is passed to the random number
                  generator, otherwise NumPy finds its own seed somewhere.
@@ -515,8 +518,8 @@ class ConstrainedField(DensityField):
         try:
             return self._residual_field
         except AttributeError:
-            k = k_abs_grid(self.gridsize, self.boxlen)
-            ki = k_i_grid(self.gridsize, self.boxlen)
+            k = toolbox.k_abs_grid(self.gridsize, self.boxlen)
+            ki = toolbox.k_i_grid(self.gridsize, self.boxlen)
             self.correlations.calculate(k, ki) # P(k) H_i(k) and \xi_ij^-1
             self.calculate_unconstrained_constraints(ki) # c_j^~
             self.calculate_residual_field() # P(k) H_i(k) \xi_ij^-1 (c_j-c_j^~)
@@ -596,7 +599,26 @@ class ConstraintCorrelations(object):
 class ConstraintLocation(object):
     def __init__(self, location):
         self.location = location
-        self.constraints = []
+        #self.constraints = []
+        # N.B.: the constraints list will cause a reference cycle, which Python
+        # is not able to handle properly! Will cause memory leak!
+        # Can be manually fixed using the gc module:
+        #   import gc
+        #   gc.collect()
+        # To see what is actually causing the memory leak:
+        #   gc.set_debug(gc.DEBUG_LEAK)
+        #   gc.collect()
+        #   print gc.garbage
+        # This way the garbage is kept in the garbage list instead of instantly
+        # being deleted (as with collect() without the set_debug stuff).
+        # See also Constraint.__init__()
+        #
+        # A better fix would be to use a "weak reference" from the weakref
+        # module. See e.g. http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python/
+        # An even better fix would be to just check for human errors in the
+        # ConstrainedField upon building the field instead of doing it in the
+        # ConstraintLocation object already as was the case when using this
+        # constraints list.
     
     def __call__(self, k=None):
         """Return common part of the constraint kernels at this location. Once
@@ -618,16 +640,16 @@ class ConstraintLocation(object):
         kr = self.location[0]*k[0] + self.location[1]*k[1] + self.location[2]*k[2]
         self._common_kernel_factor =  np.exp(1j*kr)
     
-    def add_constraint(self, constraint):
-        constraint_types = [type(con) for con in self.constraints]
-        if type(constraint) in constraint_types:
-            if type(constraint) == HeightConstraint:
-                raise ConstraintLocationError("There can only be one HeightConstraint at a ConstraintLocation!")
-            if type(constraint) == ExtremumConstraint:
-                extrema_directions = [con.direction for con in self.constraints if type(con) == ExtremumConstraint]
-                if constraint.direction in extrema_directions:
-                    raise ConstraintLocationError("There can only be one ExtremumConstraint in the %i direction at a ConstraintLocation!" % constraint.direction)
-        self.constraints.append(constraint)
+    #~ def add_constraint(self, constraint):
+        #~ constraint_types = [type(con) for con in self.constraints]
+        #~ if type(constraint) in constraint_types:
+            #~ if type(constraint) == HeightConstraint:
+                #~ raise ConstraintLocationError("There can only be one HeightConstraint at a ConstraintLocation!")
+            #~ if type(constraint) == ExtremumConstraint:
+                #~ extrema_directions = [con.direction for con in self.constraints if type(con) == ExtremumConstraint]
+                #~ if constraint.direction in extrema_directions:
+                    #~ raise ConstraintLocationError("There can only be one ExtremumConstraint in the %i direction at a ConstraintLocation!" % constraint.direction)
+        #~ self.constraints.append(constraint)
 
 
 class ConstraintLocationError(Exception):
@@ -663,7 +685,19 @@ class Constraint(object):
     def __init__(self, location, scale):
         self.location = location
         self.scale = scale
-        location.add_constraint(self)
+        #~ location.add_constraint(self)
+        # N.B.: this constraints list will cause a reference cycle, which Python
+        # is not able to handle properly! Will cause memory leak!
+        # Can be manually fixed using the gc module:
+        #   import gc
+        #   gc.collect()
+        # To see what is actually causing the memory leak:
+        #   gc.set_debug(gc.DEBUG_LEAK)
+        #   gc.collect()
+        #   print gc.garbage
+        # This way the garbage is kept in the garbage list instead of instantly
+        # being deleted (as with collect() without the set_debug stuff).
+        # See also ConstraintLocation.__init__()
     
     def W_factor(self, k):
         try:
@@ -736,8 +770,9 @@ class GravityConstraint(Constraint):
     def set_H(self, k):
         C = self.cosmology
         k_squared = k[0]**2 + k[1]**2 + k[2]**2
-        self._H = 3./2 * C.omegaM * (C.h*100)**2 * 1j * k[self.direction] / \
+        self._H = 3./2 * C.omegaM * 100**2 * 1j * k[self.direction] / \
                   k_squared * self.W_factor(k)
+                                  # 100 = Hubble in units of h
         self._H[0,0,0] = 0 # complex division of zero by zero gives NaN
 
 
@@ -760,40 +795,14 @@ class TidalConstraint(Constraint):
             delta = 1
         else:
             delta = 0
-        self._H = 3./2 * C.omegaM * (C.h*100)**2 * \
+        self._H = 3./2 * C.omegaM * 100**2 * \
                   (k[self.k_index1] * k[self.k_index2] / k_squared - delta/3.) * \
                   self.W_factor(k)
+                                  # 100 = Hubble in units of h
         self._H[0,0,0] = 0 # complex division of zero by zero gives NaN
 
 
 #   CONVENIENCE FUNCTIONS
-
-def k_abs_grid(gridsize, boxlen):
-    halfgrid = gridsize/2
-    dk = 2*np.pi/boxlen
-    k12 = np.fft.fftfreq(gridsize, 1/dk/gridsize) # k3 = k12[:halfgrid+1].abs()
-    return np.sqrt(k12[:halfgrid+1]**2 + k12[:,np.newaxis]**2 + k12[:,np.newaxis,np.newaxis]**2)
-
-def k_i_grid(gridsize, boxlen):
-    halfgrid = gridsize/2
-    dk = 2*np.pi/boxlen
-    kmax = gridsize*dk
-    k1, k2, k3 = dk*np.mgrid[0:gridsize, 0:gridsize, 0:halfgrid+1]
-    k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
-    k2 -= kmax*(k2 > dk*(halfgrid - 1))
-    return np.array((k1,k2,k3))
-
-def gaussian_smooth(densityFourier, r_g, boxlen):
-    gridsize = len(densityFourier)
-    halfgrid = gridsize/2
-    dk = 2*np.pi/boxlen
-    k = k_abs_grid(gridsize, boxlen)
-    
-    def windowGauss(ka, Rg):
-        return np.exp( -ka*ka*Rg*Rg/2 ) # N.B.: de /2 factor is als je het veld smooth!
-                                        # Het PowerSpec heeft deze factor niet.
-    
-    return DensityField(fourier=densityFourier*windowGauss(k,r_g))
 
 def euler_matrix(alpha, beta, psi):
     cos, sin = np.cos, np.sin
@@ -869,8 +878,10 @@ def constraints_from_table(table, power_spectrum, boxlen):
     constraints = []
     
     z = 0
-    velocity_to_gravity = 2*fpeebl(z, cosmo.h, cosmo.omegaR, cosmo.omegaM, \
-                          cosmo.omegaL) / 3 / (cosmo.h*100) / cosmo.omegaM
+    velocity_to_gravity = 2*fpeebl(z, cosmo.omegaR, cosmo.omegaM, \
+                      cosmo.omegaL) / 3 / 100 / cosmo.omegaM
+                                        # 100 = Hubble in units of h
+
     
     for row in table:
         # ----- Location
@@ -896,10 +907,10 @@ def constraints_from_table(table, power_spectrum, boxlen):
         sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
         sigma_min1 = power_spectrum.moment(-1, scale.scale, boxlen**3)
         gamma_nu = sigma0**2 / sigma_min1 / sigma1
-        sigma_g = 3./2 * cosmo.omegaM * (cosmo.h*100)**2 * sigma_min1
+        sigma_g = 3./2 * cosmo.omegaM * 100**2 * sigma_min1 # 100 = Hubble in units of h
         sigma_g_peak = sigma_g * np.sqrt(1 - gamma_nu**2)
         gamma = sigma1**2/sigma0/sigma2
-        sigma_E = 3./2*cosmo.omegaM*(cosmo.h*100)**2 * sigma0 * np.sqrt((1-gamma**2)/15)
+        sigma_E = 3./2*cosmo.omegaM*100**2 * sigma0 * np.sqrt((1-gamma**2)/15)
         
         # ----- Peak height
         height = row[4]
@@ -1144,7 +1155,6 @@ def zeldovich_new(redshift, psi, cosmo, print_info=False):
     omegaM = cosmo.omegaM
     omegaL = cosmo.omegaL
     omegaR = cosmo.omegaR
-    h = cosmo.h
     boxlen = psi.boxlen
     
     n1 = len(psi1)
@@ -1152,24 +1162,24 @@ def zeldovich_new(redshift, psi, cosmo, print_info=False):
     if print_info: print "Boxlen:    ",boxlen
     dx = boxlen/n1
     if print_info: print "dx:        ",dx
-    f = fpeebl(redshift, h, omegaR, omegaM, omegaL )
+    f = fpeebl(redshift, omegaR, omegaM, omegaL )
     if print_info: print "fpeebl:    ",f
     D = grow(redshift, omegaR, omegaM, omegaL)
     D0 = grow(0, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
     if print_info: print "D+(z):     ",D
     if print_info: print "D+(0):     ",D0
     if print_info: print "D(z)/D(0): ",D/D0
-    H = hubble(redshift, h, omegaR, omegaM, omegaL)
+    H = hubble(redshift, omegaR, omegaM, omegaL)
     if print_info: print "H(z):      ",H
     
-    # Velocity correction, needed in GADGET for comoving (cosm.) simulation
-    vgad = np.sqrt(1+redshift)
-    
-    xfact = boxlen*D/D0
-    vfact = vgad*D/D0*H*f*boxlen/(1+redshift)
+    #~ xfact = boxlen*D/D0
+    #~ vfact = vgad*D/D0*H*f*boxlen/(1+redshift)
+    xfact = D/D0
+    vfact = D/D0*H*f/(1+redshift)
     
     v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
-    X = (np.mgrid[0:boxlen:dx,0:boxlen:dx,0:boxlen:dx] + xfact*(v/vfact))%boxlen
+    q = np.mgrid[0:boxlen:dx,0:boxlen:dx,0:boxlen:dx] # lagrangian coordinates
+    X = (q + xfact*(v/vfact))%boxlen
     # Mirror coordinates, because somehow it doesn't match the coordinates put
     # into the constrained field.
     X = boxlen - X # x,y,z
@@ -1191,35 +1201,34 @@ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen, pri
     - omegaM:    Cosmological matter density parameter
     - omegaL:    Cosmological dark energy density parameter
     - omegaR:    Cosmological radiation density parameter
-    - h:         Hubble constant in units of 100 km/s/Mpc
+    - h:         Hubble constant in units of 100 km/s/Mpc (not used anymore)
     - boxlen:    Length of the sides of the box that will be produced, in
                  units of h^{-1} Mpc
                  
     Output:      [x,y,z,vx,vy,vz]
-    - x,y,z:     Particle coordinates (Mpc)
+    - x,y,z:     Particle coordinates (h^{-1} Mpc)
     - vx,vy,vz:  Particle velocities (km/s)
     """
-        
+    
     n1 = len(psi1)
-    boxlen = boxlen / h
+    boxlen = boxlen
     if print_info: print "Boxlen:    ",boxlen
     dx = boxlen/n1
     if print_info: print "dx:        ",dx
-    f = fpeebl(redshift, h, omegaR, omegaM, omegaL )
+    f = fpeebl(redshift, omegaR, omegaM, omegaL )
     if print_info: print "fpeebl:    ",f
     D = grow(redshift, omegaR, omegaM, omegaL)
     D0 = grow(0, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
     if print_info: print "D+(z):     ",D
     if print_info: print "D+(0):     ",D0
     if print_info: print "D(z)/D(0): ",D/D0
-    H = hubble(redshift, h, omegaR, omegaM, omegaL)
+    H = hubble(redshift, omegaR, omegaM, omegaL)
     if print_info: print "H(z):      ",H
     
-    # Velocity correction, needed in GADGET for comoving (cosm.) simulation
-    vgad = np.sqrt(1+redshift)
-    
-    xfact = boxlen*D/D0
-    vfact = vgad*D/D0*H*f*boxlen/(1+redshift)
+    #~ xfact = boxlen*D/D0
+    #~ vfact = vgad*D/D0*H*f*boxlen/(1+redshift)
+    xfact = D/D0
+    vfact = D/D0*H*f/(1+redshift)
     
     v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
     X = (np.mgrid[0:boxlen:dx,0:boxlen:dx,0:boxlen:dx] + xfact*(v/vfact))%boxlen
@@ -1232,7 +1241,7 @@ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen, pri
 
 
 # Cosmological variables
-def fpeebl(z, h, omegaR, omegaM, omegaL):
+def fpeebl(z, omegaR, omegaM, omegaL):
     """
     Velocity growth factor.
     From Pablo's zeld2gadget.f code (who in turn got it from Bertschinger's).
@@ -1250,9 +1259,9 @@ def fpeebl(z, h, omegaR, omegaM, omegaL):
     eta = np.sqrt(omegaM*(1+z) + omegaL/(1+z)/(1+z) + omegaK)
     return ( 2.5/grow(z, omegaR, omegaM, omegaL) - 1.5*omegaM*(1+z) - omegaK)/eta**2
 
-def hubble(z, h, omegar, omegam, omegal):
-    """Hubble constant at arbitrary redshift"""
-    return 100*h*np.sqrt((1+z)**4*omegar + (1+z)**3*omegam + omegal + (1+z)**2*(1-omegar-omegam-omegal))
+def hubble(z, omegar, omegam, omegal):
+    """Hubble constant at arbitrary redshift. N.B.: this is in units of h!"""
+    return 100*np.sqrt((1+z)**4*omegar + (1+z)**3*omegam + omegal + (1+z)**2*(1-omegar-omegam-omegal))
 
 def growIntgt(a, omegar, omegam, omegal):
     """Integrand for the linear growth factor D(z) (function grow())"""

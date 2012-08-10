@@ -10,14 +10,14 @@ Copyright (c) 2012. All rights reserved.
 """
 
 # imports
-import struct, numpy as np, os
+import struct, numpy as np, os, stat
 from os.path import abspath
 import pyublas
 import crunch
 
 
 # constants
-__version__ = "0.1, May 2012"
+__version__ = "0.2, August 2012"
 
 
 # exception classes
@@ -695,6 +695,13 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     """
     pos = np.array(pos, dtype='float32', order='F')
     vel = np.array(vel, dtype='float32', order='F')
+    # Velocity correction, needed in GADGET for comoving (cosm.) simulation
+    # See thread: http://www.mpa-garching.mpg.de/gadget/gadget-list/0111.html
+    # Also, manual p. 32; what we have here is the peculiar velocity (as defined
+    # here: http://www.mpa-garching.mpg.de/gadget/gadget-list/0113.html), but
+    # what we want is the (old) internal Gadget velocity u (see manual p. 32).
+    vel *= np.sqrt(1+redshift)
+    
     f = open(filename,'wb')
     BS = {}
     BS['desc'] = '=I4sII'
@@ -738,6 +745,223 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     f.write(toFileIDsize)
     
     f.close()
+
+def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 864000, resubmit_on = 0, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.4, tree_alloc_factor = 0.8, buffer_size = 100, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512"):
+    """Arguments:
+    boxlen (kpc h^-1)
+    cosmo (Cosmology object)
+    ic_file (path)
+    redshift_begin
+    run_dir_base (directory path)
+    run_name (sub directory name)
+    nproc (number of processors)
+    output_list_filename (filename w.r.t. run_dir_base)
+    DE_file (filename w.r.t. run_dir_base)
+    ic_format (1 or 2)
+    time_max (expansion factor a)
+    softening_factor (fraction of mean interparticle distance)
+    time_limit_cpu (seconds)
+    resubmit_on (0 or 1)
+    resubmit_command (path)
+    cpu_time_bet_restart_file (seconds)
+    part_alloc_factor
+    tree_alloc_factor
+    buffer_size (MB)
+    gadget_executable (file path)
+    
+    Note that run_dir_base is not the directory where the simulation will be
+    run; that is run_dir_base+run_name; the run_name directory will be created
+    by this function.
+    """
+    output_dir = run_dir_base+'/'+run_name
+    os.mkdir(output_dir)
+    
+    omegaM = cosmo.omegaM
+    omegaL = cosmo.omegaL
+    omegaB = cosmo.omegaB
+    hubble = cosmo.h
+    
+    parameter_filename = run_dir_base+'/'+run_name+'.par'
+    run_script_filename = run_dir_base+'/'+run_name+'.sh'
+    
+    output_list_filename = run_dir_base+'/'+output_list_filename
+    DE_file = run_dir_base+'/'+DE_file
+
+    time_begin = 1/(redshift_begin+1)
+
+    # Softening: based on Dolag's ratios
+    # default ~ 1/17.3 of the mean ipd
+    softening = softening_factor*boxlen/gridsize
+    softening_max_phys = softening/3
+    
+    # the actual parameter file:
+    par_file_text = """\
+%%%%%%%%%% In-/output
+InitCondFile  		%(ic_file)s
+OutputDir           %(output_dir)s
+OutputListFilename  %(output_list_filename)s
+
+
+%%%%%%%%%% Characteristics of run & Cosmology
+TimeBegin             %(time_begin)f
+TimeMax	              %(time_max)f
+BoxSize               %(boxlen)f
+
+Omega0	              %(omegaM)f
+OmegaLambda           %(omegaL)f
+OmegaBaryon           %(omegaB)f
+HubbleParam           %(hubble)f   ; only needed for cooling
+
+
+%%%%%%%%%% DE (GadgetXXL)
+DarkEnergyFile          %(DE_file)s
+%%DarkEnergyParam        -0.4
+VelIniScale		        1.0
+
+
+%%%%%%%%%% Softening lengths
+MinGasHsmlFractional     0.5  %% minimum csfc smoothing in terms of the gravitational softening length
+
+%% ~ 1/20 of mean ipd (Dolag: 22.5 for ipd of 300000/768)
+SofteningGas       %(softening)f
+SofteningHalo      %(softening)f
+SofteningDisk      0.0
+SofteningBulge     0.0        
+SofteningStars     %(softening)f
+SofteningBndry     0
+
+%% ~ 1/3 of the above values
+SofteningGasMaxPhys       %(softening_max_phys)f
+SofteningHaloMaxPhys      %(softening_max_phys)f
+SofteningDiskMaxPhys      0.0  %% corr.to EE81_soft = 70.0
+SofteningBulgeMaxPhys     0.0         
+SofteningStarsMaxPhys     %(softening_max_phys)f
+SofteningBndryMaxPhys     0
+
+
+%%%%%%%%%% Time/restart stuff
+TimeLimitCPU             %(time_limit_cpu)i
+ResubmitOn               %(resubmit_on)i
+ResubmitCommand          %(resubmit_command)s
+CpuTimeBetRestartFile    %(cpu_time_bet_restart_file)s
+
+
+%%%%%%%%%% Memory
+PartAllocFactor       %(part_alloc_factor)f
+TreeAllocFactor       %(tree_alloc_factor)f
+BufferSize            %(buffer_size)i
+
+
+ICFormat                   %(ic_format)i
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% Usually don't edit below here %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%% In-/output parameters
+OutputListOn               1
+SnapFormat                 2
+NumFilesPerSnapshot        1
+NumFilesWrittenInParallel  1
+
+
+%%%% Default filenames
+SnapshotFileBase        snap
+EnergyFile        energy.txt
+InfoFile          info.txt
+TimingsFile       timings.txt
+CpuFile           cpu.txt
+RestartFile       restart
+
+
+%%%% Misc. options
+ComovingIntegrationOn 1
+CoolingOn 0
+PeriodicBoundariesOn   1
+
+
+%%%% Output frequency (when not using output list)
+TimeBetSnapshot        1.04912649189365
+TimeOfFirstSnapshot    0.090909091
+TimeBetStatistics      0.02
+ 
+
+%%%% Accuracy of time integration
+TypeOfTimestepCriterion 0		%% Not used option in Gadget2 (left over from G1)
+ErrTolIntAccuracy       0.05	%% Accuracy of timestep criterion
+MaxSizeTimestep        0.1		%% Maximum allowed timestep for cosmological simulations
+                                %% as a fraction of the current Hubble time (i.e. dln(a))
+MinSizeTimestep        0		%% Whatever
+MaxRMSDisplacementFac  0.25		%% Something
+
+
+%%%% Tree algorithm and force accuracy
+ErrTolTheta            0.45
+TypeOfOpeningCriterion 1
+ErrTolForceAcc         0.005
+TreeDomainUpdateFrequency    0.025
+%% DomainUpdateFrequency   0.2
+
+
+%%%%  Parameters of SPH
+DesNumNgb           64
+MaxNumNgbDeviation  1
+ArtBulkViscConst    0.75
+InitGasTemp         166.53
+MinGasTemp          100.    
+CourantFac          0.2
+
+
+%%%% System of units
+UnitLength_in_cm         3.085678e21        ;  1.0 kpc /h
+UnitMass_in_g            1.989e43           ;  solar masses
+UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
+GravityConstantInternal  0
+
+
+%%%% Quantities for star formation and feedback
+StarformationOn 0
+CritPhysDensity     0.     %%  critical physical density for star formation in
+                            %%  hydrogen number density in cm^(-3)
+MaxSfrTimescale     1.5     %% in internal time unpar_file_textits
+CritOverDensity      57.7    %%  overdensity threshold value
+TempSupernova        1.0e8   %%  in Kelvin
+TempClouds           1000.0   %%  in Kelvin
+FactorSN             0.1
+FactorEVP            1000.0
+
+WindEfficiency    2.0
+WindFreeTravelLength 10.0
+WindEnergyFraction  1.0
+WindFreeTravelDensFac 0.5
+
+
+%%%% Additional things for Gadget XXL:
+%%ViscositySourceScaling 0.7
+%%ViscosityDecayLength   2.0
+%%ConductionEfficiency     0.33
+Shock_LengthScale 2.0
+Shock_DeltaDecayTimeMax  0.02
+ErrTolThetaSubfind  	 0.1
+DesLinkNgb 	 	32
+""" % locals()
+    
+    with open(parameter_filename, 'w') as par_file:
+        par_file.write(par_file_text)
+    
+    run_script_text = """\
+#!/bin/bash
+# Gadget simulation %(run_name)s.
+
+cd %(run_dir_base)s
+mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s""" % locals()
+    
+    with open(run_script_filename, 'w') as run_script:
+        run_script.write(run_script_text)
+    os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 
 
 def getheader(filename, gtype):
