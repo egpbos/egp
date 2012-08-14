@@ -21,8 +21,10 @@ z03.loadPos()
 sub = np.random.randint(0, 16777216, 100000)
 
 pos0 = np.array([20., 40., 70.])
-posi = np.array([18.2990731, 38.69969312, 69.30830766])
-pos3 = np.array([18.27326781, 38.91134458, 69.35026985])
+#posi = np.array([18.2990731, 38.69969312, 69.30830766]) # oud
+posi = np.array([19.57218684,  38.51409928,  68.74999988])
+#pos3 = np.array([18.27326781, 38.91134458, 69.35026985]) # oud
+pos3 = np.array([ 19.90462669,  38.21797494,  69.30327249])
 
 radius = 8. # Mpc h^-1 (N.B.: Gadget positions are in kpc h^-1!)
 sphere0 = sphere_grid(pos0, radius, boxlen, gridsize).reshape(z0no.pos.shape[0])

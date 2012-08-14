@@ -75,7 +75,7 @@ del ipos, ivel
 # non-iterated version (for comparison):
 print "Not building and saving non-iterated version, because that's the same as in test1."
 
-print "Preparing for gadget run %(run_name)s..."
+print "Preparing for gadget run %(run_name)s..." % locals()
 io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc)
 
 print "Done!"

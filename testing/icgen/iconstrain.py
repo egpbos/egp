@@ -17,7 +17,7 @@ Todo:
 
 # imports
 import numpy as np
-from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich_new
+from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich
 from matplotlib import pyplot as pl
 from mayavi import mlab
 import egp.toolbox

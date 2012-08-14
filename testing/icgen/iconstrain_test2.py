@@ -7,6 +7,10 @@ from csv import reader as csvreader
 import egp.io as io
 
 test_id = "2"
+run_name = "run%i" % (100+int(test_id)) # plus 100 to separate from DE+void runs
+
+run_dir_base = "/Users/users/pbos/dataserver/sims"
+nproc = 16
 
 # ---- INPUT ----
 cosmo = Cosmology('wmap7')
@@ -63,8 +67,12 @@ ipsiC = DisplacementField(irhoC)
 del irhoC
 ipos, ivel = zeldovich(redshift, ipsiC, cosmo) # Mpc, not h^-1!
 del ipsiC
-io.write_gadget_ic_dm("/Users/users/pbos/dataserver/sims/ICs/ic_icon_%iMpc_%i_%s_%i.dat" % (boxlen, gridsize, test_id, seed), ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+ic_file = "/Users/users/pbos/dataserver/sims/ICs/ic_icon_%iMpc_%i_%s_%i.dat" % (boxlen, gridsize, test_id, seed)
+io.write_gadget_ic_dm(ic_file, ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
 del ipos, ivel
+
+print "Preparing for gadget run %(run_name)s_icon..." % locals()
+io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc)
 
 # non-iterated version (for comparison):
 print "Not building and saving non-iterated version, because that's the same as in test1."
