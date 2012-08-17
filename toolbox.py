@@ -15,12 +15,52 @@ import pyublas
 import crunch
 
 # constants
-__version__ = "0.1.1, August 2012"
+__version__ = "0.2, August 2012"
 
 # exception classes
 # interface functions
 # classes
 # functions
+
+# rFFTn's with flipped minus sign convention
+def rfftn_flip(A, *args, **kwargs):
+    """
+    Real N-dimensional fast fourier transform, with flipped minus sign
+    convention.
+    
+    The convention used by NumPy is that the FFT has a minus sign in the
+    exponent and the inverse FFT has a plus. This is opposite to the convention
+    used e.g. in Numerical Recipes, but, more importantly, it is opposite to the
+    fourier transform convention used by Van de Weygaert & Bertschinger (1996).
+    This means that if you use the NumPy FFT to compute a constrained field,
+    the box will be mirrored and your constraints will not be where you expect
+    them to be in the field grid. In this, we assume the field-grid-indices-to-
+    physical-coordinates transformation to be simply i/gridsize*boxlen and the
+    other way around, physical-coordinates-to-grid-indices transformation to be
+    int(x/boxlen*gridsize).
+    
+    The effect of a changed sign in the FFT convention is a mirroring of your
+    in- and output arrays. This is what this function and irfftn_flip thus undo.
+    Try plotting np.fft.fft(np.fft.fft(A)) versus A to see for yourself.
+    """
+    return np.fft.rfftn(A[::-1,::-1,::-1], *args, **kwargs)
+
+def irfftn_flip(A, *args, **kwargs):
+    """
+    Inverse real N-dimensional fast fourier transform, with flipped minus sign
+    convention. See rfftn_flip.
+    """
+    return np.fft.irfftn(A, *args, **kwargs)[::-1,::-1,::-1]
+
+def ifftn_flip(A, *args, **kwargs):
+    """
+    Inverse N-dimensional fast fourier transform, with flipped minus sign
+    convention. See rfftn_flip.
+    """
+    return np.fft.ifftn(A, *args, **kwargs)[::-1,::-1,::-1]
+
+
+# Other stuff
 def TSC_density(pos, gridsize, boxsize, mass, periodic=True):
 	"""Distribute particle masses on a regular grid of gridsize cubed based
 	on particle positions in array pos. The masses are distributed using a

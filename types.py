@@ -12,6 +12,7 @@ Contains the basic data types used in other modules.
 """
 
 import numpy as np
+from egp import toolbox
 
 class PeriodicArray(np.ndarray):
     """
@@ -135,17 +136,17 @@ class Field(object):
         try:
             return self._fourier
         except AttributeError:
-            self._fourier = np.fft.rfftn(self.t)/np.size(self.t)
+            self._fourier = toolbox.rfftn_flip(self.t)/np.size(self.t)
             return self._fourier
     @f.setter
     def f(self, field):
         self._fourier = field
         if field is None:
-            self._ifft = np.fft.irfftn
+            self._ifft = toolbox.irfftn_flip
         elif field.shape[0] == field.shape[2]:
-            self._ifft = np.fft.ifftn
+            self._ifft = toolbox.ifftn_flip
         elif field.shape[0] == (field.shape[2]-1)*2:
-            self._ifft = np.fft.irfftn
+            self._ifft = toolbox.irfftn_flip
     
     @property
     def periodic(self):
@@ -165,6 +166,11 @@ class VectorField(object):
     attributes x, y and z.
     Initialization parameter true must have shape (3,N,N,N) and fourier must
     have shape (3,N,N,N/2+1).
+    
+    Note: We could change this to only contain one array of shape (3,N,N,N) (for
+    the true component) and use toolbox.rfftn_flip(psi, axes=(1,2,3)) so the
+    first axis is not transformed. Might be more convenient in e.g. the
+    Zel'dovich code.
     """
     def __init__(self, true=None, fourier=None):
         if np.any(true):

@@ -680,8 +680,8 @@ class ConstraintScale(object):
     def set_common_kernel_factor(self, k):
         if k is None:
             raise ValueError("No argument given; a(n initial) k must be given!")
-        ka = np.sqrt(k[0]**2 + k[1]**2 + k[2]**2)
-        self._common_kernel_factor =  np.exp(-ka*ka * self.scale**2/2)
+        ksq = k[0]**2 + k[1]**2 + k[2]**2
+        self._common_kernel_factor =  np.exp(-ksq * self.scale**2/2)
 
 
 class Constraint(object):
@@ -1165,9 +1165,9 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     omegaR = cosmo.omegaR
     boxlen = psi.boxlen
     
-    n1 = len(psi1)
+    gridsize = len(psi1)
     if print_info: print "Boxlen:    ",boxlen
-    dx = boxlen/n1
+    dx = boxlen/gridsize
     if print_info: print "dx:        ",dx
     f = fpeebl(redshift, omegaR, omegaM, omegaL)
     if print_info: print "fpeebl:    ",f
@@ -1185,12 +1185,54 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
     q = np.mgrid[0:boxlen:dx,0:boxlen:dx,0:boxlen:dx] # lagrangian coordinates
     X = (q + xfact*(v/vfact))%boxlen
-    # Mirror coordinates, because somehow it doesn't match the coordinates put
-    # into the constrained field.
-    X = boxlen - X # x,y,z
-    v = -v
+    #~ # Mirror coordinates, because somehow it doesn't match the coordinates put
+    #~ # into the constrained field.
+    #~ X = boxlen - X # x,y,z
+    #~ v = -v
+    # FIXED MIRRORING: using different FFT convention now (toolbox.rfftn etc).
     
     return X,v
+
+def zeldovich_step(redshift_start, redshift_end, psi, pos, cosmo):
+    """
+    Use the Zel'dovich approximation to calculate positions and velocities at
+    certain /redshift_end/, based on the DisplacementField /psi/ and starting
+    positions /pos/ at redshift /redshift_start/ and Cosmology /cosmo/. /psi/
+    and /pos/ should have shape (3,gridsize,gridsize,gridsize).
+    
+    Outputs a tuple of a position and velocity vector array; positions are in
+    units of h^{-1} Mpc (or in fact the same units as /psi.boxlen/) and
+    velocities in km/s.
+    """
+    psi1 = psi.x.t
+    psi2 = psi.y.t
+    psi3 = psi.z.t
+
+    omegaM = cosmo.omegaM
+    omegaL = cosmo.omegaL
+    omegaR = cosmo.omegaR
+    boxlen = psi.boxlen
+    
+    gridsize = len(psi1)
+    dx = boxlen/gridsize
+    f = fpeebl(redshift, omegaR, omegaM, omegaL)
+    D_end = grow(redshift_end, omegaR, omegaM, omegaL)
+    D_start = grow(redshift_start, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
+    H = hubble(redshift_end, omegaR, omegaM, omegaL)
+    
+    xfact = D_end/D_start
+    vfact = D_end/D_start*H*f/(1+redshift_end) # KLOPT DIT WEL? CHECK EVEN WAAR AL DE FACTOREN VANDAAN KOMEN
+                                               # denk het wel, snelheid heeft verder niets met vorige stappen te maken
+    v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
+    X = (pos + xfact*(v/vfact))%boxlen
+    #~ # Mirror coordinates, because somehow it doesn't match the coordinates put
+    #~ # into the constrained field.
+    #~ X = boxlen - X # x,y,z
+    #~ v = -v
+    # FIXED MIRRORING: using different FFT convention now (toolbox.rfftn etc).
+    
+    return X,v
+
 
 #~ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen, print_info=False):
     #~ """

@@ -14,9 +14,9 @@ z0 = io.GadgetData(loaddir+'run101_icon/snap_008')
 z0no = io.GadgetData(loaddir+'run101_noicon/snap_008')
 z03 = io.GadgetData(loaddir+'run103/snap_008')
 
-z0.loadPos()
-z0no.loadPos()
-z03.loadPos()
+#~ z0.loadPos()
+#~ z0no.loadPos()
+#~ z03.loadPos()
 
 sub = np.random.randint(0, 16777216, 100000)
 

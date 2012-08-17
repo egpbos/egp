@@ -90,6 +90,7 @@ class GadgetData(object):
             Ncount = 0
             
             for header in self.header:
+                Npart = sum(header['Npart'])
                 if self.gtype == 2:
                     offset = (2*16 + (8 + 256))
                 else:
@@ -655,6 +656,22 @@ class WVFEllipses(object):
 
 
 # functions:
+def load_rien_ic_file(filename, gridsize, header_bits=64):
+    """
+    Loads Riens strange output format from his (un)constrained IC codes.
+    By default, on 64-bit compilers, the block headers will be 64 bits; this
+    used to be 32 bits on older compilers. If you're using an older compiler,
+    set header_bits to 32.
+    Output: rho and psi.
+    """
+    head_skip = header_bits/32
+    rhopsi = np.memmap(filename, dtype='float32')[7+2*head_skip:].reshape((64**3,4+2*head_skip))[:,head_skip:-head_skip]
+    rho = rhopsi[:,0].reshape((gridsize,gridsize,gridsize))
+    psi1 = rhopsi[:,1].reshape((gridsize,gridsize,gridsize))
+    psi2 = rhopsi[:,2].reshape((gridsize,gridsize,gridsize))
+    psi3 = rhopsi[:,3].reshape((gridsize,gridsize,gridsize))
+    return rho, np.array([psi1,psi2,psi3])
+
 def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 0.314, ol0 = 0.686, h0 = 0.71):
     """
     For pure dark matter simulations only, i.e. no gas! Some notes:

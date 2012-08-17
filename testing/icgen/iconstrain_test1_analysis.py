@@ -59,6 +59,9 @@ halo0_index = np.sqrt(np.sum((haloes_z0no.SubPos - pos0_gadget)**2, axis=1)).arg
 haloi_mass = haloes_z0.SubTMass[haloi_index]
 halo0_mass = haloes_z0no.SubTMass[halo0_index]
 
+d0_halo = np.sqrt(np.sum((pos0 - haloes_z0no.SubPos[halo0_index]/1000)**2))
+di_halo = np.sqrt(np.sum((pos0 - haloes_z0.SubPos[haloi_index]/1000)**2))
+d2_halo = np.sqrt(np.sum((pos0 - haloes_z02.SubPos[halo2_index]/1000)**2))
 
 
 # Density analysis:

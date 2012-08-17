@@ -68,49 +68,54 @@ def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo):
     rhoC = ConstrainedField(rhoU, constraints) # N.B.: rhoU stays the same!!!
     return rhoC
 
-def iteration_mean(pos_i, mass_i, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos0=None):
-    # N.B.: pos0 is used here for plotting only.
-    rhoC_i = constrain_field(pos_i, mass_i, boxlen, rhoU, ps, cosmo)
-    
-    # Now, Zel'dovich it:
-    psiC_i = DisplacementField(rhoC_i)
-    POS_i, v_i = zeldovich(0., psiC_i, cosmo) # Mpc, not h^-1!
-    
+def get_peak_particle_indices(pos, radius, boxlen, gridsize):
     # Find the mean position of the particles that were originally in the peak (or
     # at least in a sphere with radius of the peak scale):
     xgrid, ygrid, zgrid = np.mgrid[0:boxlen:boxlen/gridsize, 0:boxlen:boxlen/gridsize, 0:boxlen:boxlen/gridsize] + boxlen/gridsize/2 - boxlen/2
     
     # determine roll needed to get peak position back to where it should be:
-    floor_cell_i = np.int32(pos_i/boxlen*gridsize) # "closest" cell (not really of course in half of the cases...)
-    roll_i = floor_cell_i - gridsize/2
+    floor_cell = np.int32(pos/boxlen*gridsize) # "closest" cell (not really of course in half of the cases...)
+    roll = floor_cell - gridsize/2
     # difference of roll (= integer) with real position (in cells):
-    diff_i = pos_i/boxlen*gridsize - floor_cell_i
-    xgrid -= diff_i[0]/gridsize*boxlen
-    ygrid -= diff_i[1]/gridsize*boxlen
-    zgrid -= diff_i[2]/gridsize*boxlen
+    diff = pos/boxlen*gridsize - floor_cell
+    xgrid -= diff[0]/gridsize*boxlen
+    ygrid -= diff[1]/gridsize*boxlen
+    zgrid -= diff[2]/gridsize*boxlen
     
     # (to be rolled) distance function (squared!):
     r2grid = xgrid**2 + ygrid**2 + zgrid**2
     # roll it:
-    r2grid = np.roll(r2grid, -roll_i[0], axis=0) # roll negatively, because element[0,0,0]
-    r2grid = np.roll(r2grid, -roll_i[1], axis=1) # is not x=0,0,0 but x=boxlen,boxlen,boxlen
-    r2grid = np.roll(r2grid, -roll_i[2], axis=2) # (due to changing around in zeldovich)
+    r2grid = np.roll(r2grid, -roll[0], axis=0) # roll negatively, because element[0,0,0]
+    r2grid = np.roll(r2grid, -roll[1], axis=1) # is not x=0,0,0 but x=boxlen,boxlen,boxlen
+    r2grid = np.roll(r2grid, -roll[2], axis=2) # (due to changing around in zeldovich)
     
+    spheregrid = r2grid < radius**2
+    return spheregrid
+
+def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos0=None):
+    # N.B.: pos0 is used here for plotting only.
+    rhoC = constrain_field(pos, mass, boxlen, rhoU, ps, cosmo)
+    
+    # Now, Zel'dovich it:
+    psiC = DisplacementField(rhoC)
+    POS, v = zeldovich(0., psiC, cosmo) # Mpc, not h^-1!
+    
+    # Determine peak particle indices:
     rhoc = critical_density(cosmo)
-    scale_mpc_i = (3*(mass_i*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
-    spheregrid_i = r2grid < scale_mpc_i**2
+    radius = (3*(mass*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
+    spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
     
     # finally calculate the "new position" of the peak:
     #~ POS_i = np.array([X_i,Y_i,Z_i])
-    mean_peak_pos_i = POS_i[:,spheregrid_i].mean(axis=1)
+    mean_peak_pos = POS[:,spheregrid].mean(axis=1)
     
     if plot:
-        points = mlab.points3d(POS_i[0],POS_i[1],POS_i[2], mode='point', opacity=0.5)
-        cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=scale_mpc_i, opacity=0.3)
-        peak_points = mlab.points3d(POS_i[0,spheregrid_i], POS_i[1,spheregrid_i], POS_i[2,spheregrid_i], opacity=0.5, mode='point', color=(0,1,0))
+        points = mlab.points3d(POS[0],POS[1],POS[2], mode='point', opacity=0.5)
+        cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=radius, opacity=0.3)
+        peak_points = mlab.points3d(POS[0,spheregrid], POS[1,spheregrid], POS[2,spheregrid], opacity=0.5, mode='point', color=(0,1,0))
         mlab.show()
     
-    return mean_peak_pos_i
+    return mean_peak_pos
 
 def difference(pos_iter, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
     print pos_iter, "i.e.", pos_iter%boxlen, "in the box"

@@ -72,7 +72,7 @@ io.write_gadget_ic_dm(ic_file, ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,
 del ipos, ivel
 
 print "Preparing for gadget run %(run_name)s_icon..." % locals()
-io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name+"icon", nproc)
+io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name+"_icon", nproc)
 
 # non-iterated version (for comparison):
 print "Building and saving non-iterated version..."
