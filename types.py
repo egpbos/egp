@@ -137,16 +137,20 @@ class Field(object):
             return self._fourier
         except AttributeError:
             self._fourier = toolbox.rfftn_flip(self.t)/np.size(self.t)
+            #~ self._fourier = np.fft.rfftn(self.t)/np.size(self.t)
             return self._fourier
     @f.setter
     def f(self, field):
         self._fourier = field
         if field is None:
             self._ifft = toolbox.irfftn_flip
+            #~ self._ifft = np.fft.irfftn
         elif field.shape[0] == field.shape[2]:
             self._ifft = toolbox.ifftn_flip
+            #~ self._ifft = np.fft.ifftn
         elif field.shape[0] == (field.shape[2]-1)*2:
             self._ifft = toolbox.irfftn_flip
+            #~ self._ifft = np.fft.irfftn
     
     @property
     def periodic(self):

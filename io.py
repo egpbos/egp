@@ -770,6 +770,9 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     # Length units are converted to kpc h^-1, the default Gadget unit.
     boxlen *= 1000
     
+    #~ nice = "+10"
+    nice = "+0"
+    
     output_dir = run_dir_base+'/'+run_name
     os.mkdir(output_dir)
     
@@ -955,7 +958,8 @@ DesLinkNgb          32
 # Gadget simulation %(run_name)s.
 
 cd %(run_dir_base)s
-nice +10 mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s""" % locals()
+nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
+""" % locals()
     
     with open(run_script_filename, 'w') as run_script:
         run_script.write(run_script_text)

@@ -15,11 +15,11 @@ include_directories(${BOOST_INCLUDEDIR})
 # NumPy includes:
 include_directories(BEFORE /usr/lib64/python2.6/site-packages/numpy/core/include)
 include_directories(BEFORE /usr/lib64/python2.6/site-packages/numpy/numarray/include) # is deze wel nodig?
-include_directories(BEFORE $ENV{HOME}/pythonSL6/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include)
+include_directories(BEFORE $ENV{HOME}/data/sw/pythonSL6/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include)
 
 link_directories(/Users/users/pbos/sw/lib)
 link_directories(BEFORE /usr/lib64)
-link_directories(BEFORE $ENV{HOME}/pythonSL6/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/pyublas)
+link_directories(BEFORE $ENV{HOME}/data/sw/pythonSL6/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/pyublas)
 
 # m -> math.h (voor octreesearch en zspace)
 target_link_libraries(crunch boost_python m)

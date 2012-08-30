@@ -25,13 +25,21 @@ void crunch::TSCDensity(double_vector pos, double_vector rho, int Npart, double 
         y = posptr[j*possize1 + possize2] / dGrid;
         z = posptr[j*possize1 + possize2x2] / dGrid;
         
-        ix = x + 0.5;
-        iy = y + 0.5;
-        iz = z + 0.5;
+        //~ ix = x + 0.5; // N.B.: this is wrong! The 0.5 should be added as float.
+        //~ iy = y + 0.5;
+        //~ iz = z + 0.5;
+        //~ 
+        //~ x = x - ix; // positions themselves are no longer needed
+        //~ y = y - iy;
+        //~ z = z - iz;
+        ix = x;
+        iy = y;
+        iz = z;
         
-        x = x - ix; // positions themselves are no longer needed
-        y = y - iy;
-        z = z - iz;
+        x = x - (ix + 0.5); // distance from center of cell
+        y = y - (iy + 0.5);
+        z = z - (iz + 0.5);
+        
         dxp = (1.5 - fabs(1.0 + x));
         dyp = (1.5 - fabs(1.0 + y));
         dzp = (1.5 - fabs(1.0 + z));

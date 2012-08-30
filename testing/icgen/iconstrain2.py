@@ -18,7 +18,7 @@ Todo:
 
 # imports
 import numpy as np
-from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich
+from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich, zeldovich_step
 from matplotlib import pyplot as pl
 from mayavi import mlab
 import egp.toolbox
@@ -30,7 +30,7 @@ from scipy.optimize import fmin_l_bfgs_b as solve
 from scipy.optimize import anneal
 
 # constants
-__version__ = "0.1.1, August 2012"
+__version__ = "0.1.2, August 2012"
 
 # exception classes
 # interface functions
@@ -47,7 +47,9 @@ def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos
     
     # Determine peak particle indices:
     rhoc = critical_density(cosmo)
-    radius = (3*(mass*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
+    #~ radius = (3*(mass*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
+    radius = ((mass*1e14)/rhoc/(2*np.pi)**(3./2))**(1./3) # Mpc h^-1
+
     spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
     
     # finally calculate the "new position" of the peak:

@@ -13,14 +13,31 @@ Copyright (c) 2012. All rights reserved.
 import numpy as np
 import pyublas
 import crunch
+from matplotlib import pyplot as pl
 
 # constants
-__version__ = "0.2, August 2012"
+__version__ = "0.2.1, August 2012"
 
 # exception classes
 # interface functions
 # classes
 # functions
+
+def field_show(field, boxlen, xlabel="y (Mpc)", ylabel="z (Mpc)"):
+    """
+    Plot a 2D field slice with the right axes on the right side for it to make
+    sense to me. In my world, the first axis of an array should represent the
+    x-axis, in that if you ask for a[0] in a 2D array /a/ then you should get
+    the field entries at x=0 for varying (a[0,-1] would be (x,y)=(0,boxlen)).
+    
+    By default matplotlib.pyplot's imshow does it the other way around, which
+    could of course easily be remedied by a transpose, but this easy function
+    does that all for you, and a little more.
+    """
+    pl.imshow(field.T, origin='bottom', interpolation='nearest', extent=(0,boxlen,0,boxlen))
+    pl.xlabel(xlabel)
+    pl.ylabel(ylabel)
+    pl.colorbar()
 
 # rFFTn's with flipped minus sign convention
 def rfftn_flip(A, *args, **kwargs):
@@ -62,6 +79,29 @@ def ifftn_flip(A, *args, **kwargs):
 
 # Other stuff
 def TSC_density(pos, gridsize, boxsize, mass, periodic=True):
+	"""Distribute particle masses on a regular grid of gridsize cubed based
+	on particle positions in array pos. The masses are distributed using a
+	Triangular Shaped Cloud algorithm (quadratic splines), taken from the
+	P3M code of Rien van de Weygaert. By default the particle box is taken
+	to be periodic; if this is not the case, you can call with argument
+	periodic=False. Argument boxsize is the physical size of the box and
+	defines the inter-gridpoint-distance.
+	Mass of the particles is taken to be constant at the moment and is
+	given by argument mass. THIS NEEDS TO BE FURTHER SPECIFIED IF OTHER
+	PARTICLE TYPES ARE INCLUDED! E.g. by passing a full mass array.
+	This function makes full use of Boost/PyUblas, thanks to Maarten Breddels.
+	"""
+	
+	rho = np.zeros((gridsize,gridsize,gridsize), dtype='float64')
+	
+	Npart = len(pos)
+	pos = np.array(pos, dtype='float64', order='C')
+    
+	crunch.TSCDensity(pos, rho, Npart, boxsize, gridsize, mass)
+	
+	return rho
+
+def TSC_density_old(pos, gridsize, boxsize, mass, periodic=True):
 	"""Distribute particle masses on a regular grid of gridsize cubed based
 	on particle positions in array pos. The masses are distributed using a
 	Triangular Shaped Cloud algorithm (quadratic splines), taken from the

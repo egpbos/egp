@@ -24,7 +24,7 @@ from egp import toolbox
 
 
 # constants
-__version__ = "0.5, May 2012"
+__version__ = "0.6, August 2012"
 
 
 # exception classes
@@ -100,12 +100,26 @@ class PowerSpectrum(object):
     self.amplitude manually or by using the normalize function which normalizes
     the spectrum using the volume of the periodic box, and setting sigma0 at
     scale Rth.
+    When a cache_key is given, the calculated power spectrum will be stored in
+    the self.cache dictionary under the key given by cache_key. The next time
+    the power spectrum is called with the same cache_key, the spectrum will
+    not be recalculated, but will immediately be read from memory. This can be
+    useful when calling the same PowerSpectrum several times, e.g. from within
+    a loop, without using variables outside of the loop's scope.
     """
     def __init__(self):
         self.normalized = False
+        self.cache = {} # contains cached 
         
-    def __call__(self, k):
-        return self.amplitude * self.P(k)
+    def __call__(self, k, cache_key = None):
+        if not cache_key:
+            return self.amplitude * self.P(k)
+        else:
+            try:
+                return self.cache[cache_key]
+            except KeyError:
+                self.cache[cache_key] = self.amplitude * self.P(k)
+                return self.cache[cache_key]
     
     amplitude = property()
     @amplitude.getter
@@ -363,8 +377,8 @@ class DisplacementField(VectorField):
         real7x,real7y,real7z = real7x.ravel()[1:],real7y.ravel()[1:],real7z.ravel()[1:]
         
         # Then, the actual displacement field:
-        #~ Z = 1.0j/k_sq/self.boxlen * self.density.f
-        Z = 1.0j/k_sq * self.density.f
+        #~ Z = 1.0j/k_sq/self.boxlen * self.density.f # This was also missing a minus sign (at least in the new fourier convention)
+        Z = -1.0j/k_sq * self.density.f
         Z[real7x,real7y,real7z] = 0.0 # waarom dit eigenlijk?
         Z[0,0,0] = 0.0
         VectorField.__init__(self, fourier = (k1*Z, k2*Z, k3*Z))
@@ -1183,7 +1197,8 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     vfact = D/D0*H*f/(1+redshift)
     
     v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
-    q = np.mgrid[0:boxlen:dx,0:boxlen:dx,0:boxlen:dx] # lagrangian coordinates
+    # lagrangian coordinates, in the center of the gridcells:
+    q = np.mgrid[dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx]
     X = (q + xfact*(v/vfact))%boxlen
     #~ # Mirror coordinates, because somehow it doesn't match the coordinates put
     #~ # into the constrained field.
@@ -1193,29 +1208,33 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     
     return X,v
 
+
 def zeldovich_step(redshift_start, redshift_end, psi, pos, cosmo):
     """
     Use the Zel'dovich approximation to calculate positions and velocities at
     certain /redshift_end/, based on the DisplacementField /psi/ and starting
-    positions /pos/ at redshift /redshift_start/ and Cosmology /cosmo/. /psi/
-    and /pos/ should have shape (3,gridsize,gridsize,gridsize).
+    positions /pos/ at redshift /redshift_start/ and Cosmology /cosmo/. /pos/
+    should have shape (3,gridsize,gridsize,gridsize).
     
     Outputs a tuple of a position and velocity vector array; positions are in
     units of h^{-1} Mpc (or in fact the same units as /psi.boxlen/) and
     velocities in km/s.
     """
-    psi1 = psi.x.t
-    psi2 = psi.y.t
-    psi3 = psi.z.t
-
     omegaM = cosmo.omegaM
     omegaL = cosmo.omegaL
     omegaR = cosmo.omegaR
     boxlen = psi.boxlen
     
-    gridsize = len(psi1)
+    gridsize = len(psi.x.t)
+    
+    index = np.int32(pos/boxlen*gridsize)
+    
+    psi1 = psi.x.t[index[0], index[1], index[2]]
+    psi2 = psi.y.t[index[0], index[1], index[2]]
+    psi3 = psi.z.t[index[0], index[1], index[2]]
+
     dx = boxlen/gridsize
-    f = fpeebl(redshift, omegaR, omegaM, omegaL)
+    f = fpeebl(redshift_end, omegaR, omegaM, omegaL)
     D_end = grow(redshift_end, omegaR, omegaM, omegaL)
     D_start = grow(redshift_start, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
     H = hubble(redshift_end, omegaR, omegaM, omegaL)
