@@ -14,6 +14,7 @@ import numpy as np
 import pyublas
 import crunch
 from matplotlib import pyplot as pl
+import __builtin__
 
 # constants
 __version__ = "0.2.1, August 2012"
@@ -139,13 +140,13 @@ def gaussian_smooth(densityFourier, r_g, boxlen):
     
     return densityFourier*windowGauss(k,r_g)
 
-def k_abs_grid(gridsize, boxlen):
+def calc_k_abs_grid(gridsize, boxlen):
     halfgrid = gridsize/2
     dk = 2*np.pi/boxlen
     k12 = np.fft.fftfreq(gridsize, 1/dk/gridsize) # k3 = k12[:halfgrid+1].abs()
     return np.sqrt(k12[:halfgrid+1]**2 + k12[:,np.newaxis]**2 + k12[:,np.newaxis,np.newaxis]**2)
 
-def k_i_grid(gridsize, boxlen):
+def calc_k_i_grid(gridsize, boxlen):
     halfgrid = gridsize/2
     dk = 2*np.pi/boxlen
     kmax = gridsize*dk
@@ -153,6 +154,51 @@ def k_i_grid(gridsize, boxlen):
     k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
     k2 -= kmax*(k2 > dk*(halfgrid - 1))
     return np.array((k1,k2,k3))
+
+def k_abs_grid(gridsize, boxlen):
+    try:
+        return __builtin__.k_grid_cache.k_abs(gridsize, boxlen)
+    except NameError:
+        return calc_k_abs_grid(gridsize, boxlen)
+
+def k_i_grid(gridsize, boxlen):
+    try:
+        return __builtin__.k_grid_cache.k_i(gridsize, boxlen)
+    except NameError:
+        return calc_k_i_grid(gridsize, boxlen)
+
+class KGridCache(object):
+    """
+    Objects of this class contain k_abs_grid or k_i_grid results. The functions
+    first look if an instance of this class is active in the running program and
+    if so, they pass the arguments of their current function call to the object.
+    It then checks if they have been used before, and if so, returns the result.
+    If not, the function produces the result itself and then stores it in the
+    cache instance, so it needn't be calculated again.
+    N.B.: always instantiate as __builtins__.k_grid_cache = KGridCache(). This
+    way you get a cross-module global (regular globals are still confined to the
+    module).
+    """
+    def __init__(self):
+        self.k_abs_cache = {}
+        self.k_i_cache = {}
+    
+    def k_abs(self, gridsize, boxlen):
+        cache_key = "%s %s" % (gridsize, boxlen)
+        try:
+            return self.k_abs_cache[cache_key]
+        except KeyError:
+            self.k_abs_cache[cache_key] = calc_k_abs_grid(gridsize, boxlen)
+            return self.k_abs_cache[cache_key]
+    
+    def k_i(self, gridsize, boxlen):
+        cache_key = "%s %s" % (gridsize, boxlen)
+        try:
+            return self.k_i_cache[cache_key]
+        except KeyError:
+            self.k_i_cache[cache_key] = calc_k_i_grid(gridsize, boxlen)
+            return self.k_i_cache[cache_key]
+
 
 
 # Cosmology

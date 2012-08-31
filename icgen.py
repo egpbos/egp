@@ -465,7 +465,8 @@ class GaussianRandomField(DensityField):
         
         # Then, the actual density field (in Fourier space):
         self.power.normalize(self.boxlen**3)
-        self.f = np.sqrt(self.power(k))*z
+        ps_cache_key = "grid_%s_box_%s" % (self.gridsize, self.boxlen)
+        self.f = np.sqrt(self.power(k, cache_key=ps_cache_key))*z
         
         # Finally add symmetry to the nyquist planes (so the ifft is not imaginary):
         symmetrizeMatrix(self.f)
@@ -537,7 +538,8 @@ class ConstrainedField(DensityField):
         except AttributeError:
             k = toolbox.k_abs_grid(self.gridsize, self.boxlen)
             ki = toolbox.k_i_grid(self.gridsize, self.boxlen)
-            self.correlations.calculate(k, ki) # P(k) H_i(k) and \xi_ij^-1
+            ps_cache_key = "grid_%s_box_%s" % (self.gridsize, self.boxlen)
+            self.correlations.calculate(k, ki, ps_cache_key=ps_cache_key) # P(k) H_i(k) and \xi_ij^-1
             self.calculate_unconstrained_constraints(ki) # c_j^~
             self.calculate_residual_field() # P(k) H_i(k) \xi_ij^-1 (c_j-c_j^~)
             return self._residual_field
@@ -572,14 +574,14 @@ class ConstraintCorrelations(object):
         self.constraints = constraints
         self.power = power
     
-    def calculate(self, k, ki):
-        self.calculate_constraint_correlations(k, ki)
-        self.calculate_field_constraint_correlations(k, ki)
+    def calculate(self, k, ki, ps_cache_key=None):
+        self.calculate_constraint_correlations(k, ki, ps_cache_key)
+        self.calculate_field_constraint_correlations(k, ki, ps_cache_key)
     
-    def calculate_constraint_correlations(self, k, ki, fast=False):
+    def calculate_constraint_correlations(self, k, ki, ps_cache_key=None, fast=False):
         """Calculate the matrix xi_ij containing the correlation values between
         the different constraints."""
-        power = self.power(k)
+        power = self.power(k, cache_key=ps_cache_key)
         if fast:
             # einsum has a small precision error; zie einsumPrecisie.py
             H = np.empty((len(self.constraints),) + k.shape, dtype=np.complex)
@@ -603,13 +605,13 @@ class ConstraintCorrelations(object):
                     self.xi_ij_inverse[i,j] = xi_ij # first store xi_ij
             self.xi_ij_inverse = np.matrix(self.xi_ij_inverse).I # then invert
     
-    def calculate_field_constraint_correlations(self, k, ki):
+    def calculate_field_constraint_correlations(self, k, ki, ps_cache_key=None):
         """Calculate the correlations between the field values and the
         constraint H matrices, i.e. P(k) H_i(k)."""
         H = np.empty((len(self.constraints),) + k.shape, dtype=np.complex)
         for i, coni in enumerate(self.constraints):
             H[i] = coni.H(ki)
-        PH = self.power(k)*H
+        PH = self.power(k, cache_key=ps_cache_key)*H
         self.PH = PH
 
 

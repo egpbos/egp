@@ -6,6 +6,10 @@ from egp.icgen import Cosmology, CosmoPowerSpectrum, GaussianRandomField
 from csv import reader as csvreader
 import egp.io as io
 
+from egp.toolbox import KGridCache
+import __builtin__
+__builtin__.k_grid_cache = KGridCache() # activate cache
+
 test_id = "1"
 run_name = "run%i" % (100+int(test_id)) # plus 100 to separate from DE+void runs
 

@@ -27,7 +27,7 @@ critical_density = egp.toolbox.critical_density
 from scipy.optimize import fmin_l_bfgs_b as solve, anneal, brute
 
 # constants
-__version__ = "0.1.1, August 2012"
+__version__ = "0.1.2, August 2012"
 
 # exception classes
 # interface functions
