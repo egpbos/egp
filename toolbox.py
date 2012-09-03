@@ -155,50 +155,105 @@ def calc_k_i_grid(gridsize, boxlen):
     k2 -= kmax*(k2 > dk*(halfgrid - 1))
     return np.array((k1,k2,k3))
 
+cache_k_grids = False
+
 def k_abs_grid(gridsize, boxlen):
-    try:
-        return __builtin__.k_grid_cache.k_abs(gridsize, boxlen)
-    except NameError:
+    global cache_k_grids
+    if cache_k_grids:
+        return KGridCache.k_abs(gridsize, boxlen)
+    else:
         return calc_k_abs_grid(gridsize, boxlen)
 
 def k_i_grid(gridsize, boxlen):
-    try:
-        return __builtin__.k_grid_cache.k_i(gridsize, boxlen)
-    except NameError:
+    global cache_k_grids
+    if cache_k_grids:
+        return KGridCache.k_i(gridsize, boxlen)
+    else:
         return calc_k_i_grid(gridsize, boxlen)
 
 class KGridCache(object):
     """
-    Objects of this class contain k_abs_grid or k_i_grid results. The functions
-    first look if an instance of this class is active in the running program and
-    if so, they pass the arguments of their current function call to the object.
-    It then checks if they have been used before, and if so, returns the result.
-    If not, the function produces the result itself and then stores it in the
-    cache instance, so it needn't be calculated again.
-    N.B.: always instantiate as __builtins__.k_grid_cache = KGridCache(). This
-    way you get a cross-module global (regular globals are still confined to the
-    module).
+    This class contains k_abs_grid or k_i_grid results. The functions first look
+    if caching is activated, which is done by setting egp.toolbox.cache_k_grids
+    to True. If so, they pass the arguments of their current function call to
+    this class. It then checks if the arguments have been used before, and if
+    so, returns the result. If not, the result is produced and then stored in
+    the cache dictionary of this class, so it needn't be calculated again.
+    N.B.: Do not instantiate!
     """
-    def __init__(self):
-        self.k_abs_cache = {}
-        self.k_i_cache = {}
+    k_abs_cache = {}
+    k_i_cache = {}
     
-    def k_abs(self, gridsize, boxlen):
+    def k_abs(gridsize, boxlen):
         cache_key = "%s %s" % (gridsize, boxlen)
         try:
-            return self.k_abs_cache[cache_key]
+            return KGridCache.k_abs_cache[cache_key]
         except KeyError:
-            self.k_abs_cache[cache_key] = calc_k_abs_grid(gridsize, boxlen)
-            return self.k_abs_cache[cache_key]
+            KGridCache.k_abs_cache[cache_key] = calc_k_abs_grid(gridsize, boxlen)
+            return KGridCache.k_abs_cache[cache_key]
     
-    def k_i(self, gridsize, boxlen):
+    def k_i(gridsize, boxlen):
         cache_key = "%s %s" % (gridsize, boxlen)
         try:
-            return self.k_i_cache[cache_key]
+            return KGridCache.k_i_cache[cache_key]
         except KeyError:
-            self.k_i_cache[cache_key] = calc_k_i_grid(gridsize, boxlen)
-            return self.k_i_cache[cache_key]
+            KGridCache.k_i_cache[cache_key] = calc_k_i_grid(gridsize, boxlen)
+            return KGridCache.k_i_cache[cache_key]
 
+
+def cacheable(cache_key_template = None):
+    """
+    Decorator that makes a function cacheable. The /cache_key_template/ argument
+    needs to be a string containing the same number of string formatting
+    operators (%...) as the number of arguments of the decorated function. Note
+    that keyword arguments will be sorted by their keys; this is necessary for
+    the keyword argument values to always be in the same order, because keyword
+    arguments are given in a dictionary and so they have no defined order. If no
+    /cache_key_template/ is given and caching is activated using the cache_on()
+    method, then a /cache_key/ keyword argument needs to be added when calling
+    the decorated function; it will be used as a keyword in the cache
+    dictionary, so make sure the cache_key is something that can be used as
+    such.
+    """
+    class Wrapper(object):
+        def __init__(self, fct, cache_key_template):
+            self.fct = fct
+            self.fct_call = fct
+            self.key = cache_key_template
+            self.cache = {}
+        def __call__(self, *args, **kwargs):
+            return self.fct_call(*args, **kwargs)
+        def cached_fct_call(self, *args, **kwargs):
+            cache_key = self.key % args 
+            # 
+            # kwargs nog toevoegen; alleen de values, maar gesorteerd op keys!
+            # (zie docstring)
+            # 
+            # ook nog iets met if self.key is None doen!
+            #
+            try:
+                return self.cache[cache_key]
+            except KeyError:
+                self.cache[cache_key] = self.fct_call(*args, **kwargs)
+                return self.cache[cache_key]
+        def cache_on(self):
+            self.fct_call = self.cached_fct_call
+        def cache_off(self):
+            self.fct_call = self.fct
+            self.cache.clear() # maybe not necessary
+        def __repr__(self):
+            '''Return the function's docstring.'''
+            return self.func.__doc__
+        def __get__(self, obj, objtype):
+            '''Support instance methods.'''
+            return functools.partial(self.__call__, obj)
+        
+    def closer(f):
+        # See http://stackoverflow.com/questions/233673/lexical-closures-in-python#235764
+        # on closures.
+        return Wrapper(f, cache_key_template)
+    
+    return closer
 
 
 # Cosmology
