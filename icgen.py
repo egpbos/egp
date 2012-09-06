@@ -19,7 +19,7 @@ from scipy.special import erf
 from csv import reader as csvreader
 
 from egp.crunch import resolution_independent_random_grid
-from egp.types import Field, VectorField, ParticleSet, PeriodicArray
+from egp.basic_types import Field, VectorField, ParticleSet, PeriodicArray
 from egp import toolbox
 
 
@@ -100,26 +100,38 @@ class PowerSpectrum(object):
     self.amplitude manually or by using the normalize function which normalizes
     the spectrum using the volume of the periodic box, and setting sigma0 at
     scale Rth.
-    When a cache_key is given, the calculated power spectrum will be stored in
-    the self.cache dictionary under the key given by cache_key. The next time
-    the power spectrum is called with the same cache_key, the spectrum will
-    not be recalculated, but will immediately be read from memory. This can be
-    useful when calling the same PowerSpectrum several times, e.g. from within
-    a loop, without using variables outside of the loop's scope.
+    To activate caching, call the P_call.cache_on() method. You will then need
+    to give a /cache_key/ keyword argument with your calls.
+    #~ When a cache_key is given, the calculated power spectrum will be stored in
+    #~ the self.cache dictionary under the key given by cache_key. The next time
+    #~ the power spectrum is called with the same cache_key, the spectrum will
+    #~ not be recalculated, but will immediately be read from memory. This can be
+    #~ useful when calling the same PowerSpectrum several times, e.g. from within
+    #~ a loop, without using variables outside of the loop's scope.
     """
     def __init__(self):
         self.normalized = False
         self.cache = {} # contains cached 
-        
-    def __call__(self, k, cache_key = None):
-        if not cache_key:
-            return self.amplitude * self.P(k)
-        else:
-            try:
-                return self.cache[cache_key]
-            except KeyError:
-                self.cache[cache_key] = self.amplitude * self.P(k)
-                return self.cache[cache_key]
+    
+    @toolbox.cacheable()
+    def __call__(self, k):#, cache_key = None):
+        return self.amplitude * self.P(k) # cacheable method
+        #~ return self.P_call(k) # P_call method
+        #~ if not cache_key: # internal cache method
+            #~ return self.amplitude * self.P(k)
+        #~ else:
+            #~ try:
+                #~ return self.cache[cache_key]
+            #~ except KeyError:
+                #~ self.cache[cache_key] = self.amplitude * self.P(k)
+                #~ return self.cache[cache_key]
+    
+    def P_call(self, k):
+        """This will be returned on calling the PowerSpectrum instance. Needs to
+        be a separate function from __call__ to be able to make it cacheable. To
+        cache the PowerSpectrum, therefore, you need to set cache_on() on this
+        function."""
+        return self.amplitude * self.P(k)
     
     amplitude = property()
     @amplitude.getter
@@ -431,11 +443,12 @@ class GaussianRandomField(DensityField):
         #print "Begin building rho array in Fourier space..."
         
         # Initialize fourier-space k-values grid
-        k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
-        k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
-        k2 -= kmax*(k2 > dk*(halfgrid - 1))
-        k = np.sqrt(k1**2 + k2**2 + k3**2)
-        del(k1, k2, k3) # keep memory clean
+        k = toolbox.k_abs_grid(self.gridsize, self.boxlen)
+        #~ k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
+        #~ k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
+        #~ k2 -= kmax*(k2 > dk*(halfgrid - 1))
+        #~ k = np.sqrt(k1**2 + k2**2 + k3**2)
+        #~ del(k1, k2, k3) # keep memory clean
         
         # Fill in the grid with random numbers
         # ... for the regular grid components:
@@ -1200,7 +1213,7 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     
     v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
     # lagrangian coordinates, in the center of the gridcells:
-    q = np.mgrid[dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx]
+    q = np.mgrid[dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx] # IN EEN CACHEABLE FUNCTIE ZETTEN
     X = (q + xfact*(v/vfact))%boxlen
     #~ # Mirror coordinates, because somehow it doesn't match the coordinates put
     #~ # into the constrained field.

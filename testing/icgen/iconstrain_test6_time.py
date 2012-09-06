@@ -1,12 +1,12 @@
 #!/usr/bin/env ipython
 # encoding: utf-8
 
-from iconstrain import *
+from iconstrain4plus1 import *
 from egp.icgen import Cosmology, CosmoPowerSpectrum, GaussianRandomField
 from csv import reader as csvreader
 import egp.io as io
 
-test_id = "1"
+test_id = "6"
 run_name = "run%i" % (100+int(test_id)) # plus 100 to separate from DE+void runs
 
 run_dir_base = "/Users/users/pbos/dataserver/sims"
@@ -46,19 +46,11 @@ egp.toolbox.k_abs_grid.cache_on()
 ps = CosmoPowerSpectrum(cosmo)
 ps.__call__.cache_on()
 ps.normalize(boxlen**3)
-#~ ps.__call__.cache_on()
 
 # Unconstrained field
-#~ print "eerste keer"
 rhoU = GaussianRandomField(ps, boxlen, gridsize_iter, seed=seed)
-#~ print "tweede keer"
-#~ rhoU = GaussianRandomField(ps, boxlen, gridsize_iter, seed=seed)
 
-#~ rhoU.power.__call__.cache_on()
+pos_initial = initial_guess(pos0, mass0, boxlen, gridsize_iter, rhoU, ps, cosmo)
 
-#~ ps.__call__.cache_on()
-#~ print ps.__call__.cache
-
-
-print "Now run this command:\n%prun result = iterate(pos0, mass0, boxlen, gridsize_iter, rhoU, ps, cosmo, epsilon=1e-13, factr=1e11, pgtol=1e-3)"
-print "Or for fast timing test:\n%timeit -n5 -r5 iteration_mean(pos0, mass0, boxlen, gridsize_iter, rhoU, ps, cosmo)"
+print "Now run this command:\n%prun results_all = iterate(pos_initial, pos0, mass0, boxlen, gridsize_iter, rhoU, ps, cosmo, epsilon=1e-13, factr=1e11, pgtol=1e-3)\nresult = results_all[0]"
+#~ print "Or for fast timing test:\n%timeit -n5 -r5 results_all = iteration_mean(pos_initial, pos0, mass0, boxlen, gridsize_iter, rhoU, ps, cosmo)"

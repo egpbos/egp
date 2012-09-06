@@ -114,19 +114,27 @@ def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos
     return mean_peak_pos
 
 def difference(pos_iter, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
-    print pos_iter, "i.e.", pos_iter%boxlen, "in the box"
+    print "input:", pos_iter#, "i.e.", pos_iter%boxlen, "in the box"
     pos_new = iteration_mean(pos_iter%boxlen, mass0, boxlen, gridsize, rhoU, ps, cosmo)
     print "geeft:", pos_new
+    print "diff :", np.sum((pos_new - pos0)**2), "\n"
+    #~ print "Powerspectrum stats:"
+    #~ print rhoU.power.__call__.cache['grid_64_box_100.0'].mean(), rhoU.power.__call__.cache['grid_64_box_100.0'].min(), rhoU.power.__call__.cache['grid_64_box_100.0'].max(), rhoU.power.__call__.cache['grid_64_box_100.0'].std()
+    #~ print "k_i stats:"
+    #~ print egp.toolbox.k_i_grid.cache['grid_64_box_100.0'].mean(), egp.toolbox.k_i_grid.cache['grid_64_box_100.0'].min(), egp.toolbox.k_i_grid.cache['grid_64_box_100.0'].max(), egp.toolbox.k_i_grid.cache['grid_64_box_100.0'].std()
+    #~ print "k_abs stats:"
+    #~ print egp.toolbox.k_abs_grid.cache['grid_64_box_100.0'].mean(), egp.toolbox.k_abs_grid.cache['grid_64_box_100.0'].min(), egp.toolbox.k_abs_grid.cache['grid_64_box_100.0'].max(), egp.toolbox.k_abs_grid.cache['grid_64_box_100.0'].std()
+    #~ print "... en volgende stap.\n"
     return np.sum((pos_new - pos0)**2)
 
-def iterate(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
+def iterate(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, epsilon=1e-13, factr=1e11, pgtol=1e-3):
     # N.B.: eventually mass0 will have to be included in pos0 as x0 = pos0,mass0
     # to iterate over pos and mass both.
     bound_range = 0.1*boxlen
     boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
     lower = np.array(boundaries)[:,0]
     upper = np.array(boundaries)[:,1]
-    result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True)#, epsilon=2e-10, factr=1e10)
+    result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
     #~ result = anneal(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     #~ result = brute(difference, boundaries, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     return result

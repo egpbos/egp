@@ -26,7 +26,7 @@ critical_density = egp.toolbox.critical_density
 from iconstrain import constrain_field, iteration_mean, difference
 
 # Decide which one to use!
-from scipy.optimize import fmin_l_bfgs_b as solve
+from scipy.optimize import fmin_l_bfgs_b as solve, fmin_powell
 from scipy.optimize import anneal
 
 # constants
@@ -52,14 +52,16 @@ def initial_guess(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
     print "dus na wat schuiven gebruiken we:", result
     return result
 
-def iterate(pos_initial, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
+def iterate(pos_initial, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, epsilon=1e-13, factr=1e11, pgtol=1e-3):
+    # Machine precision = 2.220D-16 (seen when running fmin_l_bfgs_b with iprint=0)
     # N.B.: eventually mass0 will have to be included in pos0 as x0 = pos0,mass0
     # to iterate over pos and mass both.
     bound_range = 0.1*boxlen
     boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
     lower = np.array(boundaries)[:,0]
     upper = np.array(boundaries)[:,1]
-    result = solve(difference, pos_initial, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True)#, epsilon=2e-10, factr=1e10)
+    result = solve(difference, pos_initial, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
+    #~ result = fmin_powell(difference, pos_initial, args = (pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     #~ result = anneal(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     #~ result = brute(difference, boundaries, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     return result
