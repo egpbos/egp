@@ -913,7 +913,7 @@ def constraints_from_table(table, power_spectrum, boxlen):
     velocity_to_gravity = 2*fpeebl(z, cosmo.omegaR, cosmo.omegaM, \
                       cosmo.omegaL) / 3 / 100 / cosmo.omegaM
                                         # 100 = Hubble in units of h
-
+    
     
     for row in table:
         # ----- Location
@@ -931,18 +931,6 @@ def constraints_from_table(table, power_spectrum, boxlen):
         else:
             scale = ConstraintScale(float(scalestr))
             scales[scalestr] = scale
-        
-        # ----- Spectral parameters (for easier constraint value definition, at
-        # ----- least in case of gaussian random field):
-        sigma0 = power_spectrum.moment(0, scale.scale, boxlen**3)
-        sigma1 = power_spectrum.moment(1, scale.scale, boxlen**3)
-        sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
-        sigma_min1 = power_spectrum.moment(-1, scale.scale, boxlen**3)
-        gamma_nu = sigma0**2 / sigma_min1 / sigma1
-        sigma_g = 3./2 * cosmo.omegaM * 100**2 * sigma_min1 # 100 = Hubble in units of h
-        sigma_g_peak = sigma_g * np.sqrt(1 - gamma_nu**2)
-        gamma = sigma1**2/sigma0/sigma2
-        sigma_E = 3./2*cosmo.omegaM*100**2 * sigma0 * np.sqrt((1-gamma**2)/15)
         
         # ----- Peak height
         height = row[4]
@@ -967,88 +955,30 @@ def constraints_from_table(table, power_spectrum, boxlen):
         density_phi = row[11]
         density_theta = row[12]
         density_psi = row[13]
-        # if one is defined, randomly define all:
+        
+        # if one is defined, randomly define all others:
         if curvature or a21 or a31 or density_phi or density_theta or density_psi:
-            if not curvature:
-                # determine the cumulative cpdf of curvature x given peak height:
-                x = np.linspace(0,10,5001) # ongeveer zelfde als in Riens code
-                dx = x[1]-x[0]
-                cumPDF = cumulative_cpdf_curvature(x,height,gamma)
-                percentile = 1 - np.random.random() # don't want zero
-                ix = cumPDF.searchsorted(percentile)
-                curvature = dx*((ix-1) + (percentile-cumPDF[ix-1])/(cumPDF[ix]-cumPDF[ix-1]))
-                # This is basically just the ``transformation method'' of
-                # drawing random variables (sect. 7.3.2 of Press+07).
-                # Note: at the end of the x-range the cumulative PDF is flat,
-                # within numerical precision, so no interpolation is possible. 
-                # This means that the curvature will never be higher than the
-                # corresponding value at which the PDF flattens.
-            else:
-                curvature = float(curvature)
-            if not a21 or not a31:
-                # For the shape distribution we apply the rejection method (see
-                # e.g. sect. 7.3.6 of Press+07) because we cannot easily
-                # determine the 
-                # N.B.: if only one is given, both will be randomly calculated!
-                p,e = np.mgrid[-0.25:0.25:0.005, 0:0.5:0.005]
-                PDF = cpdf_shape(e, p, curvature)
-                # The top of the uniform distribution beneath which we draw:
-                comparison_function_max = 1.01*PDF.max()
-                # Drawing in 3D space beneath the comparison function until we
-                # no longer reject (ugly Pythonic do-while loop equivalent):
-                draw = lambda: (0.5*np.random.random(), \
-                                0.75*np.random.random() - 0.25, \
-                                comparison_function_max*(1-np.random.random()))
-                                # gives, respectively: e, p, something not zero
-                e,p,prob = draw()
-                while cpdf_shape(e,p,curvature) < prob: # rejection criterion
-                    e,p,prob = draw()
-                # Convert to a21 and a31:
-                a21 = np.sqrt((1-2*p)/(1+p-3*e))
-                a31 = np.sqrt((1+p+3*e)/(1+p-3*e))
-            else:
-                a21 = float(a21)
-                a31 = float(a31)
-            if not density_phi:
-                density_phi = 180*np.random.random()
-            else:
-                density_phi = float(density_phi)
-            if not density_theta:
-                density_theta = 180/np.pi*np.arccos(1-np.random.random())
-            else:
-                density_theta = float(density_theta)
-            if not density_psi:
-                density_psi = 180*np.random.random()
-            else:
-                density_psi = float(density_psi)
-            
-            # Convert stuff and calculate matrix coefficients (= 2nd derivs)...
-            a12 = 1/a21
-            a13 = 1/a31
-            A = euler_matrix(density_phi, density_theta, density_psi)
-            lambda1 = curvature * sigma2 / (1 + a12**2 + a13**2)
-            lambda2 = lambda1 * a12**2
-            lambda3 = lambda1 * a13**2
-            d11 = - lambda1*A[0,0]*A[0,0] - lambda2*A[1,0]*A[1,0] - lambda3*A[2,0]*A[2,0]
-            d22 = - lambda1*A[0,1]*A[0,1] - lambda2*A[1,1]*A[1,1] - lambda3*A[2,1]*A[2,1]
-            d33 = - lambda1*A[0,2]*A[0,2] - lambda2*A[1,2]*A[1,2] - lambda3*A[2,2]*A[2,2]
-            d12 = - lambda1*A[0,0]*A[0,1] - lambda2*A[1,0]*A[1,1] - lambda3*A[2,0]*A[2,1]
-            d13 = - lambda1*A[0,0]*A[0,2] - lambda2*A[1,0]*A[1,2] - lambda3*A[2,0]*A[2,2]
-            d23 = - lambda1*A[0,1]*A[0,2] - lambda2*A[1,1]*A[1,2] - lambda3*A[2,1]*A[2,2]
-            # ... and define Constraints:
-            constraints.append(ShapeConstraint(location, scale, d11, 0, 0))
-            constraints.append(ShapeConstraint(location, scale, d22, 1, 1))
-            constraints.append(ShapeConstraint(location, scale, d33, 2, 2))
-            constraints.append(ShapeConstraint(location, scale, d12, 0, 1))
-            constraints.append(ShapeConstraint(location, scale, d13, 0, 2))
-            constraints.append(ShapeConstraint(location, scale, d23, 1, 2))
+            shape_constraints = generate_shape_constraints(location, scale, power_spectrum, boxlen, curvature, a21, a31, density_phi, density_theta, density_psi)
+            constraints.extend(shape_constraints)
         
         # ----- Velocity
         vx = row[14]
         vy = row[15]
         vz = row[16]
         
-        # Convert to gravity:
+        # Convert velocity to gravity:
+        if vx or vy or vz:
+            # ----- Spectral parameters (for easier constraint value definition, at
+            # ----- least in case of gaussian random field):
+            sigma0 = power_spectrum.moment(0, scale.scale, boxlen**3)
+            sigma1 = power_spectrum.moment(1, scale.scale, boxlen**3)
+            #~ sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
+            sigma_min1 = power_spectrum.moment(-1, scale.scale, boxlen**3)
+            gamma_nu = sigma0**2 / sigma_min1 / sigma1
+            sigma_g = 3./2 * cosmo.omegaM * 100**2 * sigma_min1 # 100 = Hubble in units of h
+            sigma_g_peak = sigma_g * np.sqrt(1 - gamma_nu**2)
+            #~ gamma = sigma1**2/sigma0/sigma2
+            #~ sigma_E = 3./2*cosmo.omegaM*100**2 * sigma0 * np.sqrt((1-gamma**2)/15)
         if vx:
             gx = velocity_to_gravity*float(vx)
             constraints.append(GravityConstraint(location, scale, gx*sigma_g_peak, 0, cosmo))
@@ -1100,6 +1030,91 @@ def constraints_from_table(table, power_spectrum, boxlen):
             constraints.append(TidalConstraint(location, scale, E13, 0, 2, cosmo))
             constraints.append(TidalConstraint(location, scale, E23, 1, 2, cosmo))
     
+    return constraints
+
+def generate_shape_constraints(location, scale, power_spectrum, boxlen, curvature, a21, a31, density_phi, density_theta, density_psi):
+    """The actual constraint-values should be strings and they can be empty
+    strings if you don't want to constrain that particular value (it will then
+    be randomly assigned according to random draws from the proper
+    distributions)."""
+    constraints = []
+    sigma0 = power_spectrum.moment(0, scale.scale, boxlen**3)
+    sigma1 = power_spectrum.moment(1, scale.scale, boxlen**3)
+    sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
+    gamma = sigma1**2/sigma0/sigma2
+    if not curvature:
+        # determine the cumulative cpdf of curvature x given peak height:
+        x = np.linspace(0,10,5001) # ongeveer zelfde als in Riens code
+        dx = x[1]-x[0]
+        cumPDF = cumulative_cpdf_curvature(x,height,gamma)
+        percentile = 1 - np.random.random() # don't want zero
+        ix = cumPDF.searchsorted(percentile)
+        curvature = dx*((ix-1) + (percentile-cumPDF[ix-1])/(cumPDF[ix]-cumPDF[ix-1]))
+        # This is basically just the ``transformation method'' of
+        # drawing random variables (sect. 7.3.2 of Press+07).
+        # Note: at the end of the x-range the cumulative PDF is flat,
+        # within numerical precision, so no interpolation is possible. 
+        # This means that the curvature will never be higher than the
+        # corresponding value at which the PDF flattens.
+    else:
+        curvature = float(curvature)
+    if not a21 or not a31:
+        # For the shape distribution we apply the rejection method (see
+        # e.g. sect. 7.3.6 of Press+07) because we cannot easily
+        # determine the 
+        # N.B.: if only one is given, both will be randomly calculated!
+        p,e = np.mgrid[-0.25:0.25:0.005, 0:0.5:0.005]
+        PDF = cpdf_shape(e, p, curvature)
+        # The top of the uniform distribution beneath which we draw:
+        comparison_function_max = 1.01*PDF.max()
+        # Drawing in 3D space beneath the comparison function until we
+        # no longer reject (ugly Pythonic do-while loop equivalent):
+        draw = lambda: (0.5*np.random.random(), \
+                        0.75*np.random.random() - 0.25, \
+                        comparison_function_max*(1-np.random.random()))
+                        # gives, respectively: e, p, something not zero
+        e,p,prob = draw()
+        while cpdf_shape(e,p,curvature) < prob: # rejection criterion
+            e,p,prob = draw()
+        # Convert to a21 and a31:
+        a21 = np.sqrt((1-2*p)/(1+p-3*e))
+        a31 = np.sqrt((1+p+3*e)/(1+p-3*e))
+    else:
+        a21 = float(a21)
+        a31 = float(a31)
+    if not density_phi:
+        density_phi = 180*np.random.random()
+    else:
+        density_phi = float(density_phi)
+    if not density_theta:
+        density_theta = 180/np.pi*np.arccos(1-np.random.random())
+    else:
+        density_theta = float(density_theta)
+    if not density_psi:
+        density_psi = 180*np.random.random()
+    else:
+        density_psi = float(density_psi)
+    
+    # Convert stuff and calculate matrix coefficients (= 2nd derivs)...
+    a12 = 1/a21
+    a13 = 1/a31
+    A = euler_matrix(density_phi, density_theta, density_psi)
+    lambda1 = curvature * sigma2 / (1 + a12**2 + a13**2)
+    lambda2 = lambda1 * a12**2
+    lambda3 = lambda1 * a13**2
+    d11 = - lambda1*A[0,0]*A[0,0] - lambda2*A[1,0]*A[1,0] - lambda3*A[2,0]*A[2,0]
+    d22 = - lambda1*A[0,1]*A[0,1] - lambda2*A[1,1]*A[1,1] - lambda3*A[2,1]*A[2,1]
+    d33 = - lambda1*A[0,2]*A[0,2] - lambda2*A[1,2]*A[1,2] - lambda3*A[2,2]*A[2,2]
+    d12 = - lambda1*A[0,0]*A[0,1] - lambda2*A[1,0]*A[1,1] - lambda3*A[2,0]*A[2,1]
+    d13 = - lambda1*A[0,0]*A[0,2] - lambda2*A[1,0]*A[1,2] - lambda3*A[2,0]*A[2,2]
+    d23 = - lambda1*A[0,1]*A[0,2] - lambda2*A[1,1]*A[1,2] - lambda3*A[2,1]*A[2,2]
+    # ... and define Constraints:
+    constraints.append(ShapeConstraint(location, scale, d11, 0, 0))
+    constraints.append(ShapeConstraint(location, scale, d22, 1, 1))
+    constraints.append(ShapeConstraint(location, scale, d33, 2, 2))
+    constraints.append(ShapeConstraint(location, scale, d12, 0, 1))
+    constraints.append(ShapeConstraint(location, scale, d13, 0, 2))
+    constraints.append(ShapeConstraint(location, scale, d23, 1, 2))
     return constraints
 
 #   FACTORY HELPER FUNCTIONS
