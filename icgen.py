@@ -373,19 +373,20 @@ class DisplacementField(VectorField):
         self.build_fourier() # this method calls VectorField.__init__()
     
     def build_fourier(self):
-        halfgrid = self.gridsize/2
-        dk = 2*np.pi / self.boxlen
-        kmax = self.gridsize*dk
+        #~ halfgrid = self.gridsize/2
+        #~ dk = 2*np.pi / self.boxlen
+        #~ kmax = self.gridsize*dk
         
         # Initialize fourier-space k-values grid
-        k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
-        k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
-        k2 -= kmax*(k2 > dk*(halfgrid - 1))
+        k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.boxlen)
+        #~ k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
+        #~ k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
+        #~ k2 -= kmax*(k2 > dk*(halfgrid - 1))
         k_sq = k1**2 + k2**2 + k3**2
         k_sq[0,0,0] = 1 # to avoid division by zero
 
         # Indices for the 7 real, independent, non-zero grid values:
-        real7x,real7y,real7z = np.mgrid[0:2,0:2,0:2]*halfgrid
+        real7x,real7y,real7z = np.mgrid[0:2,0:2,0:2]*self.gridsize/2
         real7x,real7y,real7z = real7x.ravel()[1:],real7y.ravel()[1:],real7z.ravel()[1:]
         
         # Then, the actual displacement field:
@@ -394,6 +395,63 @@ class DisplacementField(VectorField):
         Z[real7x,real7y,real7z] = 0.0 # waarom dit eigenlijk?
         Z[0,0,0] = 0.0
         VectorField.__init__(self, fourier = (k1*Z, k2*Z, k3*Z))
+        
+        # Finally add symmetry to the nyquist planes (so the ifft is not imaginary):
+        symmetrizeMatrix(self.x.f)
+        symmetrizeMatrix(self.y.f)
+        symmetrizeMatrix(self.z.f)
+
+
+class DisplacementField2ndOrder(VectorField):
+    """
+    A three component VectorField representing the 2nd order displacement field
+    corresponding to a DisplacementField on a periodic grid. N.B.: the
+    DisplacementField must have attribute /boxlen/ set. The components are
+    stored as attributes x, y and z, which are Field instances.
+    
+    Gives the 2nd order displacement field in the units as the box length, which
+    should be h^{-1} Mpc (or kpc, but at least in "Hubble units", with h^{-1}!).
+    """
+    def __init__(self, psi1):
+        self.psi1 = psi1
+        try:
+            self.gridsize = self.psi1.gridsize
+        except AttributeError:
+            self.gridsize = self.psi1.x.t.shape[0]
+        self.boxlen = self.psi1.boxlen
+        self.build_fourier() # this method calls VectorField.__init__()
+    
+    def build_fourier(self):
+        # Initialize fourier-space k-values grid
+        k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.boxlen)
+        k_sq = k1**2 + k2**2 + k3**2
+        k_sq[0,0,0] = 1 # to avoid division by zero
+
+        # Indices for the 7 real, independent, non-zero grid values:
+        real7x,real7y,real7z = np.mgrid[0:2,0:2,0:2]*self.gridsize/2
+        real7x,real7y,real7z = real7x.ravel()[1:],real7y.ravel()[1:],real7z.ravel()[1:]
+        
+        # Now, let's calculate stuff...
+        # ... the second derivatives of psi(1):
+        d11 = Field(fourier = self.psi1.x.f*k1)
+        d22 = Field(fourier = self.psi1.y.f*k2)
+        d33 = Field(fourier = self.psi1.z.f*k3)
+        d12 = Field(fourier = self.psi1.x.f*k2)
+        d13 = Field(fourier = self.psi1.x.f*k3)
+        d23 = Field(fourier = self.psi1.y.f*k3)
+        # ... nabla_q^2 phi(2):
+        nabla2_phi2 = Field(true = d11.t*d22.t - d12.t**2 + d11.t*d33.t - d13.t**2 + d22.t*d33.t - d23.t**2 )
+        del d11, d22, d33, d12, d13, d23
+        # ... and phi(2):
+        phi2 = nabla2_phi2.f/k_sq
+        
+        # --- Fix shit
+        phi2[real7x,real7y,real7z] = 0.0 # waarom dit eigenlijk?
+        phi2[0,0,0] = 0.0
+        
+        # And finish psi(2) (the actual second order displacement field):
+        psi2 = (k1*phi2, k2*phi2, k3*phi2)
+        VectorField.__init__(self, fourier = psi2)
         
         # Finally add symmetry to the nyquist planes (so the ifft is not imaginary):
         symmetrizeMatrix(self.x.f)
@@ -1032,7 +1090,7 @@ def constraints_from_table(table, power_spectrum, boxlen):
     
     return constraints
 
-def generate_shape_constraints(location, scale, power_spectrum, boxlen, curvature, a21, a31, density_phi, density_theta, density_psi):
+def generate_shape_constraints(location, scale, power_spectrum, boxlen, curvature="", a21="", a31="", density_phi="", density_theta="", density_psi=""):
     """The actual constraint-values should be strings and they can be empty
     strings if you don't want to constrain that particular value (it will then
     be randomly assigned according to random draws from the proper
@@ -1043,42 +1101,11 @@ def generate_shape_constraints(location, scale, power_spectrum, boxlen, curvatur
     sigma2 = power_spectrum.moment(2, scale.scale, boxlen**3)
     gamma = sigma1**2/sigma0/sigma2
     if not curvature:
-        # determine the cumulative cpdf of curvature x given peak height:
-        x = np.linspace(0,10,5001) # ongeveer zelfde als in Riens code
-        dx = x[1]-x[0]
-        cumPDF = cumulative_cpdf_curvature(x,height,gamma)
-        percentile = 1 - np.random.random() # don't want zero
-        ix = cumPDF.searchsorted(percentile)
-        curvature = dx*((ix-1) + (percentile-cumPDF[ix-1])/(cumPDF[ix]-cumPDF[ix-1]))
-        # This is basically just the ``transformation method'' of
-        # drawing random variables (sect. 7.3.2 of Press+07).
-        # Note: at the end of the x-range the cumulative PDF is flat,
-        # within numerical precision, so no interpolation is possible. 
-        # This means that the curvature will never be higher than the
-        # corresponding value at which the PDF flattens.
+        curvature = random_curvature(height, gamma)
     else:
         curvature = float(curvature)
     if not a21 or not a31:
-        # For the shape distribution we apply the rejection method (see
-        # e.g. sect. 7.3.6 of Press+07) because we cannot easily
-        # determine the 
-        # N.B.: if only one is given, both will be randomly calculated!
-        p,e = np.mgrid[-0.25:0.25:0.005, 0:0.5:0.005]
-        PDF = cpdf_shape(e, p, curvature)
-        # The top of the uniform distribution beneath which we draw:
-        comparison_function_max = 1.01*PDF.max()
-        # Drawing in 3D space beneath the comparison function until we
-        # no longer reject (ugly Pythonic do-while loop equivalent):
-        draw = lambda: (0.5*np.random.random(), \
-                        0.75*np.random.random() - 0.25, \
-                        comparison_function_max*(1-np.random.random()))
-                        # gives, respectively: e, p, something not zero
-        e,p,prob = draw()
-        while cpdf_shape(e,p,curvature) < prob: # rejection criterion
-            e,p,prob = draw()
-        # Convert to a21 and a31:
-        a21 = np.sqrt((1-2*p)/(1+p-3*e))
-        a31 = np.sqrt((1+p+3*e)/(1+p-3*e))
+		a21, a31 = random_shape(curvature)
     else:
         a21 = float(a21)
         a31 = float(a31)
@@ -1117,7 +1144,47 @@ def generate_shape_constraints(location, scale, power_spectrum, boxlen, curvatur
     constraints.append(ShapeConstraint(location, scale, d23, 1, 2))
     return constraints
 
+
 #   FACTORY HELPER FUNCTIONS
+
+def random_curvature(height, gamma):
+	# determine the cumulative cpdf of curvature x given peak height:
+	x = np.linspace(0,10,5001) # ongeveer zelfde als in Riens code
+	dx = x[1]-x[0]
+	cumPDF = cumulative_cpdf_curvature(x,height,gamma)
+	percentile = 1 - np.random.random() # don't want zero
+	ix = cumPDF.searchsorted(percentile)
+	curvature = dx*((ix-1) + (percentile-cumPDF[ix-1])/(cumPDF[ix]-cumPDF[ix-1]))
+	# This is basically just the ``transformation method'' of
+	# drawing random variables (sect. 7.3.2 of Press+07).
+	# Note: at the end of the x-range the cumulative PDF is flat,
+	# within numerical precision, so no interpolation is possible. 
+	# This means that the curvature will never be higher than the
+	# corresponding value at which the PDF flattens.
+	return curvature
+
+def random_shape(curvature):
+	# For the shape distribution we apply the rejection method (see
+	# e.g. sect. 7.3.6 of Press+07) because we cannot easily
+	# determine the 
+	# N.B.: if only one is given, both will be randomly calculated!
+	p,e = np.mgrid[-0.25:0.25:0.005, 0:0.5:0.005]
+	PDF = cpdf_shape(e, p, curvature)
+	# The top of the uniform distribution beneath which we draw:
+	comparison_function_max = 1.01*PDF.max()
+	# Drawing in 3D space beneath the comparison function until we
+	# no longer reject (ugly Pythonic do-while loop equivalent):
+	draw = lambda: (0.5*np.random.random(), \
+					0.75*np.random.random() - 0.25, \
+					comparison_function_max*(1-np.random.random()))
+					# gives, respectively: e, p, something not zero
+	e,p,prob = draw()
+	while cpdf_shape(e,p,curvature) < prob: # rejection criterion
+		e,p,prob = draw()
+	# Convert to a21 and a31:
+	a21 = np.sqrt((1-2*p)/(1+p-3*e))
+	a31 = np.sqrt((1+p+3*e)/(1+p-3*e))
+	return a21, a31
 
 def cumulative_cpdf_curvature(x, height, gamma):
     """Determine the cumulative conditional probability distribution function of
@@ -1279,6 +1346,42 @@ def zeldovich_step(redshift_start, redshift_end, psi, pos, cosmo):
     #~ X = boxlen - X # x,y,z
     #~ v = -v
     # FIXED MIRRORING: using different FFT convention now (toolbox.rfftn etc).
+    
+    return X,v
+
+
+def two_LPT_ICs(redshift, psi1, psi2, cosmo):
+    """
+    Use the 2LPT approximation to calculate positions and velocities at
+    certain /redshift/, based on the DisplacementField /psi1/ and second order
+    DisplacementField2ndOrder /psi2/ of e.g. a Gaussian random density field and
+    Cosmology /cosmo/.
+    
+    Outputs a tuple of a position and velocity vector array; positions are in
+    units of h^{-1} Mpc (or in fact the same units as /psi.boxlen/) and
+    velocities in km/s.
+    """
+    boxlen = psi1.boxlen
+    
+    gridsize = len(psi1.x.t)
+    f1 = fpeebl(redshift, cosmo.omegaR, cosmo.omegaM, cosmo.omegaL)
+    f2 = 2*cosmo.omegaM**(6./11) # approximation from Bernardeau+01
+    D0 = grow(0, cosmo.omegaR, cosmo.omegaM, cosmo.omegaL) # used for normalization of D to t = 0
+    D1 = grow(redshift, cosmo.omegaR, cosmo.omegaM, cosmo.omegaL)
+    D1 = D1/D0
+    D2 = -3./7*D1**2*cosmo.omegaM**(-1./143)
+    
+    H = hubble(redshift, cosmo.omegaR, cosmo.omegaM, cosmo.omegaL)/(1+redshift) # conformal hubble constant
+    
+    psi1_vec = np.array([psi1.x.t, psi1.y.t, psi1.z.t])
+    psi2_vec = np.array([psi2.x.t, psi2.y.t, psi2.z.t])
+
+    v = D1*H*f1 * psi1_vec + D2*H*f2 * psi2_vec # vx,vy,vz
+    # lagrangian coordinates, in the center of the gridcells:
+    dx = boxlen/gridsize
+    q = np.mgrid[dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx]
+    
+    X = (q + D1*psi1_vec + D2*psi2_vec)%boxlen
     
     return X,v
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-iconstrain1.py
+iconstrain.py
 Iterative constrainer for peaks in ICs of cosmological N-body simulations.
 
 Created by Evert Gerardus Patrick Bos.
@@ -11,7 +11,7 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import numpy as np
-from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich
+from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich, generate_shape_constraints
 from matplotlib import pyplot as pl
 from mayavi import mlab
 import egp.toolbox
@@ -27,7 +27,7 @@ __version__ = "0.2, October 2012"
 # classes
 # functions
 
-def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo):
+def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo, shape_constraints = []):
     location = ConstraintLocation(pos)
     
     rhoc = egp.toolbox.critical_density(cosmo)
@@ -51,6 +51,10 @@ def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo):
     constraints.append(ExtremumConstraint(location, scale, 1))
     constraints.append(ExtremumConstraint(location, scale, 2))
     
+    # apply shape constraints to location & scale:
+    if shape_constraints:
+		constraints += generate_shape_constraints(location, scale, ps, boxlen, *shape_constraints)
+    
     # Do the field stuff!
     rhoC = ConstrainedField(rhoU, constraints) # N.B.: rhoU stays the same!!!
     return rhoC
@@ -58,9 +62,15 @@ def constrain_field(pos, mass, boxlen, rhoU, ps, cosmo):
 def get_peak_particle_indices(pos, radius, boxlen, gridsize):
     return sphere_grid(pos, radius, boxlen, gridsize)
 
-def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos0=None):
+def plot_all_plus_selection(points, pos0, selection, radius):
+	points_plot = mlab.points3d(points[0],points[1],points[2], mode='point', opacity=0.5)
+	cluster_plot = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=radius, opacity=0.3)
+	peak_points_plot = mlab.points3d(points[0,selection], points[1,selection], points[2,selection], opacity=0.5, mode='sphere', scale_factor=radius/10., color=(0,1,0))
+	mlab.show()
+
+def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = [], plot=False, pos0=None):
     # N.B.: pos0 is used here for plotting only.
-    rhoC = constrain_field(pos, mass, boxlen, rhoU, ps, cosmo)
+    rhoC = constrain_field(pos, mass, boxlen, rhoU, ps, cosmo, shape_constraints)
     
     # Now, Zel'dovich it:
     psiC = DisplacementField(rhoC)
@@ -77,28 +87,25 @@ def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos
     mean_peak_pos = POS[:,spheregrid].mean(axis=1)
     
     if plot:
-        points = mlab.points3d(POS[0],POS[1],POS[2], mode='point', opacity=0.5)
-        cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=radius, opacity=0.3)
-        peak_points = mlab.points3d(POS[0,spheregrid], POS[1,spheregrid], POS[2,spheregrid], opacity=0.5, mode='point', color=(0,1,0))
-        mlab.show()
+        plot_all_plus_cluster(POS, pos0, spheregrid, radius)
     
     return mean_peak_pos
 
-def difference(pos_iter, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
+def difference(pos_iter, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = []):
     print "input:", pos_iter#, "i.e.", pos_iter%boxlen, "in the box"
-    pos_new = iteration_mean(pos_iter%boxlen, mass0, boxlen, gridsize, rhoU, ps, cosmo)
+    pos_new = iteration_mean(pos_iter%boxlen, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints)
     print "geeft:", pos_new
     print "diff :", np.sum((pos_new - pos0)**2), "\n"
     return np.sum((pos_new - pos0)**2)
 
-def iterate(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, epsilon=1e-13, factr=1e11, pgtol=1e-3):
+def iterate(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     # N.B.: eventually mass0 will have to be included in pos0 as x0 = pos0,mass0
     # to iterate over pos and mass both.
     bound_range = 0.1*boxlen
     boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
     lower = np.array(boundaries)[:,0]
     upper = np.array(boundaries)[:,1]
-    result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
+    result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
     #~ result = anneal(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     #~ result = brute(difference, boundaries, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
     return result
