@@ -13,7 +13,6 @@ Copyright (c) 2012. All rights reserved.
 import numpy as np
 import pyublas
 import crunch
-from matplotlib import pyplot as pl
 #~ import __builtin__
 import functools
 from types import MethodType
@@ -168,6 +167,7 @@ def field_show(field, boxlen, xlabel="y (Mpc)", ylabel="z (Mpc)"):
     could of course easily be remedied by a transpose, but this easy function
     does that all for you, and a little more.
     """
+    from matplotlib import pyplot as pl
     pl.imshow(field.T, origin='bottom', interpolation='nearest', extent=(0,boxlen,0,boxlen))
     pl.xlabel(xlabel)
     pl.ylabel(ylabel)

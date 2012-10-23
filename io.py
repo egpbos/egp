@@ -966,7 +966,7 @@ nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
     os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
     
     with open(restart_script_filename, 'w') as restart_script:
-        restart_script.write(run_script_text+" 1")
+        restart_script.write(run_script_text[:-1]+" 1\n")
     os.chmod(restart_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 
 

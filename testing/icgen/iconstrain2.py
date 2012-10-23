@@ -6,6 +6,10 @@ iconstrain2.py
 Iterative constrainer for peaks in ICs of cosmological N-body simulations.
 Version 2: two-step iteration steps; Zel'dovich up to z_coll and then another.
 
+N.B.: this file doesn't actually contain the algorithm, it is in iconstrain_test4.py.
+This is because the tests turned out that this method is useless, so it wasn't
+really ever implemented properly after that.
+
 Created by Evert Gerardus Patrick Bos.
 Copyright (c) 2012. All rights reserved.
 """
@@ -23,7 +27,7 @@ from matplotlib import pyplot as pl
 from mayavi import mlab
 import egp.toolbox
 critical_density = egp.toolbox.critical_density
-from iconstrain import constrain_field, sphere_grid, get_peak_particle_indices
+from iconstrain import constrain_field, sphere_grid, get_peak_particle_indices, iteration_mean
 
 # Decide which one to use!
 from scipy.optimize import fmin_l_bfgs_b as solve
@@ -36,33 +40,6 @@ __version__ = "0.1.2, August 2012"
 # interface functions
 # classes
 # functions
-
-def iteration_mean(pos, mass, boxlen, gridsize, rhoU, ps, cosmo, plot=False, pos0=None):
-    # N.B.: pos0 is used here for plotting only.
-    rhoC = constrain_field(pos, mass, boxlen, rhoU, ps, cosmo)
-    
-    # Now, Zel'dovich it:
-    psiC = DisplacementField(rhoC)
-    POS, v = zeldovich(0., psiC, cosmo) # Mpc, not h^-1!
-    
-    # Determine peak particle indices:
-    rhoc = critical_density(cosmo)
-    #~ radius = (3*(mass*1e14)/4/np.pi/rhoc)**(1./3) # Mpc h^-1
-    radius = ((mass*1e14)/rhoc/(2*np.pi)**(3./2))**(1./3) # Mpc h^-1
-
-    spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
-    
-    # finally calculate the "new position" of the peak:
-    #~ POS_i = np.array([X_i,Y_i,Z_i])
-    mean_peak_pos = POS[:,spheregrid].mean(axis=1)
-    
-    if plot:
-        points = mlab.points3d(POS[0],POS[1],POS[2], mode='point', opacity=0.5)
-        cluster = mlab.points3d(pos0[0], pos0[1], pos0[2], mode='sphere', color=(1,0,0), scale_factor=radius, opacity=0.3)
-        peak_points = mlab.points3d(POS[0,spheregrid], POS[1,spheregrid], POS[2,spheregrid], opacity=0.5, mode='point', color=(0,1,0))
-        mlab.show()
-    
-    return mean_peak_pos
 
 def difference(pos_iter, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
     print pos_iter, "i.e.", pos_iter%boxlen, "in the box"

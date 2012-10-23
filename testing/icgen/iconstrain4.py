@@ -19,8 +19,7 @@ Todo:
 # imports
 import numpy as np
 from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich
-from matplotlib import pyplot as pl
-from mayavi import mlab
+#from matplotlib import pyplot as pl
 import egp.toolbox
 critical_density = egp.toolbox.critical_density
 from iconstrain import constrain_field, iteration_mean, sphere_grid
@@ -37,7 +36,7 @@ __version__ = "0.1.1, August 2012"
 # classes
 # functions
 
-def iterate(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
+def iterate(pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = []):
     # N.B.: eventually mass0 will have to be included in pos0 as x0 = pos0,mass0
     # to iterate over pos and mass both.
     bound_range = 0.1*boxlen
@@ -46,7 +45,7 @@ def iterate(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo):
     upper = np.array(boundaries)[:,1]
     #~ result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True)#, epsilon=0.5)
     print pos0
-    pos_new = iteration_mean(pos0%boxlen, mass0, boxlen, gridsize, rhoU, ps, cosmo)
+    pos_new = iteration_mean(pos0%boxlen, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints)
     print "geeft:", pos_new
     result = 2*pos0 - pos_new # = pos0 + (pos0 - pos_new), mirror new pos in old
     print "dus na wat schuiven gebruiken we:", result

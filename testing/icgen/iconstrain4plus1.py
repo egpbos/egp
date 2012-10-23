@@ -19,11 +19,12 @@ Todo:
 # imports
 import numpy as np
 from egp.icgen import ConstraintLocation, ConstraintScale, HeightConstraint, ExtremumConstraint, ConstrainedField, DisplacementField, zeldovich, two_LPT_ICs
-from matplotlib import pyplot as pl
-from mayavi import mlab
+# from matplotlib import pyplot as pl
+#from mayavi import mlab
 import egp.toolbox
 critical_density = egp.toolbox.critical_density
 from iconstrain import constrain_field, iteration_mean, difference
+from iconstrain4 import iterate as initial_guess
 
 # Decide which one to use!
 from scipy.optimize import fmin_l_bfgs_b as solve, fmin_powell
@@ -37,31 +38,31 @@ __version__ = "0.1, August 2012"
 # classes
 # functions
 
-def initial_guess(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = []):
-    # N.B.: eventually mass0 will have to be included in pos0 as x0 = pos0,mass0
-    # to iterate over pos and mass both.
-    bound_range = 0.1*boxlen
-    boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
-    lower = np.array(boundaries)[:,0]
-    upper = np.array(boundaries)[:,1]
-    #~ result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True)#, epsilon=0.5)
-    print pos0
-    pos_new = iteration_mean(pos0%boxlen, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints)
-    print "geeft:", pos_new
-    result = 2*pos0 - pos_new # = pos0 + (pos0 - pos_new), mirror new pos in old
-    print "dus na wat schuiven gebruiken we:", result
-    return result
+# def initial_guess(pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = []):
+#     # N.B.: eventually height will have to be included in pos0 as x0 = pos0,height
+#     # to iterate over pos and height both.
+#     bound_range = 0.1*boxlen
+#     boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
+#     lower = np.array(boundaries)[:,0]
+#     upper = np.array(boundaries)[:,1]
+#     #~ result = solve(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo), bounds = boundaries, approx_grad=True)#, epsilon=0.5)
+#     print pos0
+#     pos_new = iteration_mean(pos0%boxlen, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints)
+#     print "geeft:", pos_new
+#     result = 2*pos0 - pos_new # = pos0 + (pos0 - pos_new), mirror new pos in old
+#     print "dus na wat schuiven gebruiken we:", result
+#     return result
 
-def iterate(pos_initial, pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
+def iterate(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     # Machine precision = 2.220D-16 (seen when running fmin_l_bfgs_b with iprint=0)
-    # N.B.: eventually mass0 will have to be included in pos0 as x0 = pos0,mass0
-    # to iterate over pos and mass both.
+    # N.B.: eventually height will have to be included in pos0 as x0 = pos0,height
+    # to iterate over pos and height both.
     bound_range = 0.1*boxlen
     boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
     lower = np.array(boundaries)[:,0]
     upper = np.array(boundaries)[:,1]
-    result = solve(difference, pos_initial, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
-    #~ result = fmin_powell(difference, pos_initial, args = (pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
-    #~ result = anneal(difference, pos0, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
-    #~ result = brute(difference, boundaries, args=(pos0, mass0, boxlen, gridsize, rhoU, ps, cosmo))
+    result = solve(difference, pos_initial, args=(pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo, shape_constraints), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
+    #~ result = fmin_powell(difference, pos_initial, args = (pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo))
+    #~ result = anneal(difference, pos0, args=(pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo))
+    #~ result = brute(difference, boundaries, args=(pos0, height, scale_mpc, boxlen, gridsize, rhoU, ps, cosmo))
     return result
