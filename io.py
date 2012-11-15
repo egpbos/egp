@@ -523,9 +523,21 @@ class GadgetData(object):
 class SubFindHaloes(object):
     def __init__(self, firstfile):
         self.firstfile = abspath(firstfile)
-        self.loadData()
+        self.load_data()
     
-    def loadData(self):
+    def save_txt(self, filenamebase):
+        """Filenamebase will be appended with _groups.txt and _subhaloes.txt."""
+        groups = np.array([self.HaloLen, self.NsubPerHalo, self.FirstSubOfHalo, self.Halo_M_Mean200, self.Halo_R_Mean200, self.Halo_M_Crit200, self.Halo_R_Crit200, self.Halo_M_TopHat200, self.Halo_R_TopHat200, self.HaloCont, self.HaloPos[:,0], self.HaloPos[:,1], self.HaloPos[:,2], self.HaloMass]).T
+        subhaloes = np.array([self.SubLen, self.SubOffset, self.SubParentHalo, self.SubPos[:,0], self.SubPos[:,1], self.SubPos[:,2], self.SubVel[:,0], self.SubVel[:,1], self.SubVel[:,2], self.SubVelDisp, self.SubVmax, self.SubSpin[:,0], self.SubSpin[:,1], self.SubSpin[:,2], self.SubMostBoundID, self.SubHalfMass, self.SubMassTab[:,0], self.SubMassTab[:,1], self.SubMassTab[:,2], self.SubMassTab[:,3], self.SubMassTab[:,4], self.SubMassTab[:,5], self.SubTMass]).T
+        np.savetxt(filenamebase+'_groups.txt', groups)
+        np.savetxt(filenamebase+'_subhaloes.txt', subhaloes)
+    
+    def save_sub_xyzm(self, filenamebase):
+        """Filenamebase will be appended with _xyzm.txt."""
+        data = np.array([self.SubPos[:,0], self.SubPos[:,1], self.SubPos[:,2], self.SubTMass]).T
+        np.savetxt(filenamebase+'_xyzm.txt', data)
+    
+    def load_data(self):
         """Loads file headers and data of all files in the dataset into
         memory."""
         filename = self.firstfile
@@ -534,7 +546,7 @@ class SubFindHaloes(object):
         
         self.TotNgroups = tab0l[1]
         tab0file.seek(12)
-        self.TotNids = struct.unpack('=q', tab0file.read(8))
+        self.TotNids = struct.unpack('=q', tab0file.read(8)) # double long (LL in IDL)
         self.Nfiles = tab0l[5]
         self.TotNsubhalos = tab0l[7]
 
@@ -623,6 +635,72 @@ class SubFindHaloes(object):
             
             del tabl, tabf, tabul
             tabfile.close()
+
+
+class GadgetFOFGroups(object):
+    def __init__(self, firstfile):
+        self.firstfile = abspath(firstfile)
+        self.load_data()
+    
+    def save_txt(self, filenamebase):
+        """Filenamebase will be appended with .txt."""
+        groups = np.array([self.GroupLen, self.GroupOffset, self.GroupMass, self.GroupCM[:,0], self.GroupCM[:,1], self.GroupCM[:,2], self.GroupVel[:,0], self.GroupVel[:,1], self.GroupVel[:,2], self.GroupLenType[:,0], self.GroupLenType[:,1], self.GroupLenType[:,2], self.GroupLenType[:,3], self.GroupLenType[:,4], self.GroupLenType[:,5], self.GroupLenMass[:,0], self.GroupLenMass[:,1], self.GroupLenMass[:,2], self.GroupLenMass[:,3], self.GroupLenMass[:,4], self.GroupLenMass[:,5]]).T
+        np.savetxt(filenamebase+'.txt', groups)
+    
+    def load_data(self):
+        """Loads file headers and data of all files in the dataset into
+        memory."""
+        filename = self.firstfile
+        tab0l = np.memmap(filename, dtype='int32', mode='r')
+        tab0file = file(filename, 'rb')
+        
+        self.TotNgroups = tab0l[1]
+        tab0file.seek(12)
+        self.TotNids = struct.unpack('=q', tab0file.read(8)) # double long (LL in IDL)
+        self.Nfiles = tab0l[5]
+
+        del tab0l
+        tab0file.close()
+        
+        offset = 0
+        
+        self.GroupLen = np.empty(self.TotNgroups, dtype='int32')
+        self.GroupOffset = np.empty(self.TotNgroups, dtype='int32')
+        self.GroupMass = np.empty(self.TotNgroups, dtype='float32')
+        self.GroupCM = np.empty((self.TotNgroups,3), dtype='float32')
+        self.GroupVel = np.empty((self.TotNgroups,3), dtype='float32')
+        self.GroupLenType = np.empty((self.TotNgroups,6), dtype='int32')
+        self.GroupLenMass = np.empty((self.TotNgroups,6), dtype='float32')
+                
+        for i in range(self.Nfiles):
+            ifile = str(i)
+            
+            tabl = np.memmap(filename[:-1]+ifile, dtype='int32', mode='r')
+            tabf = np.memmap(filename[:-1]+ifile, dtype='float32', mode='r')
+            
+            Ngroups = tabl[0]
+                        
+            if Ngroups:
+                b = 6
+                f = 0
+                self.GroupLen[offset:offset+Ngroups] = tabl[b+f*Ngroups:b+(f+1)*Ngroups] # Group Length
+                f += 1
+                self.GroupOffset[offset:offset+Ngroups] = tabl[b+f*Ngroups:b+(f+1)*Ngroups] # Group member ID offset
+                f += 1
+                self.GroupMass[offset:offset+Ngroups] = tabf[b+f*Ngroups:b+(f+1)*Ngroups] # FoF Mass
+                f += 1
+                self.GroupCM[offset:offset+Ngroups,:] = tabf[b+f*Ngroups:b+(f+3)*Ngroups].reshape((Ngroups,3)) # FoF Position
+                f += 3
+                self.GroupVel[offset:offset+Ngroups,:] = tabf[b+f*Ngroups:b+(f+3)*Ngroups].reshape((Ngroups,3)) # FoF Position
+                f += 3
+                self.GroupLenType[offset:offset+Ngroups,:] = tabf[b+f*Ngroups:b+(f+6)*Ngroups].reshape((Ngroups,6)) # FoF Position
+                f += 6
+                self.GroupLenMass[offset:offset+Ngroups,:] = tabf[b+f*Ngroups:b+(f+6)*Ngroups].reshape((Ngroups,6)) # FoF Position
+                f += 6
+                offset += Ngroups
+                        
+            del tabl, tabf
+        self.groups = np.array([self.GroupLen, self.GroupOffset, self.GroupMass, self.GroupCM[:,0], self.GroupCM[:,1], self.GroupCM[:,2], self.GroupVel[:,0], self.GroupVel[:,1], self.GroupVel[:,2], self.GroupLenType[:,0], self.GroupLenType[:,1], self.GroupLenType[:,2], self.GroupLenType[:,3], self.GroupLenType[:,4], self.GroupLenType[:,5], self.GroupLenMass[:,0], self.GroupLenMass[:,1], self.GroupLenMass[:,2], self.GroupLenMass[:,3], self.GroupLenMass[:,4], self.GroupLenMass[:,5]])
 
 
 class WVFEllipses(object):
@@ -740,63 +818,8 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     
     f.close()
 
-def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 864000, resubmit_on = 0, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.4, tree_alloc_factor = 0.8, buffer_size = 100, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512"):
-    """Arguments:
-    boxlen (Mpc h^-1)
-    cosmo (Cosmology object)
-    ic_file (path)
-    redshift_begin
-    run_dir_base (directory path)
-    run_name (sub directory name)
-    nproc (number of processors)
-    output_list_filename (filename w.r.t. run_dir_base)
-    DE_file (filename w.r.t. run_dir_base)
-    ic_format (1 or 2)
-    time_max (expansion factor a)
-    softening_factor (fraction of mean interparticle distance)
-    time_limit_cpu (seconds)
-    resubmit_on (0 or 1)
-    resubmit_command (path)
-    cpu_time_bet_restart_file (seconds)
-    part_alloc_factor
-    tree_alloc_factor
-    buffer_size (MB)
-    gadget_executable (file path)
-    
-    Note that run_dir_base is not the directory where the simulation will be
-    run; that is run_dir_base+run_name; the run_name directory will be created
-    by this function.
-    """
-    # Length units are converted to kpc h^-1, the default Gadget unit.
-    boxlen *= 1000
-    
-    #~ nice = "+10"
-    nice = "+0"
-    
-    output_dir = run_dir_base+'/'+run_name
-    os.mkdir(output_dir)
-    
-    omegaM = cosmo.omegaM
-    omegaL = cosmo.omegaL
-    omegaB = cosmo.omegaB
-    hubble = cosmo.h
-    
-    parameter_filename = run_dir_base+'/'+run_name+'.par'
-    run_script_filename = run_dir_base+'/'+run_name+'.sh'
-    restart_script_filename = run_dir_base+'/'+run_name+'_restart.sh'
-    
-    output_list_filename = run_dir_base+'/'+output_list_filename
-    DE_file = run_dir_base+'/'+DE_file
-
-    time_begin = 1/(redshift_begin+1)
-
-    # Softening: based on Dolag's ratios
-    # default ~ 1/17.3 of the mean ipd
-    softening = softening_factor*boxlen/gridsize
-    softening_max_phys = softening/3
-    
-    # the actual parameter file:
-    par_file_text = """\
+# global variables (used in next function):
+gadget_par_file_text = """\
 %%%%%%%%%% In-/output
 InitCondFile          %(ic_file)s
 OutputDir           %(output_dir)s
@@ -948,26 +971,220 @@ Shock_LengthScale 2.0
 Shock_DeltaDecayTimeMax  0.02
 ErrTolThetaSubfind       0.1
 DesLinkNgb          32
-""" % locals()
-    
-    with open(parameter_filename, 'w') as par_file:
-        par_file.write(par_file_text)
-    
-    run_script_text = """\
+"""
+
+gadget_run_script_texts = {}
+
+gadget_run_script_texts["millipede"] = """\
+#!/bin/bash
+#PBS -N %(run_name)s
+#PBS -l nodes=%(nodes)i:ppn=%(ppn)i
+#PBS -e /home/p252012/log/%(run_name)s.err
+#PBS -o /home/p252012/log/%(run_name)s.out
+#PBS -l walltime=%(walltime)i:00:00
+#PBS -m abe
+#PBS -M pbos@astro.rug.nl
+# Gadget simulation %(run_name)s.
+
+module add openmpi/gcc torque maui
+
+cd %(run_dir_base)s
+mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
+"""
+
+gadget_run_script_texts["kapteyn"] = """\
 #!/bin/tcsh
 # Gadget simulation %(run_name)s.
 
 cd %(run_dir_base)s
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
-""" % locals()
+"""
+
+def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 864000, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
+    """Arguments:
+    boxlen (Mpc h^-1)
+    cosmo (Cosmology object)
+    ic_file (path)
+    redshift_begin
+    run_dir_base (directory path)
+    run_name (sub directory name)
+    nproc (number of processors)
+    output_list_filename (filename w.r.t. run_dir_base)
+    DE_file (filename w.r.t. run_dir_base)
+    ic_format (1 or 2)
+    time_max (expansion factor a)
+    softening_factor (fraction of mean interparticle distance)
+    time_limit_cpu (seconds); also used for walltime parameter for millipede!
+    resubmit_on (0 or 1)
+    resubmit_command (path)
+    cpu_time_bet_restart_file (seconds)
+    part_alloc_factor
+    tree_alloc_factor
+    buffer_size (MB)
+    gadget_executable (file path)
+    save_dir (directory path): optional; if given, the files will be saved here
+                              and no run directory will be made. This is useful
+                              when you need to run on a remote location and
+                              need to copy the files to there first.
+    run_location: 'kapteyn' or 'millipede'
+    mem (GB): required amount of memory for millipede runs.
+    nodes: number of nodes (millipede).
+    queue: millipede queue; choose between nodes, quads, short, etc.
+    
+    Note that run_dir_base is not the directory where the simulation will be
+    run; that is run_dir_base+run_name; the run_name directory will be created
+    by this function.
+    """
+    # Length units are converted to kpc h^-1, the default Gadget unit.
+    boxlen *= 1000
+    
+    output_dir = run_dir_base+'/'+run_name
+    if not save_dir:
+        os.mkdir(output_dir)
+    
+    omegaM = cosmo.omegaM
+    omegaL = cosmo.omegaL
+    omegaB = cosmo.omegaB
+    hubble = cosmo.h
+    
+    if not save_dir:
+        parameter_filename = run_dir_base+'/'+run_name+'.par'
+        run_script_filename = run_dir_base+'/'+run_name+'.sh'
+        restart_script_filename = run_dir_base+'/'+run_name+'_restart.sh'
+    else:
+        parameter_filename = save_dir+'/'+run_name+'.par'
+        run_script_filename = save_dir+'/'+run_name+'.sh'
+        restart_script_filename = save_dir+'/'+run_name+'_restart.sh'
+    
+    output_list_filename = run_dir_base+'/'+output_list_filename
+    DE_file = run_dir_base+'/'+DE_file
+    
+    time_begin = 1/(redshift_begin+1)
+    
+    # Softening: based on Dolag's ratios
+    # default ~ 1/17.3 of the mean ipd
+    softening = softening_factor*boxlen/gridsize
+    softening_max_phys = softening/3
+    
+    # For millipede runs:
+    walltime = time_limit_cpu/3600
+    
+    if resubmit_on and (run_location=='kapteyn'):
+        resubmit_command = restart_script_filename
+    if resubmit_on and (run_location=='millipede'):
+        resubmit_command = run_dir_base+'/'+run_name+'_qsub_restart.sh'
+        local_filename = save_dir+'/'+run_name+'_qsub_restart.sh'
+        with open(local_filename, 'w') as qresub_file:
+            qresub_file.write("#!/usr/bin/env bash\n")
+            # HIER KUN JE DINGEN TOEVOEGEN OM BESTANDEN LOKAAL (OP DE NODE) TE rsync'EN EN rm'EN!
+            qresub_file.write("qsub %(run_dir_base)s/%(run_name)s_restart.sh -q %(queue)s\n" % locals())
+        os.chmod(local_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+    
+    ppn = nproc/nodes
+    # N.B.: make sure that nproc and nodes fit with the queue!
+    # 12 max. ppn for nodes queue, 24 max. ppn for quads queue.
+    
+    ### Open and write to files:
+    global gadget_par_file_text
+    par_file_text = gadget_par_file_text % locals()
+    
+    with open(parameter_filename, 'w') as par_file:
+        par_file.write(par_file_text)
+    
+    if save_dir: # parameter_filename is used in the run_script, so needs to be localized!
+        parameter_filename = run_dir_base+'/'+run_name+'.par'
+    
+    global gadget_run_script_texts
+    run_script_text = gadget_run_script_texts[run_location] % locals()
     
     with open(run_script_filename, 'w') as run_script:
         run_script.write(run_script_text)
     os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
     
+    run_name += "_restart"
+    run_script_text = gadget_run_script_texts[run_location] % locals()
+    
     with open(restart_script_filename, 'w') as restart_script:
         restart_script.write(run_script_text[:-1]+" 1\n")
     os.chmod(restart_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+
+subfind_run_script_texts = {}
+
+subfind_run_script_texts["millipede"] = """\
+#!/bin/bash
+#PBS -N %(run_name)s_subfind_snaps%(snapstring)s
+#PBS -l nodes=%(nodes)i:ppn=%(ppn)i
+#PBS -e /home/p252012/log/%(run_name)s_subfind_snaps%(snapstring)s.err
+#PBS -o /home/p252012/log/%(run_name)s_subfind_snaps%(snapstring)s.out
+#PBS -l walltime=%(walltime)i:00:00
+#PBS -m abe
+#PBS -M pbos@astro.rug.nl
+# Gadget SubFind run on Gadget run %(run_name)s.
+
+module add openmpi/gcc torque maui
+
+cd %(run_dir_base)s
+"""
+
+subfind_run_script_texts["kapteyn"] = """\
+#!/bin/tcsh
+# Gadget SubFind run on Gadget run %(run_name)s.
+
+cd %(run_dir_base)s
+"""
+
+subfind_run_script_lastline ={}
+
+subfind_run_script_lastline["millipede"] = """\
+mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s 3 %(snap)s
+"""
+
+subfind_run_script_lastline["kapteyn"] = """\
+nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s 3 %(snap)s
+"""
+
+def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_cpu = 864000, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', nodes = 1, queue = 'nodes'):
+    """
+    Use prepare_gadget_run() to prepare the parameter file. The following
+    parameters in this function must be the same as what you used in
+    prepare_gadget_run(): run_dir_base and run_name. It also assumes you run
+    the SubFind run in the same location, so run_location must be the same
+    as well and therefore save_dir as well.
+    
+    There is one extra argument w.r.t. prepare_gadget_run, snaps, which is a
+    list of integers of the snapshots of this gadget run that you want to run
+    SubFind on from the run script that this function creates.
+    """    
+    output_dir = run_dir_base+'/'+run_name
+    parameter_filename = run_dir_base+'/'+run_name+'.par'
+    
+    snapstring = ""
+    for snap in snaps[:-1]:
+        snapstring += "%i," % snap
+    snapstring += "%i" % snaps[-1]
+    
+    if not save_dir:
+        run_script_filename = run_dir_base+'/'+run_name+'_subfind_snaps%s.sh' % snapstring
+    else:
+        run_script_filename = save_dir+'/'+run_name+'_subfind_snaps%s.sh' % snapstring
+    
+    # For millipede runs:
+    walltime = time_limit_cpu/3600
+    
+    ppn = nproc/nodes
+    # N.B.: make sure that nproc and nodes fit with the queue!
+    # 12 max. ppn for nodes queue, 24 max. ppn for quads queue.
+    
+    ### Open and write to files:
+    global subfind_run_script_texts
+    global subfind_run_script_lastline
+    run_script_text = subfind_run_script_texts[run_location] % locals()
+    for snap in snaps:
+        run_script_text += subfind_run_script_lastline[run_location] % locals()
+    
+    with open(run_script_filename, 'w') as run_script:
+        run_script.write(run_script_text)
+    os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 
 
 def getheader(filename, gtype):
