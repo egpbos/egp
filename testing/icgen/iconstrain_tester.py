@@ -70,31 +70,32 @@ def set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed):
 
 def setup_gadget_run(cosmo, ps, boxlen, gridsize, seed, peak_pos, peak_height, scale_mpc, redshift, test_id, run_dir_base, nproc, constrain_shape=True, shape_seed=0, run_name = None):    
     # shape / orientation constraints:
-    # if constrain_shape:
-    #     shape_constraints = set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
-    # else:
-    #     shape_constraints = []
+    if constrain_shape:
+        shape_constraints = set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
+    else:
+        shape_constraints = []
     
     if not run_name:
         run_name = "run%i_%i" % ((100+int(test_id)), seed) # plus 100 to separate from DE+void runs
     
-    # rhoc = egp.toolbox.critical_density(cosmo) # M_sun Mpc^-3 h^2
-    #  particle_mass = cosmo.omegaM * rhoc * boxlen**3 / gridsize**3 / 1e10 # 10^10 M_sun h^-1
-    #  
-    #  rhoU_out = egp.icgen.GaussianRandomField(ps, boxlen, gridsize, seed=seed)
-    #  
-    #  print "Building and saving %s..." % run_name
-    #  irhoC = constrain_field(peak_pos, peak_height, scale_mpc, boxlen, rhoU_out, ps, cosmo, shape_constraints)
-    #  ipsiC = egp.icgen.DisplacementField(irhoC)
-    #  del irhoC
-    #  ipos, ivel = egp.icgen.zeldovich(redshift, ipsiC, cosmo) # Mpc, not h^-1!
-    #  del ipsiC
-    #  ic_file = "/Users/users/pbos/dataserver/sims/ICs/ic_%iMpc_%i_%s_%i.dat" % (boxlen, gridsize, test_id, seed)
-    #  egp.io.write_gadget_ic_dm(ic_file, ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
-    #  del ipos, ivel
-    #  
-    #  print "Preparing for gadget run %(run_name)s..." % locals()
-    #  egp.io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc)
+    rhoc = egp.toolbox.critical_density(cosmo) # M_sun Mpc^-3 h^2
+    particle_mass = cosmo.omegaM * rhoc * boxlen**3 / gridsize**3 / 1e10 # 10^10 M_sun h^-1
+    
+    rhoU_out = egp.icgen.GaussianRandomField(ps, boxlen, gridsize, seed=seed)
+    
+    print "Building %s..." % run_name
+    irhoC = constrain_field(peak_pos, peak_height, scale_mpc, boxlen, rhoU_out, ps, cosmo, shape_constraints)
+    ipsiC = egp.icgen.DisplacementField(irhoC)
+    del irhoC
+    ipos, ivel = egp.icgen.zeldovich(redshift, ipsiC, cosmo) # Mpc, not h^-1!
+    del ipsiC
+    ic_file = "/Users/users/pbos/dataserver/sims/ICs/ic_%iMpc_%i_%s_%i.dat" % (boxlen, gridsize, test_id, seed)
+    print "Saving %s..." % run_name
+    egp.io.write_gadget_ic_dm(ic_file, ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+    del ipos, ivel
+    
+    print "Preparing for gadget run %(run_name)s..." % locals()
+    egp.io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc)
     
     log_file = open(run_dir_base+'/'+run_name+'.log', 'a+')
     log_file.write('peak position:\n')

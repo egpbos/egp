@@ -1,0 +1,14 @@
+# DIAG: print allerlei dingen, volgens mij puur voor diagnostics?
+# BINARY: output formaat, lijkt het
+# NGP: iets met een kernel, wrs voor density estimation
+# NGPH: ook die kernel, maar dan voor de halofinder
+# PPINT: ik denk de buitenste PP loop (zie paper, figuur 2, if pp=.true.)
+# PP_EXT: binnenste PP loop dan dus.
+# MPI_TIME: print timings (min/max/avg) van MPI jobs.
+# LRCKCORR: geen idee.
+# PID_FLAG: hou particle IDs bij om ICs aan snapshots te kunnen relateren.
+# DEBUG_PP_EXT: print debug informatie
+# READ_SEED: "This will always use the same random number at each time step. It surely introduces a bias, but is good for testing code."
+# DISP_MESH: applies random offset from initial position at each timestep om anisotropie t.g.v. het grid te minimaliseren.
+# DEBUG: zal wel nog meer debug info zijn.
+

@@ -1040,7 +1040,10 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     
     output_dir = run_dir_base+'/'+run_name
     if not save_dir:
-        os.mkdir(output_dir)
+        try:
+            os.mkdir(output_dir)
+        except OSError:
+            print "Warning: output directory already exists. This run might be overwriting previous runs!"
     
     omegaM = cosmo.omegaM
     omegaL = cosmo.omegaL

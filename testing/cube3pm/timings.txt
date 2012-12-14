@@ -1,0 +1,10 @@
+64^3 particles simulatie van 200 Mpc
+
+Met PM en PM_EXT:
+1500.672u 21.080s 3:40.52 690.0%	0+0k 37168+55296io 80pf+0w
+1511.531u 20.278s 3:39.94 696.4%	0+0k 0+55296io 0pf+0w
+
+Zonder enige PM:
+694.495u 9.553s 1:48.19 650.7%	0+0k 0+55296io 0pf+0w
+
+

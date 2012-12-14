@@ -19,6 +19,7 @@ from types import MethodType
 from time import time
 import traceback
 import sys
+import os
 
 # constants
 __version__ = "0.3, September 2012"
@@ -258,14 +259,29 @@ def TSC_density_old(pos, gridsize, boxsize, mass, periodic=True):
 	
 	return rho
 
-def filter_density(density, kernel, kernel_arguments):
-    """Kind of speaks for itself, I'd say."""
+def filter_field(fieldFourier, boxlen, kernel, kernel_arguments, gridsize=None):
+    """Returns the fourier-space representation of the field
+    convolved with a kernel. Kind of speaks for itself, I'd say. Use
+    gaussian_kernel or tophat_kernel for /kernel/ and a list of
+    appropriate kernel arguments in /kernel_arguments/. Gridsize can be
+    optionally specified, otherwise the first shape element of
+    fieldFourier will be used."""
+    if not gridsize:
+        gridsize = fieldFourier.shape[0]
+    k = k_abs_grid(gridsize, boxlen)
+    return fieldFourier * kernel(k, *kernel_arguments)
+
+def gaussian_kernel(k, r_g):
+    return np.exp( -k*k*r_g*r_g/2 )
+
+def tophat_kernel(k, r_th):
+    x = k * r_th
+    kernel = 3*(np.sin(x) - x*np.cos(x))/x**3
+    return np.nan_to_num(kernel) # to get out the divisions by zero
 
 def gaussian_smooth(densityFourier, r_g, boxlen):
     """Returns the fourier-space representation of the smoothed density field."""
     gridsize = len(densityFourier)
-    halfgrid = gridsize/2
-    dk = 2*np.pi/boxlen
     k = k_abs_grid(gridsize, boxlen)
     
     def windowGauss(ka, Rg):
@@ -273,6 +289,11 @@ def gaussian_smooth(densityFourier, r_g, boxlen):
                                         # Het PowerSpec heeft deze factor niet.
     
     return densityFourier*windowGauss(k,r_g)
+
+def tophat_smooth(densityFourier, r_th, boxlen):
+    """Returns the fourier-space representation of the smoothed density field."""
+    gridsize = len(densityFourier)
+    k = k_abs_grid(gridsize, boxlen)
 
 #~ def calc_k_abs_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")
@@ -348,3 +369,12 @@ def critical_density(cosmo = None):
     gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31 # Mpc^3 Msun^-1 s^-2
     rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3)
     return rhoc
+
+
+# Totally unrelated, but useful stuff
+
+def mkdir(path):
+    try:
+        os.stat(path)
+    except:
+        os.mkdir(path)

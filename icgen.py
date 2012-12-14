@@ -1306,6 +1306,33 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     return X,v
 
 
+def zeldovich_displacement(redshift, psi, cosmo, print_info=False):
+    """
+    Use the Zel'dovich approximation to calculate the physical
+    displacement at certain /redshift/ in the position coordinates,
+    based on the DisplacementField /psi/ of e.g. a Gaussian
+    random density field and Cosmology /cosmo/.
+    
+    Returned displacements are in units of h^{-1} Mpc (or in fact the
+    same units as /psi.boxlen/).
+    """
+    psi1 = psi.x.t
+    psi2 = psi.y.t
+    psi3 = psi.z.t
+    
+    omegaM = cosmo.omegaM
+    omegaL = cosmo.omegaL
+    omegaR = cosmo.omegaR
+    D = grow(redshift, omegaR, omegaM, omegaL)
+    D0 = grow(0, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
+    
+    xfact = D/D0
+    
+    disp_x = xfact*np.array([psi1,psi2,psi3])
+    
+    return disp_x
+
+
 def zeldovich_step(redshift_start, redshift_end, psi, pos, cosmo):
     """
     Use the Zel'dovich approximation to calculate positions and velocities at
