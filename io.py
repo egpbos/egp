@@ -16,6 +16,7 @@ import pyublas
 import crunch
 import cPickle as pickle
 import egp.toolbox, egp.icgen
+import tarfile
 
 
 # constants
