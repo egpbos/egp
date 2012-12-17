@@ -1368,7 +1368,11 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
     os.symlink(run_path+"source_threads/cubep3m", run_path+"batch/cubep3m")
     
     ### 4. Save parameters in a pickled file
-    pickle.dump(locals(), open(run_path+"parameters.pickle", "wb"))
+    parameters = locals()
+    for key in parameters:
+        if type(eval(key)) in file, np.ndarray:
+            del parameters[key]
+    pickle.dump(parameters, open(run_path+"parameters.pickle", "wb"))
     
     print("Run with:\n%(run_script_path)s" % locals())
 
