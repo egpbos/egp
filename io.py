@@ -15,6 +15,7 @@ from os.path import abspath
 import pyublas
 import crunch
 import cPickle as pickle
+import egp.toolbox, egp.icgen
 
 
 # constants
