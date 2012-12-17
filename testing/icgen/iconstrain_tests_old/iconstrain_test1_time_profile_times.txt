@@ -1,3 +1,0 @@
-eerste (zonder k-cache, met oude powerspectrum cache): 184.189
-tweede (met k-cache, met oude powerspectrum cache): 159.494
-derde (met k-cache, met nieuwe powerspectrum cache): 390.544

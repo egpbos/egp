@@ -1,6 +1,0 @@
-cacheable PS:
-    58.887
-    53.759
-interne cache PS:
-    55.309
-    
