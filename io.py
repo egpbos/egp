@@ -14,6 +14,7 @@ import struct, numpy as np, os, stat
 from os.path import abspath
 import pyublas
 import crunch
+import cPickle as pickle
 
 
 # constants
@@ -1363,6 +1364,9 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
     
     # create symlink to executable in batch directory
     os.symlink(run_path+"source_threads/cubep3m", run_path+"batch/cubep3m")
+    
+    ### 4. Save parameters in a pickled file
+    pickle.dump(locals(), open(run_path+"parameters.pickle", "wb"))
     
     print("Run with:\n%(run_script_path)s" % locals())
 
