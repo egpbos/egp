@@ -1369,14 +1369,12 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
     
     ### 4. Save parameters in a pickled file
     parameters = locals().copy()
-    print parameters
     remove = []
     for key in parameters:
-        if type(eval(key)) in (file, np.ndarray):
+        if type(eval(key)) in (file, np.ndarray, tarfile.TarFile):
             remove.append(key)
     for key in remove:
         del parameters[key]
-    print parameters
     pickle.dump(parameters, open(run_path+"parameters.pickle", "wb"))
     
     print("Run with:\n%(run_script_path)s" % locals())
