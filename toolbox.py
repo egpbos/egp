@@ -371,10 +371,33 @@ def critical_density(cosmo = None):
     return rhoc
 
 
-# Totally unrelated, but useful stuff
+# Other useful stuff
+
+def fill_template_file(filename, value_dict):
+    """
+    Open a text file with Python string replacements in it (the
+    %(variable_name)s type ones) and replace them by the values of the
+    corresponding keys in the /value_dict/.
+    """
+    f = open(filename, 'r')
+    text = f.read()
+    f.close()
+    f = open(filename, 'w')
+    f.write(text % value_dict)
+    f.close()
+
 
 def mkdir(path):
     try:
         os.stat(path)
     except:
         os.mkdir(path)
+
+
+def binfloat(filename):
+    """Open a binary file with float32 format."""
+    return np.memmap(filename, dtype='float32')
+
+def binint(filename):
+    """Open a binary file with int32 format."""
+    return np.memmap(filename, dtype='int32')

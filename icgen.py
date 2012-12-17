@@ -61,14 +61,17 @@ class Cosmology(object):
         if not choice:
             self.omegaM, self.omegaB, self.omegaL, self.omegaR, self.h = 0.3, 0.04, 0.7, 0.0, 0.7
             self.rth, self.sigma0 = 8.0, 0.8
+            self.w_0, self.w_a = -1.0, 0.0
             self.primn = 1.0
         elif choice.lower() == "wmap3":
             self.omegaM, self.omegaB, self.omegaL, self.omegaR, self.h = 0.268, 0.044, 0.732, 0.0, 0.704
             self.rth, self.sigma0 = 8.0, 0.776
+            self.w_0, self.w_a = -1.0, 0.0
             self.primn = 0.947
         elif choice.lower() == "wmap7":
             self.omegaM, self.omegaB, self.omegaL, self.omegaR, self.h = 0.272, 0.0456, 0.728, 0.0, 0.704
             self.rth, self.sigma0 = 8.0, 0.809
+            self.w_0, self.w_a = -1.0, 0.0
             self.primn = 0.963
         self.bias, self.TCMB = 1.0, 2.7
         self.trans = trans
