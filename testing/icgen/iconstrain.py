@@ -12,7 +12,7 @@ Copyright (c) 2012. All rights reserved.
 # imports
 import numpy as np
 import egp.icgen, egp.toolbox
-import glob, os, subprocess
+import glob, os, subprocess, shutil
 
 # Decide which one to use!
 from scipy.optimize import fmin_l_bfgs_b as solve, anneal, brute
@@ -102,13 +102,13 @@ def difference(pos_iter, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, 
     print "diff :", np.sum((pos_new - pos0)**2), "\n"
     return np.sum((pos_new - pos0)**2)
 
-def iteration_mean_PM(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], initial_redshift = 63., run_path_base = '/Users/users/pbos/dataserver/cubep3m/iconstrain_scratch', save_steps = False, cores = 8):
+def iteration_mean_PM(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], initial_redshift = 63., run_path_base = '/Users/users/pbos/dataserver/cubep3m/iconstrain_scratch/', save_steps = False, cores = 8):
     deltaC = constrain_field(pos, height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_constraints)
     psiC = egp.icgen.DisplacementField(deltaC)
     x, v = egp.icgen.zeldovich(0., psiC, cosmo) # Mpc, not h^-1!
     
     # PM it (CubePM):
-    snapshots = [0.]
+    snapshots = np.array([initial_redshift/2., 0.])
     # determine run_name:
     if save_steps:
         ls = glob.glob(run_path_base+'/*')
@@ -128,14 +128,14 @@ def iteration_mean_PM(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosm
     # run:
     subprocess.call(run_script_path, shell=True)
     # load result:
-    simulation = egp.io.CubeP3MData(run_path_base+'/output/0.000xv0.dat')
+    simulation = egp.io.CubeP3MData(run_path_base+run_name+'/output/0.000xv0.dat')
     
     # Determine peak particle indices:
     radius = scale_mpc
     spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
     
     # finally calculate the "new position" of the peak:
-    mean_peak_pos = simulation.pos.reshape(gridsize, gridsize, gridsize)[:,spheregrid].mean(axis=1)
+    mean_peak_pos = simulation.pos.reshape(gridsize, gridsize, gridsize, 3)[:,spheregrid].mean(axis=1)
         
     return mean_peak_pos
 

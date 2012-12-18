@@ -558,7 +558,7 @@ class CubeP3MData(object):
             # will be used to order the other data by ID.
             if self.metadata['pid_flag']:
                 pid_filename = self.filename[:self.filename.find('xv')]+'PID0.dat'
-                idarray = np.memmap(pid_filename, dtype='int64', offset=self.offset)
+                idarray = np.memmap(pid_filename, dtype='int64', offset=self.offset*4)
                 self.order = np.argsort(idarray).astype('uint32')
                 del idarray
             else:
@@ -576,8 +576,8 @@ class CubeP3MData(object):
         except AttributeError:
             # Load the particle positions into a NumPy array called self._pos,
             # ordered by ID number.
-            self.pos = self.xv.reshape(self.Ntotal, 6)[:,:3]
-            self.pos *= self.metadata['boxlen']/self.metadata['nc'] # Mpc h^-1
+            # N.B.: +0.5 (and %boxlen later on) because of the way the ICs are set up.
+            self.pos = ((self.xv.reshape(self.Ntotal, 6)[:,:3]+0.5) * self.metadata['boxlen']/self.metadata['nc'])%self.metadata['boxlen'] # Mpc h^-1
             self.pos = self.pos[self.order]
             return self._pos
 
@@ -592,8 +592,7 @@ class CubeP3MData(object):
         except AttributeError:
             # Load the particle velocities into a NumPy array called self._vel,
             # ordered by ID number.
-            self.vel = self.xv.reshape(self.Ntotal, 6)[:,3:]
-            self.vel *= (150*(1+self.metadata['redshift']) * self.metadata['boxlen'] / self.metadata['nc'] * np.sqrt(self.metadata['omega_m'])) # km/s
+            self.vel = self.xv.reshape(self.Ntotal, 6)[:,3:] * (150*(1+self.metadata['redshift']) * self.metadata['boxlen'] / self.metadata['nc'] * np.sqrt(self.metadata['omega_m'])) # km/s
             self.vel = self.vel[self.order]
             return self._vel
         

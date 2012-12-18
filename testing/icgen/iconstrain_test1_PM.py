@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import numpy as np
 import iconstrain
 # from iconstrain4plus1 import initial_guess, iterate
 # from iconstrain_tester import *
@@ -35,7 +36,7 @@ target_pos = np.array([20.,40.,70.])
 # constrained peak mass:
 filename = "/Users/users/pbos/code/egp/testing/icgen/MCXC+xyz_SCLx4.1.csv" # kapteyn
 #filename = "/Users/patrick/astro/code/egp/testing/icgen/MCXC+xyz_SCLx4.1.csv" # mac
-clusters = egp.toolbox.load_catalog(filename)
+clusters = egp.toolbox.load_csv_catalog(filename)
 mass0 = np.array([x[12] for x in clusters], dtype='float64')[0] # 10^14 Msun
 # ... leading to the peak's height:
 peak_height = iconstrain.mass_to_peak_height(mass0, cosmo)
@@ -52,7 +53,7 @@ scale_mpc = iconstrain.mass_to_scale(mass0, cosmo)
 # peak_height *= height_multiplier
 
 shape_seed = 10
-shape_constraints = set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
+shape_constraints = iconstrain.set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
 one_step_result = iconstrain.iteration_mean_PM(target_pos, peak_height, scale_mpc, boxlen, gridsize_iter, deltaU, ps, cosmo, shape_constraints)
 
 raise SystemExit
