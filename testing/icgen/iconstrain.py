@@ -20,38 +20,6 @@ from scipy.optimize import fmin_l_bfgs_b as solve, anneal, brute
 # constants
 __version__ = "0.3, December 2012"
 
-# exception classes
-# interface functions
-
-def run(cosmo, ps, boxlen, gridsize, deltaU, target_pos, peak_height, scale_mpc, iterate, initial_guess = iterate_mirror_zeldovich, constrain_shape=True, shape_seed=0):
-    """
-    Call with /iterate/ one of the iteration functions. /initial_guess/ can be
-    either an ndarray with an initial guess or a function that computes an
-    initial guess (accepting the same arguments as /iterate/, except for the
-    first one of course, which is the initial position). By default
-    iterate_mirror_zeldovich is used as initial_guess function.
-    """
-    # shape / orientation constraints:
-    if constrain_shape:
-        shape_constraints = set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
-    else:
-        shape_constraints = []
-    
-    if type(initial_guess) is np.ndarray:
-        pos_initial = initial_guess
-    else:
-        pos_initial = initial_guess(target_pos, peak_height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
-    
-    results_all = iterate(pos_initial, target_pos, peak_height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
-    result = results_all[0]
-    
-    return result
-
-
-# MULTI PEAK!?!?!?!
-# Wrs andere functie voor maken, of lijsten.
-
-
 # functions
 
 # N.B.: in iterate functions, eventually mass0 will have to be included in pos0
@@ -93,6 +61,37 @@ def iterate_PM():
 
 def iterate_P3M():
     return iterate_solve(iteration_mean_P3M, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
+
+
+# interface functions
+
+def run(cosmo, ps, boxlen, gridsize, deltaU, target_pos, peak_height, scale_mpc, iterate, initial_guess = iterate_mirror_zeldovich, constrain_shape=True, shape_seed=0):
+    """
+    Call with /iterate/ one of the iteration functions. /initial_guess/ can be
+    either an ndarray with an initial guess or a function that computes an
+    initial guess (accepting the same arguments as /iterate/, except for the
+    first one of course, which is the initial position). By default
+    iterate_mirror_zeldovich is used as initial_guess function.
+    """
+    # shape / orientation constraints:
+    if constrain_shape:
+        shape_constraints = set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
+    else:
+        shape_constraints = []
+    
+    if type(initial_guess) is np.ndarray:
+        pos_initial = initial_guess
+    else:
+        pos_initial = initial_guess(target_pos, peak_height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
+    
+    results_all = iterate(pos_initial, target_pos, peak_height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
+    result = results_all[0]
+    
+    return result
+
+
+# MULTI PEAK!?!?!?!
+# Wrs andere functie voor maken, of lijsten.
 
 
 # Helper functions:
