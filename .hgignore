@@ -3,4 +3,4 @@ syntax: glob
 *~
 crunch/build
 crunch.so
-
+*.DS_Store
