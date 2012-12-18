@@ -19,7 +19,7 @@ ps = egp.icgen.CosmoPowerSpectrum(cosmo)
 snapshots = np.array([20., 5., 3., 2., 1.5, 1., 0.5, 0.])
 
 ## names, paths etc. parameters
-run_name = 'test1.10_functie'
+run_name = 'test1.11_pickle'
 run_path_base = '/Users/users/pbos/dataserver/cubep3m/'
 
 ## grid parameters
