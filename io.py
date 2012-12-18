@@ -1273,7 +1273,7 @@ def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_
     os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 
 
-def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, nodes_dim, tiles_node_dim, cores, nf_tile_I = 2, nf_cutoff = 16, pid_flag=False, pp_run=True, pp_range = 2, displace_from_mesh=False, read_displacement_seed=False, verbose=False, debug=False, chaplygin=False, dt_scale = 1.0, dt_max = 1.0, ra_max = 0.05, da_max = 0.01, cfactor = 1.05, max_nts = 4000, density_buffer = 2.0, location='kapteyn'):
+def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim = 1, tiles_node_dim = 2, nf_tile_I = 2, nf_cutoff = 16, pid_flag=False, pp_run=True, pp_range = 2, displace_from_mesh=False, read_displacement_seed=False, verbose=False, debug=False, chaplygin=False, dt_scale = 1.0, dt_max = 1.0, ra_max = 0.05, da_max = 0.01, cfactor = 1.05, max_nts = 4000, density_buffer = 2.0, location='kapteyn'):
     """
     Give pos and vel like they come out of egp.icgen.zeldovich.
     
@@ -1325,8 +1325,7 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
     -- Miscellaneous:
     density_buffer: density buffer fraction (1.0 == no buffer, 2.0 == 2x avg
                     density, etc)
-    
-    
+    location: obvious    
     """
     ### 0. Parameters
     omega_l = cosmo.omegaL
@@ -1458,6 +1457,7 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
     pickle.dump(parameters, open(run_path+"parameters.pickle", "wb"))
     
     print("Run with:\n%(run_script_path)s" % locals())
+    return run_script_path
 
 
 def getheader(filename, gtype):

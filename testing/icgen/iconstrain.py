@@ -12,6 +12,7 @@ Copyright (c) 2012. All rights reserved.
 # imports
 import numpy as np
 import egp.icgen, egp.toolbox
+import glob, os, subprocess
 
 # Decide which one to use!
 from scipy.optimize import fmin_l_bfgs_b as solve, anneal, brute
@@ -21,8 +22,6 @@ __version__ = "0.3, December 2012"
 
 # exception classes
 # interface functions
-
-# MULTI DIM!?!?!?!
 
 def run(cosmo, ps, boxlen, gridsize, deltaU, target_pos, peak_height, scale_mpc, iterate, initial_guess = iterate_mirror_zeldovich, constrain_shape=True, shape_seed=0):
     """
@@ -48,6 +47,11 @@ def run(cosmo, ps, boxlen, gridsize, deltaU, target_pos, peak_height, scale_mpc,
     
     return result
 
+
+# MULTI PEAK!?!?!?!
+# Wrs andere functie voor maken, of lijsten.
+
+
 # functions
 
 # N.B.: in iterate functions, eventually mass0 will have to be included in pos0
@@ -55,45 +59,40 @@ def run(cosmo, ps, boxlen, gridsize, deltaU, target_pos, peak_height, scale_mpc,
 # Machine precision = 2.220D-16 (seen when running fmin_l_bfgs_b with iprint=0)
 
 # Mirror (old iconstrain4); not actually an iteration, just one step:
-def iterate_mirror_zeldovich(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=None, factr=None, pgtol=None):
-    pos_new = iteration_mean_zeldovich(pos0%boxlen, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
+def iterate_mirror(iteration, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=None, factr=None, pgtol=None):
+    pos_new = iteration(pos0%boxlen, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
     result = 2*pos0 - pos_new # = pos0 + (pos0 - pos_new), mirror new pos in old
     return result
+    
+def iterate_mirror_zeldovich(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=None, factr=None, pgtol=None):
+    return iterate_mirror(iteration_mean_zeldovich, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
 
 def iterate_mirror_2LPT(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=None, factr=None, pgtol=None):
-    pos_new = iteration_mean_2LPT(pos0%boxlen, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
-    result = 2*pos0 - pos_new # = pos0 + (pos0 - pos_new), mirror new pos in old
-    return result
+    return iterate_mirror(iteration_mean_2LPT, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
 
 # Real iterations; solve pos0 == pos_i based on _x:
-def iterate_zeldovich(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
-# uit iconstrain:
+def iterate_solve(iteration, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     bound_range = 0.1*boxlen
     boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
     lower = np.array(boundaries)[:,0]
     upper = np.array(boundaries)[:,1]
-    result = solve(difference, pos_initial, args=(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, iteration_mean_zeldovich, shape_constraints), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
+    result = solve(difference, pos_initial, args=(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, iteration, shape_constraints), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
     #~ result = anneal(difference, pos0, args=(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo))
     #~ result = brute(difference, boundaries, args=(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo))
+    #~ result = fmin_powell(difference, pos_initial, args = (pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo))
     return result
+
+def iterate_zeldovich(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
+    return iterate_solve(iteration_mean_zeldovich, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
 def iterate_2LPT(pos_initial, pos0, mass0, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
-# uit iconstrain5:
-    bound_range = 0.1*boxlen
-    boundaries = ((pos0[0]-bound_range, pos0[0]+bound_range), (pos0[1]-bound_range, pos0[1]+bound_range), (pos0[2]-bound_range, pos0[2]+bound_range))
-    lower = np.array(boundaries)[:,0]
-    upper = np.array(boundaries)[:,1]
-    result = solve(difference, pos_initial, args=(pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, iteration_mean_2LPT, shape_constraints), bounds = boundaries, approx_grad=True, epsilon=epsilon, factr=factr, pgtol=pgtol, iprint=0)
-    #~ result = fmin_powell(difference, pos_initial, args = (pos0, mass0, boxlen, gridsize, deltaU, ps, cosmo))
-    #~ result = anneal(difference, pos0, args=(pos0, mass0, boxlen, gridsize, deltaU, ps, cosmo))
-    #~ result = brute(difference, boundaries, args=(pos0, mass0, boxlen, gridsize, deltaU, ps, cosmo))
-    return result
+    return iterate_solve(iteration_mean_2LPT, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
 def iterate_PM():
-    pass
+    return iterate_solve(iteration_mean_PM, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
 def iterate_P3M():
-    pass
+    return iterate_solve(iteration_mean_P3M, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
 
 # Helper functions:
@@ -104,48 +103,82 @@ def difference(pos_iter, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, 
     print "diff :", np.sum((pos_new - pos0)**2), "\n"
     return np.sum((pos_new - pos0)**2)
 
-def iteration_mean_zeldovich(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], plot=False, pos0=None):
-    # N.B.: pos0 is used here for plotting only.
+def iteration_mean_PM(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], initial_redshift = 63., run_path_base = '/Users/users/pbos/dataserver/cubep3m/iconstrain_scratch', save_steps = False, cores = 8):
     deltaC = constrain_field(pos, height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_constraints)
-    
-    # Now, Zel'dovich it:
     psiC = egp.icgen.DisplacementField(deltaC)
-    POS, v = egp.icgen.zeldovich(0., psiC, cosmo) # Mpc, not h^-1!
+    x, v = egp.icgen.zeldovich(0., psiC, cosmo) # Mpc, not h^-1!
+    
+    # PM it (CubePM):
+    snapshots = [0.]
+    # determine run_name:
+    if save_steps:
+        ls = glob.glob(run_path_base+'/*')
+        if not ls:
+            run_name = '0000'
+        else:
+            previous_step = int(os.path.basename(ls[-1]))
+            run_name = '%04i' % previous_step+1
+    else:
+        run_name = 'step'
+        try:
+            shutil.rmtree(run_path_base+'/'+run_name)
+        except OSError:
+            pass
+    # setup:
+    run_script_path = egp.io.setup_cubep3m_run(x, v, cosmo, boxlen, gridsize, initial_redshift, snapshots, run_name, run_path_base, cores, pid_flag = True, pp_run = False)
+    # run:
+    subprocess.call(run_script_path, shell=True)
+    # load result:
+    simulation = egp.io.CubeP3MData(run_path_base+'/output/0.000xv0.dat')
     
     # Determine peak particle indices:
     radius = scale_mpc
     spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
     
     # finally calculate the "new position" of the peak:
-    mean_peak_pos = POS[:,spheregrid].mean(axis=1)
-    
-    if plot:
-        plot_all_plus_cluster(POS, pos0, spheregrid, radius)
-    
+    mean_peak_pos = simulation.pos.reshape(gridsize, gridsize, gridsize)[:,spheregrid].mean(axis=1)
+        
     return mean_peak_pos
 
-def iteration_mean_2LPT(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], plot=False, pos0=None):
-    # N.B.: pos0 is used here for plotting only.
+def iteration_mean_P3M(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], initial_redshift = 63., run_path_base = '/Users/users/pbos/dataserver/cubep3m/iconstrain_scratch', save_steps = False, cores = 8):
+    pass
+
+def iteration_mean_zeldovich(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = []):
+# uit iconstrain:
+    deltaC = constrain_field(pos, height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_constraints)
+    
+    # Now, Zel'dovich it:
+    psiC = egp.icgen.DisplacementField(deltaC)
+    x, v = egp.icgen.zeldovich(0., psiC, cosmo) # Mpc, not h^-1!
+    
+    # Determine peak particle indices:
+    radius = scale_mpc
+    spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
+    
+    # finally calculate the "new position" of the peak:
+    mean_peak_pos = x[:,spheregrid].mean(axis=1)
+        
+    return mean_peak_pos
+
+def iteration_mean_2LPT(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = []):
+# uit iconstrain5:
     deltaC = constrain_field(pos, height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_constraints)
     
     # Now, 2LPT it:
     psiC = egp.icgen.DisplacementField(deltaC)
     psi2C = egp.icgen.DisplacementField2ndOrder(psiC)
-    POS, v = egp.icgen.two_LPT_ICs(0., psiC, psi2C, cosmo) # Mpc, not h^-1!
+    x, v = egp.icgen.two_LPT_ICs(0., psiC, psi2C, cosmo) # Mpc, not h^-1!
     
     # Determine peak particle indices:
     radius = scale_mpc
     spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
     
     # finally calculate the "new position" of the peak:
-    mean_peak_pos = POS[:,spheregrid].mean(axis=1)
-    
-    if plot:
-        plot_all_plus_cluster(POS, pos0, spheregrid, radius)
-    
+    mean_peak_pos = x[:,spheregrid].mean(axis=1)
+        
     return mean_peak_pos
 
-
+ 
 def constrain_field(pos, height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_constraints = []):
     location = egp.icgen.ConstraintLocation(pos)
     
@@ -169,6 +202,21 @@ def constrain_field(pos, height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_con
     # Do the field stuff!
     deltaC = egp.icgen.ConstrainedField(deltaU, constraints) # N.B.: deltaU stays the same!!!
     return deltaC
+
+def set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed):
+    sigma0 = ps.moment(0, scale_mpc, boxlen**3)
+    sigma1 = ps.moment(1, scale_mpc, boxlen**3)
+    sigma2 = ps.moment(2, scale_mpc, boxlen**3)
+    gamma = sigma1**2/sigma0/sigma2
+        
+    np.random.seed(shape_seed)
+    curvature = egp.icgen.random_curvature(peak_height, gamma)
+    a21, a31 = egp.icgen.random_shape(curvature)
+    density_phi = 180*np.random.random()
+    density_theta = 180/np.pi*np.arccos(1-np.random.random())
+    density_psi = 180*np.random.random()
+    shape_constraints = (curvature, a21, a31, density_phi, density_theta, density_psi)
+    return shape_constraints
 
 def plot_all_plus_selection(points, pos0, selection, radius):
     from mayavi import mlab
