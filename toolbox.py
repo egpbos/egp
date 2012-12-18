@@ -20,6 +20,8 @@ from time import time
 import traceback
 import sys
 import os
+import csv
+
 
 # constants
 __version__ = "0.3, September 2012"
@@ -370,8 +372,18 @@ def critical_density(cosmo = None):
     rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3)
     return rhoc
 
-
 # Other useful stuff
+
+def load_csv_catalog(filename):
+    table_file = open(filename)
+    table = csv.reader(table_file)
+    table.next() # skip header
+    catalog = []
+    for entry in table:
+        catalog.append(entry)
+    table_file.close()
+    return catalog
+
 
 def fill_template_file(filename, value_dict):
     """

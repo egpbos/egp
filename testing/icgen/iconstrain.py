@@ -53,13 +53,13 @@ def iterate_solve(iteration, pos_initial, pos0, height, scale_mpc, boxlen, grids
 def iterate_zeldovich(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_zeldovich, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
-def iterate_2LPT(pos_initial, pos0, mass0, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
+def iterate_2LPT(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_2LPT, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
-def iterate_PM():
+def iterate_PM(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_PM, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
-def iterate_P3M():
+def iterate_P3M(pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_P3M, pos_initial, pos0, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
 
@@ -67,7 +67,7 @@ def iterate_P3M():
 
 def run(cosmo, ps, boxlen, gridsize, deltaU, target_pos, peak_height, scale_mpc, iterate, initial_guess = iterate_mirror_zeldovich, constrain_shape=True, shape_seed=0):
     """
-    Call with /iterate/ one of the iteration functions. /initial_guess/ can be
+    Call with /iterate/ one of the iterate_## functions. /initial_guess/ can be
     either an ndarray with an initial guess or a function that computes an
     initial guess (accepting the same arguments as /iterate/, except for the
     first one of course, which is the initial position). By default
@@ -248,3 +248,24 @@ def sphere_grid(pos, radius, boxlen, gridsize):
     
     spheregrid = r2grid < radius**2
     return spheregrid
+
+
+def mass_to_peak_height(mass, cosmo):
+    # Later gaan we hier een empirische fit functie in stoppen, gebaseerd op de
+    # test uitkomsten.
+    mass = mass*1e14 # mass given in 1e14 M_sol
+    rhoc = egp.toolbox.critical_density(cosmo)
+    scale_mpc = (mass/rhoc/(2*np.pi)**(3./2))**(1./3) # Mpc h^-1
+    # using the volume of a gaussian window function, (2*pi)**(3./2) * R**3
+    height = mass/(2*np.pi)**(3./2)/scale_mpc**3/rhoc
+    return height
+
+def mass_to_scale(mass, cosmo):
+    # Later gaan we hier een empirische fit functie in stoppen, gebaseerd op de
+    # test uitkomsten.
+    mass = mass*1e14 # mass given in 1e14 M_sol
+    rhoc = egp.toolbox.critical_density(cosmo)
+    scale_mpc = (mass/rhoc/(2*np.pi)**(3./2))**(1./3) # Mpc h^-1
+    # using the volume of a gaussian window function, (2*pi)**(3./2) * R**3
+    return scale_mpc
+
