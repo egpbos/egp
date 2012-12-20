@@ -19,7 +19,7 @@ import tarfile
 
 
 # constants
-__version__ = "0.3, August 2012"
+__version__ = "0.4, December 2012"
 
 
 # exception classes
@@ -1272,7 +1272,7 @@ def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_
     os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 
 
-def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim = 1, tiles_node_dim = 2, nf_tile_I = 2, nf_cutoff = 16, pid_flag=False, pp_run=True, pp_range = 2, displace_from_mesh=False, read_displacement_seed=False, verbose=False, debug=False, chaplygin=False, dt_scale = 1.0, dt_max = 1.0, ra_max = 0.05, da_max = 0.01, cfactor = 1.05, max_nts = 4000, density_buffer = 2.0, location='kapteyn'):
+def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim = 1, tiles_node_dim = 2, nf_tile_I = 2, nf_cutoff = 16, pid_flag=False, pp_run=True, pp_range = 2, displace_from_mesh=True, move_grid_back=True, read_displacement_seed=False, verbose=False, debug=False, chaplygin=False, dt_scale = 1.0, dt_max = 1.0, ra_max = 0.05, da_max = 0.01, cfactor = 1.05, max_nts = 4000, density_buffer = 2.0, location='kapteyn'):
     """
     Give pos and vel like they come out of egp.icgen.zeldovich.
     
@@ -1307,7 +1307,9 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
     pp_range
     verbose: diagnostic info, timing, etc.
     debug: extra debugging information
-    displace_from_mesh: random displacement at every timestep
+    displace_from_mesh: random displacement at every timestep; necessary for
+                        correct working of code!
+    move_grid_back: move particles back after random displacement
     read_displacement_seed: use constant seed for displace_from_mesh
                             N.B.: must write ic_path/seed0.init containing
                             enough seeds for all timesteps!
@@ -1401,6 +1403,8 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
         FFLAGS_append += " -DPPINT -DPP_EXT"
     if displace_from_mesh:
         FFLAGS_append += " -DDISP_MESH"
+    if move_grid_back:
+        FFLAGS_append += " -DMOVE_GRID_BACK"
     if read_displacement_seed:
         FFLAGS_append += " -DREAD_SEED"
     if verbose:
