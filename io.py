@@ -557,10 +557,8 @@ class CubeP3MData(object):
             # Load particle IDs and use them to build an ordering array that
             # will be used to order the other data by ID.
             if self.metadata['pid_flag']:
-                pid_filename = self.filename[:self.filename.find('xv')]+'PID0.dat'
-                idarray = np.memmap(pid_filename, dtype='int64', offset=self.offset*4)
-                self.order = np.argsort(idarray).astype('uint32')
-                del idarray
+                pidarray = self.get_pid_array()
+                self.order = np.argsort(pidarray).astype('uint32')
             else:
                 self.order = np.arange(self.Ntotal)
             return self._order
@@ -580,7 +578,7 @@ class CubeP3MData(object):
             self.pos = ((self.xv.reshape(self.Ntotal, 6)[:,:3]+0.5) * self.metadata['boxlen']/self.metadata['nc'])%self.metadata['boxlen'] # Mpc h^-1
             self.pos = self.pos[self.order]
             return self._pos
-
+    
     vel = property()
     @vel.setter
     def vel(self, vel):
@@ -600,6 +598,11 @@ class CubeP3MData(object):
         """Loads the pickled parameters. Assumes that simulation was setup with
         this code, which saves parameters as a Python pickle file."""
         self.metadata = pickle.load(open(self.run_path+'parameters.pickle', 'rb'))
+    
+    def get_pid_array(self):
+        pid_filename = self.filename[:self.filename.find('xv')]+'PID0.dat'
+        idarray = np.memmap(pid_filename, dtype='int64', offset=self.offset*4)
+        return idarray
 
 
 class SubFindHaloes(object):

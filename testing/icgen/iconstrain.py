@@ -132,10 +132,17 @@ def iteration_mean_PM(pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosm
     
     # Determine peak particle indices:
     radius = scale_mpc
-    spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize)
+    spheregrid = get_peak_particle_indices(pos, radius, boxlen, gridsize).reshape(simulation.pos.shape[0])
+    # Remove the spheregrid-cells of particles that were removed:
+    if simulation.Ntotal < gridsize**3:
+        pidarray = simulation.get_pid_array()
+        all_pids = np.arange(gridsize**3)+1
+        deleted = np.setdiff1d(all_pids, pidarray)
+        all_pids == deleted
+        spheregrid = spheregrid[-np.in1d(all_pids, deleted)]
     
     # finally calculate the "new position" of the peak:
-    mean_peak_pos = simulation.pos.reshape(gridsize, gridsize, gridsize, 3)[:,spheregrid].mean(axis=1)
+    mean_peak_pos = simulation.pos[:,spheregrid].mean(axis=1)
         
     return mean_peak_pos
 
