@@ -7,8 +7,7 @@ nproc = 4
 
 run_name = 'cubep3m_vs_gadget'
 
-cosmo = egp.icgen.Cosmology('wmap7')
-cosmo.trans = 8
+cosmo = egp.icgen.Cosmology('wmap7', trans = 8)
 boxlen = 200. # Mpc h^-1
 redshift = 63.
 gridsize = 64
@@ -34,15 +33,23 @@ egp.io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_filename, redshift, run_di
 raise SystemExit
 
 # Then compare:
+from mayavi import mlab
 
-filename_gadget = '/Users/users/pbos/dataserver/sims/run100_2522572538/snap_008'
+filename_gadget = '/net/dataserver1/data/users/pbos/sims/cubep3m_vs_gadget_2522572538/snap_008'
 
-filename_cubep3m = '/net/dataserver1/data/users/pbos/cubep3m/test1.5_velfactor/output/0.000xv0.dat'
+filename_cubep3m = '/net/dataserver1/data/users/pbos/cubep3m/test1.12_disp_mesh/output/0.000xv0.dat'
 
-cubep3m_x = np.memmap(filename_cubep3m, dtype='float32')
-cubep3m_xint = np.memmap(filename_cubep3m, dtype='int32')
-
-offset = len(cubep3m_x)-cubep3m_xint[0]*6
-cubep3m_x = cubep3m_x[offset:].reshape(cubep3m_xint[0],6)[:,:3]
-
+cubep3m = egp.io.CubeP3MData(filename_cubep3m)
 gadget = egp.io.GadgetData(filename_gadget)
+# zeldovich:
+posZ, velZ = egp.icgen.zeldovich(0., psi, cosmo)
+
+mlab.figure(1)
+mlab.points3d(gadget.pos[:,0], gadget.pos[:,1], gadget.pos[:,2], mode='point', opacity=0.5)
+
+mlab.figure(2)
+mlab.points3d(cubep3m.pos[:,0], cubep3m.pos[:,1], cubep3m.pos[:,2], mode='point', opacity=0.5)
+
+
+mlab.figure(3)
+mlab.points3d(posZ[0], posZ[1], posZ[2], mode='point', opacity=0.5)

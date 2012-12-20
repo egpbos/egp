@@ -1,9 +1,6 @@
 #/usr/bin/env python
 import numpy as np
 import egp.icgen, egp.io
-import struct
-import tarfile
-import os
 
 ## cosmological simulation parameters
 gridsize = 64 # amount of particles = gridsize**3
@@ -19,8 +16,10 @@ ps = egp.icgen.CosmoPowerSpectrum(cosmo)
 snapshots = np.array([20., 5., 3., 2., 1.5, 1., 0.5, 0.])
 
 ## names, paths etc. parameters
-run_name = 'test1.11_pickle'
+run_name = 'test1.12_disp_mesh'
 run_path_base = '/Users/users/pbos/dataserver/cubep3m/'
+
+displace_from_mesh = True
 
 ## grid parameters
 nodes_dim = 1
@@ -33,4 +32,4 @@ delta = egp.icgen.GaussianRandomField(ps, boxlen, gridsize, seed)
 psi = egp.icgen.DisplacementField(delta)
 pos, vel = egp.icgen.zeldovich(redshift, psi, cosmo)
 
-egp.io.setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, nodes_dim, tiles_node_dim, cores, nf_tile_I = nf_tile_I)
+egp.io.setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim, tiles_node_dim, nf_tile_I = nf_tile_I, displace_from_mesh = displace_from_mesh)
