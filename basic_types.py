@@ -162,6 +162,26 @@ class Field(object):
         except AttributeError:
             self._periodic = PeriodicArray(self.t)
             return self._periodic
+    
+    def show(self, xlabel="x (Mpc)", ylabel="y (Mpc)"):
+        """
+        Plot a 2D field slice with the right axes on the right side for it to make
+        sense to me. In my world, the first axis of an array should represent the
+        x-axis, in that if you ask for a[0] in a 2D array /a/ then you should get
+        the field entries at x=0 for varying (a[0,-1] would be (x,y)=(0,boxlen)).
+        
+        By default matplotlib.pyplot's imshow does it the other way around, which
+        could of course easily be remedied by a transpose, but this easy function
+        does that all for you, and a little more.
+        
+        N.B.: must import pyplot as pl from matplotlib!
+        N.B.2: only works for objects with a boxlen property.
+        """
+        pl.imshow(self.t.T, origin='bottom', interpolation='nearest', extent=(0,self.boxlen,0,self.boxlen))
+        pl.xlabel(xlabel)
+        pl.ylabel(ylabel)
+        pl.colorbar()
+
 
 
 class VectorField(object):

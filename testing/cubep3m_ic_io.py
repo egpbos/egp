@@ -4,7 +4,7 @@ import egp.icgen, egp.io
 
 ## cosmological simulation parameters
 gridsize = 64 # amount of particles = gridsize**3
-boxlen = 200.0 # Mpc/h
+boxlen = 100.0 # Mpc/h
 redshift = 63.0
 
 seed = 2522572538
@@ -16,7 +16,7 @@ ps = egp.icgen.CosmoPowerSpectrum(cosmo)
 snapshots = np.array([20., 5., 3., 2., 1.5, 1., 0.5, 0.])
 
 ## names, paths etc. parameters
-run_name = 'test1.15_read_seed'
+run_name = 'test1.17_constrained_field'
 run_path_base = '/Users/users/pbos/dataserver/cubep3m/'
 
 ## grid parameters
@@ -25,12 +25,26 @@ tiles_node_dim = 2
 cores = 8
 nf_tile_I = 2
 
-read_displacement_seed = True
+#~ read_displacement_seed = True
 
-## pos en vel bepalen
-delta = egp.icgen.GaussianRandomField(ps, boxlen, gridsize, seed)
-psi = egp.icgen.DisplacementField(delta)
-pos, vel = egp.icgen.zeldovich(redshift, psi, cosmo)
+# Constrained field spul
+import sys
+sys.path.append("/Users/users/pbos/code/egp/testing/icgen")
+import iconstrain
 
-egp.io.setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim, tiles_node_dim, nf_tile_I = nf_tile_I, read_displacement_seed = read_displacement_seed)
+deltaU = egp.icgen.GaussianRandomField(ps, boxlen, gridsize, seed=seed)
+
+target_pos = np.array([20.,40.,70.])
+peak_height = 1.0000000000000002
+scale_mpc = 4.0225468329142506
+
+shape_seed = 10
+shape_constraints = iconstrain.set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
+
+deltaC = iconstrain.constrain_field(target_pos, peak_height, scale_mpc, boxlen, deltaU, ps, cosmo, shape_constraints = shape_constraints)
+psiC = egp.icgen.DisplacementField(deltaC)
+
+pos, vel = egp.icgen.zeldovich(redshift, psiC, cosmo)
+
+egp.io.setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim, tiles_node_dim, nf_tile_I = nf_tile_I)
 # note that after test1.12 the default value for displace_from_mesh was changed to True! To recreate these tests you need to set it to False.

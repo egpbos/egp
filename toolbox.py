@@ -21,6 +21,7 @@ import traceback
 import sys
 import os
 import csv
+import egp.basic_types
 
 
 # constants
@@ -260,6 +261,18 @@ def TSC_density_old(pos, gridsize, boxsize, mass, periodic=True):
 	crunch.TSCDensity(pos.astype('float64'), rho, Npart, boxsize, gridsize, mass)
 	
 	return rho
+
+def filter_Field(field, kernel, kernel_arguments, gridsize=None):
+    """Returns a new Field object that is the input Field /field/
+    convolved with a kernel. Kind of speaks for itself, I'd say. Use
+    gaussian_kernel or tophat_kernel for /kernel/ and a list of
+    appropriate kernel arguments in /kernel_arguments/. Gridsize can be
+    optionally specified, otherwise the first shape element of
+    fieldFourier of /field.f/ will be used."""
+    field_fourier = field.f
+    boxlen = field.boxlen
+    field_fourier_filtered = filter_field(field_fourier, boxlen, kernel, kernel_arguments, gridsize)
+    return egp.basic_types.Field(fourier = field_fourier_filtered)
 
 def filter_field(fieldFourier, boxlen, kernel, kernel_arguments, gridsize=None):
     """Returns the fourier-space representation of the field
