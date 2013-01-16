@@ -11,14 +11,11 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import numpy as np
-import egp.icgen, egp.toolbox
+import egp.icgen, egp.toolbox, egp.io
 import glob, os, subprocess, shutil
 
 # Decide which one to use!
 from scipy.optimize import fmin_l_bfgs_b as solve, anneal, brute
-
-# constants
-__version__ = "0.3, December 2012"
 
 # functions
 
@@ -56,10 +53,10 @@ def iterate_zeldovich(peak_pos_initial, target_pos, height, scale_mpc, boxlen, g
 def iterate_2LPT(peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_2LPT, peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
-def iterate_PM(peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
+def iterate_PM(peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-6, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_PM, peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
-def iterate_P3M(peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-13, factr=1e11, pgtol=1e-3):
+def iterate_P3M(peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints = [], epsilon=1e-6, factr=1e11, pgtol=1e-3):
     return iterate_solve(iteration_mean_P3M, peak_pos_initial, target_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints, epsilon, factr, pgtol)
 
 
@@ -281,3 +278,131 @@ def mass_to_scale(mass, cosmo):
     # using the volume of a gaussian window function, (2*pi)**(3./2) * R**3
     return scale_mpc
 
+
+def setup_gadget_run(cosmo, ps, boxlen, gridsize, seed, peak_pos, peak_height, scale_mpc, redshift, test_id, run_dir_base, nproc, constrain_shape=True, shape_seed=0, run_name = None, location='kapteyn', save_dir = None, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", time_limit_cpu = 86400):    
+    # shape / orientation constraints:
+    if constrain_shape:
+        shape_constraints = set_shape_constraints(ps, boxlen, peak_height, scale_mpc, shape_seed)
+    else:
+        shape_constraints = []
+    
+    if not run_name:
+        run_name = "run%s_%i" % (test_id, seed) # plus 100 to separate from DE+void runs
+    
+    ic_file = run_dir_base+"/ICs/ic_%iMpc_%i_%s.dat" % (boxlen, gridsize, run_name)
+    if not save_dir:
+        save_dir = run_dir_base
+        ic_file_save = ic_file
+    else:
+        ic_file_save = "/Users/users/pbos/dataserver/sims/ICs/ic_%iMpc_%i_%s.dat" % (boxlen, gridsize, run_name)
+
+    rhoc = egp.toolbox.critical_density(cosmo) # M_sun Mpc^-3 h^2
+    particle_mass = cosmo.omegaM * rhoc * boxlen**3 / gridsize**3 / 1e10 # 10^10 M_sun h^-1
+    
+    rhoU_out = egp.icgen.GaussianRandomField(ps, boxlen, gridsize, seed=seed)
+    
+    print "Building %s..." % run_name
+    irhoC = constrain_field(peak_pos, peak_height, scale_mpc, boxlen, rhoU_out, ps, cosmo, shape_constraints)
+    ipsiC = egp.icgen.DisplacementField(irhoC)
+    del irhoC
+    ipos, ivel = egp.icgen.zeldovich(redshift, ipsiC, cosmo) # Mpc, not h^-1!
+    del ipsiC
+    print "Saving %s..." % run_name
+    egp.io.write_gadget_ic_dm(ic_file_save, ipos.reshape((3,gridsize**3)).T, ivel.reshape((3,gridsize**3)).T, particle_mass, redshift, boxlen, cosmo.omegaM, cosmo.omegaL, cosmo.h)
+    del ipos, ivel
+    
+    print "Preparing for gadget run %(run_name)s..." % locals()
+    run_instructions = egp.io.prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift, run_dir_base, run_name, nproc, run_location=location, save_dir = save_dir, gadget_executable=gadget_executable, time_limit_cpu = time_limit_cpu)
+    
+    log_file = open(save_dir+'/'+run_name+'.log', 'w')
+    log_file.write('peak position:\n')
+    log_file.write(peak_pos.__str__())
+    log_file.close()
+    
+    print "Done!"
+    return run_instructions
+
+
+# ANALYSE
+
+def analyse_run(run_dir_base, run_name, target_pos, target_mass, boxlen, gridsize, radius, snapshot_number = '008'):
+    z0 = egp.io.GadgetData(run_dir_base+'/'+run_name+'/snap_'+snapshot_number)
+    with open(run_dir_base+'/'+run_name+'.log', 'r') as log_file:
+        log_file.readline()
+        pos_iter = np.array(log_file.readline().replace('[',"").replace(']',"").split(), dtype='float32')
+    sphere = sphere_grid(pos_iter, radius, boxlen, gridsize).reshape(z0.pos.shape[0])
+    
+    pos_gadget = z0.pos[sphere].mean(axis=0)/1000.
+    dpos = np.sqrt(np.sum((pos_gadget - target_pos)**2))
+    
+    # Subhalo analysis
+    haloes_z0 = egp.io.SubFindHaloes(run_dir_base+'/'+run_name+'/groups_'+snapshot_number+'/subhalo_tab_'+snapshot_number+'.0')
+    # identify the SubFind halo that is most probably the one we constrained (closest in space)
+    halo_index = np.sqrt(np.sum((haloes_z0.SubPos/1000 - pos_gadget)**2, axis=1)).argmin()
+    halo_mass = haloes_z0.SubTMass[halo_index]
+    dpos_halo = np.sqrt(np.sum((target_pos - haloes_z0.SubPos[halo_index]/1000)**2))
+    
+    # Top-level parent subhalo analysis
+    parent_index = np.sqrt(np.sum((haloes_z0.parent_pos/1000 - pos_gadget)**2, axis=1)).argmin()
+    parent_mass = haloes_z0.parent_mass[parent_index]
+    dpos_parent = np.sqrt(np.sum((target_pos - haloes_z0.parent_pos[parent_index]/1000)**2))
+    parent_children = len(haloes_z0.parent_children[parent_index])
+    
+    # Surrounding haloes analysis
+    halo_distance = np.sqrt(np.sum((haloes_z0.SubPos/1000 - target_pos)**2, axis=1))
+    surrounder_filter = halo_distance < radius
+    surrounder_number = np.sum(surrounder_filter) # printen
+    if surrounder_number > 0:
+        surrounder_relative_pos = haloes_z0.SubPos[surrounder_filter]/1000 - target_pos
+        surrounder_masses = haloes_z0.SubTMass[surrounder_filter]
+        surrounder_mass = np.sum(surrounder_masses) # printen
+        surrounder_cm = np.sum(surrounder_masses[:,None]*surrounder_relative_pos, axis=0)/surrounder_mass
+        #~ surrounder_relative_pos_mean = np.mean(surrounder_relative_pos, axis=0)
+        surrounder_pos_std = np.std(surrounder_relative_pos, axis=0)
+        surrounder_dpos = np.sqrt(np.sum((surrounder_cm)**2)) # printen
+        surrounder_dpos_std_amplitude = np.sqrt(np.sum(surrounder_pos_std**2)) # printen
+        
+        # Most massive surrounding subhalo analysis
+        massive_surrounder_index = surrounder_masses.argmax()
+        massive_surrounder_mass = surrounder_masses[massive_surrounder_index]
+        massive_surrounder_dpos = np.sqrt(np.sum((target_pos - haloes_z0.SubPos[surrounder_filter][massive_surrounder_index]/1000)**2))
+    
+        # Surrounding subhalo with mass closest to target_mass analysis
+        closest_mass_index = np.abs(surrounder_masses - target_mass).argmin()
+        closest_mass_mass = surrounder_masses[closest_mass_index]
+        closest_mass_dpos = np.sqrt(np.sum((target_pos - haloes_z0.SubPos[surrounder_filter][closest_mass_index]/1000)**2))
+    else:
+        surrounder_dpos = -1
+        surrounder_dpos_std_amplitude = -1
+        surrounder_mass = -1
+        massive_surrounder_dpos = -1
+        massive_surrounder_mass = -1
+        closest_mass_dpos = -1
+        closest_mass_mass = -1
+    
+    #~ # Density analysis
+    #~ den = egp.toolbox.TSC_density(z0.pos, gridsize, boxlen, 1.)
+    #~ den_f = np.fft.rfftn(den)
+    #~ # smooth on 8 Mpc scale:
+    #~ sden = np.fft.irfftn(egp.toolbox.gaussian_smooth(den_f, 8., boxlen))
+    #~ sden_max_i = np.array(np.unravel_index(sden.argmax(), sden.shape))
+    #~ sden_max_pos = sden_max_i*boxlen/gridsize
+    #~ dpos_den = np.sqrt(np.sum((target_pos-sden_max_pos)**2))
+    
+    # Present results
+    presentation = "Distance of particles in Gadget to target position:      %f\n\
+Distance of closest subhalo to target position:          %f\n\
+Mass of this halo:                                       %f\n\
+Distance of closest parent subhalo to target position:   %f\n\
+Mass of this parent halo:                                %f\n\
+Number of children of parent halo:                       %i\n\
+Number of surrounding subhaloes within peak radius:             %i\n\
+Distance of center of mass of surrounding subhaloes to target:  %f\n\
+'Standard deviation' (spread) of surrounding subhalo positions: %f\n\
+Total mass of surrounding subhaloes:                            %f\n\
+Distance of most massive surrounding subhalo to target position:   %f\n\
+Mass of most massive surrounding subhalo:                          %f\n\
+Distance to target position of surrounding subhalo closest to target mass: %f\n\
+Mass of this subhalo:                                                      %f" % (dpos, dpos_halo, halo_mass, dpos_parent, parent_mass, parent_children, surrounder_number, surrounder_dpos, surrounder_dpos_std_amplitude, surrounder_mass, massive_surrounder_dpos, massive_surrounder_mass, closest_mass_dpos, closest_mass_mass)
+    #~ print "Distance of density maximum to target position: ", dpos_den
+    return presentation, dpos, dpos_halo, halo_mass, dpos_parent, parent_mass, parent_children, surrounder_number, surrounder_dpos, surrounder_dpos_std_amplitude, surrounder_mass, massive_surrounder_dpos, massive_surrounder_mass, closest_mass_dpos, closest_mass_mass

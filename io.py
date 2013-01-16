@@ -610,6 +610,108 @@ class SubFindHaloes(object):
         self.firstfile = os.path.abspath(firstfile)
         self.load_data()
     
+    # The following parent attributes take the subhaloes which are the
+    # top-level parents in a hierarchy of subhaloes and add the masses
+    # of the children in that hierarchy to the parents. It leaves only
+    # the mass-added top-level parents.
+    
+    parent_filter = property()
+    @parent_filter.setter
+    def parent_filter(self, parent_filter):
+        self._parent_filter = parent_filter
+    @parent_filter.getter
+    def parent_filter(self):
+        try:
+            return self._parent_filter
+        except AttributeError:
+            self.parent_filter = self.SubParentHalo == 0
+            return self._parent_filter
+    
+    child_filter = property()
+    @child_filter.setter
+    def child_filter(self, child_filter):
+        self._child_filter = child_filter
+    @child_filter.getter
+    def child_filter(self):
+        try:
+            return self._child_filter
+        except AttributeError:
+            self.child_filter = self.SubParentHalo != 0
+            return self._child_filter
+    
+    parent_index = property()
+    @parent_index.setter
+    def parent_index(self, parent_index):
+        self._parent_index = parent_index
+    @parent_index.getter
+    def parent_index(self):
+        try:
+            return self._parent_index
+        except AttributeError:
+            self.parent_index = np.argwhere(self.parent_filter)
+            return self._parent_index
+    
+    child_index = property()
+    @child_index.setter
+    def child_index(self, child_index):
+        self._child_index = child_index
+    @child_index.getter
+    def child_index(self):
+        try:
+            return self._child_index
+        except AttributeError:
+            self.child_index = np.argwhere(self.child_filter)
+            return self._child_index
+
+    parent_mass = property()
+    @parent_mass.setter
+    def parent_mass(self, parent_mass):
+        self._parent_mass = parent_mass
+    @parent_mass.getter
+    def parent_mass(self):
+        try:
+            return self._parent_mass
+        except AttributeError:
+            # We'll filter the mass later, but we need the structure to remain
+            # intact for easy addition of the child masses first.
+            parent_mass = self.SubTMass.copy()
+            
+            child_mass = self.SubTMass[self.child_filter]
+            child_parent = self.SubParentHalo[self.child_filter]
+            parents_with_children = list(set(child_parent))
+            for parent in parents_with_children[::-1]: # backwards to account for possible sub-sub-structure
+                i = parent - 1
+                parent_mass[i] += child_mass[np.argwhere(child_parent==parent)].sum()
+            
+            self.parent_mass = parent_mass[self.parent_filter]
+            return self._parent_mass
+    
+    parent_pos = property()
+    @parent_pos.setter
+    def parent_pos(self, parent_pos):
+        self._parent_pos = parent_pos
+    @parent_pos.getter
+    def parent_pos(self):
+        try:
+            return self._parent_pos
+        except AttributeError:
+            self.parent_pos = self.SubPos[self.parent_filter]
+            return self._parent_pos
+    
+    parent_children = property()
+    @parent_children.setter
+    def parent_children(self, parent_children):
+        self._parent_children = parent_children
+    @parent_children.getter
+    def parent_children(self):
+        try:
+            return self._parent_children
+        except AttributeError:
+            child_parent = self.SubParentHalo[self.child_filter]
+            self.parent_children = [np.argwhere(child_parent==parent) for parent in self.parent_index+1]
+            #self.parent_children = [(i+1,parent_children[i]) for i in range(len(parent_children)) if len(parent_children[i])>0] # only keep non-zero lists and add parent ID
+            return self._parent_children
+
     def save_txt(self, filenamebase):
         """Filenamebase will be appended with _groups.txt and _subhaloes.txt."""
         groups = np.array([self.HaloLen, self.NsubPerHalo, self.FirstSubOfHalo, self.Halo_M_Mean200, self.Halo_R_Mean200, self.Halo_M_Crit200, self.Halo_R_Crit200, self.Halo_M_TopHat200, self.Halo_R_TopHat200, self.HaloCont, self.HaloPos[:,0], self.HaloPos[:,1], self.HaloPos[:,2], self.HaloMass]).T
@@ -1085,7 +1187,7 @@ cd %(run_dir_base)s
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
 """
 
-def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 864000, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
+def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 86400, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
     """Arguments:
     boxlen (Mpc h^-1)
     cosmo (Cosmology object)
@@ -1195,6 +1297,25 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     with open(restart_script_filename, 'w') as restart_script:
         restart_script.write(run_script_text[:-1]+" 1\n")
     os.chmod(restart_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+    
+    run_name = run_name[:-8] # _restart taken off again
+    
+    if run_location=='millipede':
+        ic_file_local = '/Users/users/pbos/dataserver/sims/ICs/'+os.path.basename(ic_file)
+        run_dir = run_dir_base+'/'+run_name
+        run_instructions = "# Copy the files to millipede with the following commands:\n"+\
+                           "scp %(ic_file_local)s millipede:%(run_dir_base)s/ICs\n" % locals()+\
+                           "scp %(save_dir)s/%(run_name)s*.{sh,par} millipede:%(run_dir_base)s\n" % locals()+\
+                           "ssh millipede mkdir %(run_dir)s\n" % locals()+\
+                           "# Start the run on millipede in the %(queue)s queue using:\n" % locals()+\
+                           "GADGETRUNID=`ssh millipede qsub %(run_dir_base)s/%(run_name)s.sh -q %(queue)s`\n" % locals()+\
+                           "echo $GADGETRUNID"
+        print("Check status of running jobs with:\n"+\
+              "ssh millipede qstat -u p252012")
+        return run_instructions
+    else:
+        return "Time to run!"
+
 
 subfind_run_script_texts = {}
 
@@ -1231,7 +1352,7 @@ subfind_run_script_lastline["kapteyn"] = """\
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s 3 %(snap)s
 """
 
-def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_cpu = 864000, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', nodes = 1, queue = 'nodes'):
+def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_cpu = 864000, gadget_executable = "/net/schmidt/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', nodes = 1, queue = 'nodes', wait_on = None):
     """
     Use prepare_gadget_run() to prepare the parameter file. The following
     parameters in this function must be the same as what you used in
@@ -1251,10 +1372,12 @@ def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_
         snapstring += "%i," % snap
     snapstring += "%i" % snaps[-1]
     
+    run_script_basename = run_name+'_subfind_snaps%s.sh' % snapstring
     if not save_dir:
-        run_script_filename = run_dir_base+'/'+run_name+'_subfind_snaps%s.sh' % snapstring
+        save_dir = run_dir_base
+        run_script_filename = run_dir_base+'/'+run_script_basename
     else:
-        run_script_filename = save_dir+'/'+run_name+'_subfind_snaps%s.sh' % snapstring
+        run_script_filename = save_dir+'/'+run_script_basename
     
     # For millipede runs:
     walltime = time_limit_cpu/3600
@@ -1273,6 +1396,20 @@ def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_
     with open(run_script_filename, 'w') as run_script:
         run_script.write(run_script_text)
     os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+
+    if run_location=='millipede':
+        run_instructions = "# Copy the run script to millipede with the following command:\n"+\
+                           "scp %(run_script_filename)s millipede:%(run_dir_base)s\n" % locals()+\
+                           "# Start the run on millipede in the %(queue)s queue using:\n" % locals()
+        if not wait_on:
+            run_instructions += "SUBFINDRUNID=`ssh millipede qsub %(run_dir_base)s/%(run_script_basename)s -q %(queue)s`\n" % locals()+\
+                                "echo $SUBFINDRUNID"
+        else:
+            run_instructions += "SUBFINDRUNID=`ssh millipede qsub -W depend=afterok:%(wait_on)s %(run_dir_base)s/%(run_script_basename)s -q %(queue)s`\n" % locals()+\
+                                "echo $SUBFINDRUNID"
+        return run_instructions
+    else:
+        return "Time to run!"
 
 
 def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, run_name, run_path_base, cores, nodes_dim = 1, tiles_node_dim = 2, nf_tile_I = 2, nf_cutoff = 16, pid_flag=False, pp_run=True, pp_range = 2, displace_from_mesh=True, move_grid_back=True, read_displacement_seed=False, verbose=False, debug=False, chaplygin=False, dt_scale = 1.0, dt_max = 1.0, ra_max = 0.05, da_max = 0.01, cfactor = 1.05, max_nts = 4000, density_buffer = 2.0, location='kapteyn'):
