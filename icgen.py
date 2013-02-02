@@ -22,11 +22,7 @@ from egp.crunch import resolution_independent_random_grid
 from egp.basic_types import Field, VectorField, ParticleSet, PeriodicArray
 from egp import toolbox
 
-
 # constants
-__version__ = "0.6, August 2012"
-
-
 # exception classes
 # interface functions
 # classes
@@ -261,7 +257,12 @@ class CosmoPowerSpectrum(PowerSpectrum):
         """
         Transfer function for CDM with baryonic features from Eisenstein & Hu 1999.
         Reference: astro-ph/9709112.
+        
+        Note: this function sometimes turns off divide-by-zero warnings,
+        so check for them yourself!
         """
+        error_setting = np.geterr()['divide']
+        
         omegaB = self.cosmology.omegaB
         omegaM = self.cosmology.omegaM
         omegaCDM = omegaM - omegaB
@@ -301,14 +302,19 @@ class CosmoPowerSpectrum(PowerSpectrum):
         betaC = 1/( 1 + b1_betaC*((omegaCDM/omegaM)**b2_betaC - 1) )
             
         betaNode = 8.41*(omegaM*h*h)**0.435
-        st = s / (1+(betaNode/k/s)**3)**(1./3)# s-tilde
         
+        np.seterr(divide = 'ignore') # Divide by zero warning off
+        st = s / (1+(betaNode/k/s)**3)**(1./3)# s-tilde
+        np.seterr(divide = error_setting) # Divide by zero warning back on
+
         C = lambda alC: 14.2/alC + 386/(1+69.9*q**1.08)
         Ttilde0 = lambda k, alC, beC: np.log(np.e + 1.8*beC*q) / \
                   ( np.log(np.e+1.8*beC*q) + C(alC)*q*q )
         
+        np.seterr(divide = 'ignore') # Divide by zero warning off
         Tb = (( Ttilde0(k,1,1)/(1+(k*s/5.2)**2) + alphaB/(1+(betaB/k/s)**3) * \
              np.exp(-(k/kSilk)**1.4) )) * np.sinc(k*st/2/np.pi)
+        np.seterr(divide = error_setting) # Divide by zero warning back on
         
         f = 1/(1+(k*s/5.4)**4)
         Tcdm = f*Ttilde0(k,1,betaC) + (1-f)*Ttilde0(k,alphaC,betaC)
