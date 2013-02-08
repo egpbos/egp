@@ -113,7 +113,7 @@ def difference(peak_pos_input, target_evolved_pos, height, scale_mpc, boxlen, gr
         print printstring
     return np.sum((evolved_peak_pos - target_evolved_pos)**2)
 
-def difference_root(peak_pos_input, target_evolved_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, iteration_mean, shape_constraints = [], verbose = 2):
+def difference_root(peak_pos_input, target_evolved_pos, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, iteration_mean, shape_constraints = [], verbose = 1):
     N_peaks = len(peak_pos_input)/3
     if verbose > 1: print "input:\n", peak_pos_input.reshape(N_peaks,3)#, "i.e.", peak_pos_input%boxlen, "in the box"
     evolved_peak_pos = iteration_mean(peak_pos_input%boxlen, height, scale_mpc, boxlen, gridsize, deltaU, ps, cosmo, shape_constraints)
