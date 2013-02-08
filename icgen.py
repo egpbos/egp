@@ -487,22 +487,19 @@ class GaussianRandomField(DensityField):
     - gridsize:  Number of grid points in one direction
     - seed:      If given, a random seed is passed to the random number
                  generator, otherwise NumPy finds its own seed somewhere.
-    - ksphere:   If true, a sphere in k-space is defined with radius k_nyquist.
-                 Outside of this sphere, all grid values are zero. If false,
-                 these are also just random values, subject to symmetries.
     
     Computed attributes:
     - t:        The true density field.
     - f:        The density field in Fourier space.
     """
-    def __init__(self, power, boxlen, gridsize, seed = None, ksphere = True):
+    def __init__(self, power, boxlen, gridsize, seed = None):
+        print "NOTE: ksphere is removed from default GRF! Use GaussianRandomFieldKSphere instead if you want that."
         self.power = power
         self.boxlen = boxlen
         self.gridsize = int(gridsize)
         self.seed = seed
         if not self.seed:
             self.seed = np.random.randint(0x100000000)
-        self.ksphere = ksphere
         self.build_fourier()
     
     def build_fourier(self):
@@ -559,12 +556,37 @@ class GaussianRandomField(DensityField):
         # It could be something different, but it's the integral over your field
         # and so then you wouldn't have a field with average value of zero
         # anymore, which is what we do want it to have.
-        
+
+
+class GaussianRandomFieldKSphere(GaussianRandomField):
+    """
+    Generates a Gaussian random DensityField, but adds the option of
+    filtering k-space; either outside of the radius k_nyquist everything
+    is to zero (/ksphere/ > 0) or inside this radius it's zero
+    (/ksphere/ < 0). If /ksphere/ = 0 there is no filtering and you get
+    just a GRF.
+    
+    Computed attributes:
+    - t:        The true density field.
+    - f:        The density field in Fourier space.
+    """
+    def __init__(self, power, boxlen, gridsize, seed = None, ksphere = 1):
+        super(GaussianRandomFieldKSphere, self).__init__(power, boxlen, gridsize, seed = seed)
+        self.ksphere = ksphere
+        super(GaussianRandomFieldKSphere, self).build_fourier()
+        self.ksphere_filter()
+    
+    def ksphere_filter(self):
+        k = toolbox.k_abs_grid(self.gridsize, self.boxlen)
+        dk = 2*np.pi / self.boxlen
+        kmax = self.gridsize*dk
         # Setting everything outside of the k-sphere with radius k_nyquist to zero.
-        if self.ksphere:
+        if self.ksphere > 0:
             ksphere = k <= kmax/2
             self.f *= ksphere
-
+        elif self.ksphere < 0:
+            ksphere = k > kmax/2
+            self.f *= ksphere
 
 
 # internal functions & classes

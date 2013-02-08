@@ -1,0 +1,31 @@
+project(crunch)
+
+set(SOURCE crunch.cpp TSC.cpp zspace.cpp gridsearch.cpp twopcf.cpp octreesearch.cpp gaussian_filter.cpp resolution_independent_random_grid.cpp)
+
+add_library(crunch SHARED ${SOURCE})
+
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_PATH})
+
+find_package(Boost REQUIRED)
+include_directories(${BOOST_INCLUDEDIR})
+
+# NumPy includes:
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+find_package(NumPy REQUIRED)
+include_directories(${NUMPY_INCLUDE_DIRS})
+
+include_directories(/home/patrick/software/lib/python2.7/site-packages/PyUblas-2011.1-py2.7-linux-x86_64.egg/include)
+
+link_directories(/home/patrick/software/lib/python2.7/site-packages/PyUblas-2011.1-py2.7-linux-x86_64.egg/pyublas)
+
+# m -> math.h (voor octreesearch en zspace)
+target_link_libraries(crunch boost_python m)
+
+set_target_properties(crunch PROPERTIES PREFIX "")
+set_target_properties(crunch PROPERTIES LIBRARY_OUTPUT_DIRECTORY $ENV{HOME}/code/egp)
+
+# Add C++11 support (used in resolution_independent_random_grid):
+# And add massive local(!!) optimization with -march=native
+#set_target_properties(crunch PROPERTIES COMPILE_FLAGS "-std=c++0x -march=native")
+set_target_properties(crunch PROPERTIES COMPILE_FLAGS "-std=c++0x")
