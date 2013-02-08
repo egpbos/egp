@@ -11,11 +11,15 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import numpy as np
-import pyublas
-import crunch
+try:
+    import pyublas
+    import crunch
+except:
+    print "pyublas and egp.crunch not imported!"
 #~ import __builtin__
+
+import types
 import functools
-from types import MethodType
 from time import time
 import traceback
 import sys
@@ -126,7 +130,7 @@ def cacheable(cache_key_template = None):
             #~ except AssertionError:
                 #~ traceback.print_stack()
             #~ self.fct_call = self.fct_call.__get__(instance, owner)
-            thing = MethodType(self, instance, owner)
+            thing = types.MethodType(self, instance, owner)
             #~ thing = self.__get__(instance, owner) # dit zou equivalent moeten zijn aan MethodType(self, instance, owner)
             #~ thing = self.__class__(self.fct_call.__get__(instance, owner))
             #~ print time()-a

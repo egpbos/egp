@@ -9,16 +9,24 @@ include_directories(${PYTHON_INCLUDE_PATH})
 
 find_package(Boost REQUIRED)
 include_directories(${BOOST_INCLUDEDIR})
+#~ include_directories(BEFORE /Users/users/pbos/sw/include/boost)
+#~ include_directories(BEFORE /Users/users/pbos/sw/include)
 
 # NumPy includes:
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 find_package(NumPy REQUIRED)
 include_directories(${NUMPY_INCLUDE_DIRS})
 
-include_directories(/Users/patrick/astro/software/lib/python2.7/site-packages/PyUblas-2011.1-py2.7-macosx-10.5-x86_64.egg/include)
-include_directories(/Users/patrick/astro/software/include)
+# include_directories(BEFORE /usr/lib64/python2.6/site-packages/numpy/core/include)
+# include_directories(BEFORE /usr/lib64/python2.6/site-packages/numpy/numarray/include) # is deze wel nodig?
+# include_directories(BEFORE $ENV{HOME}/data/sw/pythonSL6/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include)
 
-link_directories($ENV{HOME}/astro/software/lib/python2.7/site-packages/PyUblas-2011.1-py2.7-macosx-10.5-x86_64.egg/pyublas)
+include_directories(BEFORE $ENV{HOME}/sw/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include)
+
+link_directories(/Users/users/pbos/sw/lib)
+link_directories(BEFORE /usr/lib64)
+link_directories(BEFORE $ENV{HOME}/sw/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/pyublas)
+# link_directories(BEFORE $ENV{HOME}/data/sw/pythonSL6/lib64/python2.6/site-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/pyublas)
 
 # m -> math.h (voor octreesearch en zspace)
 target_link_libraries(crunch boost_python m)

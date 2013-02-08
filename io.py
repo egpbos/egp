@@ -11,8 +11,11 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import struct, os, stat, numpy as np
-import pyublas
-import crunch
+try:
+    import pyublas
+    import crunch
+except:
+    print "pyublas and egp.crunch not imported!"
 import cPickle as pickle
 import egp.toolbox, egp.icgen
 import tarfile

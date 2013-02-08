@@ -11,14 +11,18 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import numpy as np
-import pyublas
 from numpy.random import random as rnd, seed as setseed
 from scipy.integrate import quadrature as integrate
 from scipy.interpolate import InterpolatedUnivariateSpline as Interpolator
 from scipy.special import erf
 from csv import reader as csvreader
 
-from egp.crunch import resolution_independent_random_grid
+try:
+    import pyublas
+    from egp.crunch import resolution_independent_random_grid
+except:
+    print "pyublas and egp.crunch not imported, making unconstrained IC fields will not work!"
+
 from egp.basic_types import Field, VectorField, ParticleSet, PeriodicArray
 from egp import toolbox
 
