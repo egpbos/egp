@@ -391,6 +391,31 @@ def critical_density(cosmo = None):
 
 # Other useful stuff
 
+def x_to_xms(x_decimal):
+    x = x_decimal // 1
+    minutes_decimal = (x_decimal - x)*60
+    minutes = minutes_decimal // 1
+    seconds_decimal = (x_decimal - x - minutes/60)*3600
+    return x, minutes, seconds_decimal
+
+def hms_to_deg(h,m,s):
+    h_decimal = h + m/60. + s/3600.
+    degrees_decimal = h_decimal/24.*360
+    return degrees_decimal
+
+def hms_to_dms(h,m,s):
+    degrees_decimal = hms_to_deg(h,m,s)
+    return x_to_xms(degrees_decimal)
+
+def dms_to_deg(d,m,s):
+    degrees_decimal = d + m/60. + s/3600.
+    return degrees_decimal
+
+def dms_to_hms(h,m,s):
+    degrees_decimal = dms_to_deg(d,m,s)
+    hours_decimal = degrees_decimal/360.*24
+    return x_to_xms(hours_decimal)
+
 def load_csv_catalog(filename):
     table_file = open(filename)
     table = csv.reader(table_file)
