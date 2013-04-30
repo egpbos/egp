@@ -6,6 +6,9 @@ __init__.py
 
 Created by Evert Gerardus Patrick Bos.
 Copyright (c) January 2012. All rights reserved.
+
+Conventions:
+- The values in Fields correspond to physical coordinates. The boxlen size spans the full cells on both ends, i.e. it begins at the far end of the [0,0,0] cell and ends at the far end of the [gridsize,gridsize,gridsize] cell. Each cell value corresponds to the coordinates at the center of the cell. This means that the coordinates of cell [0,0,0] are [dx/2,dx/2,dx/2] where dx is the linear size of one cell.
 """
 
 __all__ = ['icgen']
