@@ -1536,3 +1536,16 @@ def grow(z, omegar, omegam, omegal):
     integral = integrate(growIntgt, 0, a, args=(omegar, omegam, omegal), vec_func = False)[0]
     eta = np.sqrt(omegam/a + omegal*a*a + 1 - omegam - omegal)
     return eta/a*integral
+
+def growRIntgt(a, omegar, omegam, omegal):
+    """Integrand for the linear growth factor D(z) (function grow())"""
+    if a == 0: return 0
+    
+    eta = np.sqrt(omegar/a/a + omegam/a + omegal*a*a + 1 - omegam - omegal - omegar)
+    return 2.5/eta**3
+  
+def growR(z, omegar, omegam, omegal):
+    a = 1./(1+z)
+    integral = integrate(growIntgt, 0, a, args=(omegar, omegam, omegal), vec_func = False)[0]
+    eta = np.sqrt(omegar/a/a + omegam/a + omegal*a*a + 1 - omegam - omegal - omegar)
+    return eta/a*integral
