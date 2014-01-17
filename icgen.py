@@ -344,7 +344,11 @@ class InterpolatedPowerSpectrum(PowerSpectrum):
         mask = np.r_[True, (np.diff(kInit) > 0)]
         kInit = kInit[mask]
         pInit = pInit[mask]
-        self.P = Interpolator(kInit, pInit, k=order)
+        self.interpolator = Interpolator(kInit, pInit, k=order)
+    def P(self, k):
+        shape = k.shape
+        k_flat = k.reshape(np.prod(shape))
+        return self.interpolator(k_flat).reshape(shape)
 
 
 class EstimatedPowerSpectrum(InterpolatedPowerSpectrum):
@@ -545,7 +549,16 @@ class GaussianRandomField(DensityField):
         z[0,0,0] = 0
         
         # Then, the actual density field (in Fourier space):
-        self.power.normalize(self.boxlen**3)
+        try:
+            self.power.amplitude
+        except AttributeError:
+            try:
+                self.power.normalize(self.boxlen**3)
+            except TypeError:
+                print("Power spectrum normalization:")
+                sigma0 = input("   give sigma0:")
+                Rth    = input("   give Rth:")
+                self.power.normalize(self.boxlen**3, Rth, sigma0)
         ps_cache_key = "grid_%s_box_%s" % (self.gridsize, self.boxlen)
         self.f = np.sqrt(self.power(k, cache_key=ps_cache_key))*z
         
@@ -1446,6 +1459,22 @@ def two_LPT_ICs(redshift, psi1, psi2, cosmo):
     X = (q + D1*psi1_vec + D2*psi2_vec)%boxlen
     
     return X,v
+
+
+# Convenience functions
+
+def density_to_pos_vel(density_field, cosmology, redshift):
+    """Of course, the density_field must be at z=\inf. It must be a
+    DensityField object. cosmology must be a Cosmology object. redshift should
+    be the redshift to which you want the Zel'dovich approximation to put the
+    particles.
+    The output are two arrays: positions (Mpc/h) and velocities (km/s) of the
+    particles. These can then be fed to e.g. egp.io.write_gadget_ic_dm()."""
+    psi = DisplacementField(density_field)
+    pos, vel = zeldovich(redshift, psi, cosmology) # Mpc, not h^-1!
+    return pos, vel
+
+# END Convenience functions
 
 
 #~ def zeldovich(redshift, psi1, psi2, psi3, omegaM, omegaL, omegaR, h, boxlen, print_info=False):

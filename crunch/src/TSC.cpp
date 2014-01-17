@@ -127,3 +127,132 @@ void crunch::fillrho(int_vector k, float_vector w, float_vector rho, int Npart, 
                     
                 }
 }
+
+void fillZero(float_vector out, int size)
+{
+#pragma omp parallel for
+  for (int i=0; i < size; i++)
+    out[i] = 0.0;
+}
+
+// Convenience function for applying periodic boundary conditions on a
+// single coordinate. 
+void pacman_coordinate(float_vector x, double L)
+{
+  while (*x < 0.)
+    *x += L;
+  while (*x > L)
+    *x -= L;
+}
+
+// Convenience function for getting the 8 nearest cells to a coordinate.
+// Since these 8 form a cube, only two cells need to be returned, those that
+// form a diagonal of the cube. cell_index1 is the one whose cell center
+// coordinates xc_1 are lower than the coordinate x's, i.e. xc_1 < x, etc., and
+// cell_index2 has the higher cell center coordinates xc_2, xc_2 > x.
+// N.B.: cell_index arrays must have length 3!
+void getCICcells(double boxsize, int gridsize, double x, double y, double z, int_vector cell_index1, int_vector cell_index2)
+{
+  double xpos, ypos, zpos;
+  double dGrid = boxsize/gridsize;
+
+  xpos = x - 0.5*dGrid;
+  ypos = y - 0.5*dGrid;
+  zpos = z - 0.5*dGrid;
+  // periodic boundary conditions:
+  pacman_coordinate(&xpos, boxsize);
+  pacman_coordinate(&ypos, boxsize);
+  pacman_coordinate(&zpos, boxsize);
+
+  cell_index1[0] = static_cast<int>(floor(xpos/dGrid)); // indices of the cell of the particle
+  cell_index1[1] = static_cast<int>(floor(ypos/dGrid));
+  cell_index1[2] = static_cast<int>(floor(zpos/dGrid));
+
+  cell_index1[0] = (cell_index1[0] + gridsize) % gridsize; // periodic boundary conditions
+  cell_index1[1] = (cell_index1[1] + gridsize) % gridsize;
+  cell_index1[2] = (cell_index1[2] + gridsize) % gridsize;
+
+  cell_index2[0] = (cell_index1[0] + 1) % gridsize;
+  cell_index2[1] = (cell_index1[1] + 1) % gridsize;
+  cell_index2[2] = (cell_index1[2] + 1) % gridsize;
+}
+
+// CIC weights, used in the CIC density estimator. 
+// tx is just 1-dx. Note that these arrays must have length 3, and cell_index1
+// as well. The latter can be calculated using getCICcells.
+void getCICweights(double boxsize, int gridsize, double x, double y, double z, int_vector cell_index1, float_vector dx, float_vector tx)
+{
+  double xpos, ypos, zpos, xc, yc, zc;
+  double dGrid = boxsize/gridsize;
+  
+  xpos = x - 0.5*dGrid;
+  ypos = y - 0.5*dGrid;
+  zpos = z - 0.5*dGrid;
+// periodic boundary conditions:
+  pacman_coordinate(&xpos, boxsize);
+  pacman_coordinate(&ypos, boxsize);
+  pacman_coordinate(&zpos, boxsize);
+
+  xc = static_cast<double>(cell_index1[0]); 
+  yc = static_cast<double>(cell_index1[1]);
+  zc = static_cast<double>(cell_index1[2]);
+
+  dx[0] = xpos/dGrid - xc;
+  dx[1] = ypos/dGrid - yc;
+  dx[2] = zpos/dGrid - zc;
+
+  tx[0] = 1.0 - dx[0];
+  tx[1] = 1.0 - dx[1];
+  tx[2] = 1.0 - dx[2];
+}
+
+void crunch::CICDensity(double_vector pos, double_vector rho, int Npart, double boxsize, int gridsize, double mass)
+{
+#define DELTA(i,j,k) delta[k[2]+gridsize*(j[1]+gridsize*i[0])]
+
+  long possize1 = pos.strides()[0]/pos.itemsize();
+  long possize2 = pos.strides()[1]/pos.itemsize();
+  long possize2x2 = 2*possize2;
+  double* posptr = pos.data().begin();
+
+  long rhosize1 = rho.strides()[0]/rho.itemsize();
+  long rhosize2 = rho.strides()[1]/rho.itemsize();
+  long rhosize3 = rho.strides()[2]/rho.itemsize();
+  double* rhoptr = rho.data().begin();
+
+  double dGrid = boxsize/gridsize;
+
+  fillZero(rho, gridsize*gridsize*gridsize);
+
+#pragma omp parallel for
+  for(long j = 0; j < Npart; j++) {
+    double x = posptr[j*possize1] / dGrid;
+    double y = posptr[j*possize1 + possize2] / dGrid;
+    double z = posptr[j*possize1 + possize2x2] / dGrid;
+    
+    int_vector i(3), ii(3);
+    float_vector dx(3), tx(3);
+
+    getCICcells(boxsize, gridsize, x, y, z, i, ii);
+    getCICweights(boxsize, gridsize, x, y, z, i, dx, tx);
+
+#pragma omp atomic
+    DELTA(i,i,i)    += mass*tx[0]*tx[1]*tx[2];
+#pragma omp atomic
+    DELTA(ii,i,i)   += mass*dx[0]*tx[1]*tx[2];
+#pragma omp atomic
+    DELTA(i,ii,i)   += mass*tx[0]*dx[1]*tx[2];
+#pragma omp atomic
+    DELTA(i,i,ii)   += mass*tx[0]*tx[1]*dx[2];
+#pragma omp atomic
+    DELTA(ii,ii,i)  += mass*dx[0]*dx[1]*tx[2];
+#pragma omp atomic
+    DELTA(ii,i,ii)  += mass*dx[0]*tx[1]*dx[2];
+#pragma omp atomic
+    DELTA(i,ii,ii)  += mass*tx[0]*dx[1]*dx[2];
+#pragma omp atomic
+    DELTA(ii,ii,ii) += mass*dx[0]*dx[1]*dx[2];
+  }
+  
+#undef DELTA
+}

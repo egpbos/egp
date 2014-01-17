@@ -275,6 +275,8 @@ def filter_Field(field, kernel, kernel_arguments, gridsize=None):
     fieldFourier of /field.f/ will be used."""
     field_fourier = field.f
     boxlen = field.boxlen
+    if not gridsize:
+        gridsize = field.f.shape[0]
     field_fourier_filtered = filter_field(field_fourier, boxlen, kernel, kernel_arguments, gridsize)
     return egp.basic_types.Field(fourier = field_fourier_filtered)
 
