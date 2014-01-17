@@ -1199,7 +1199,7 @@ cd %(run_dir_base)s
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
 """
 
-def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 86400, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
+def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 86400, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
     """Arguments:
     boxlen (Mpc h^-1)
     cosmo (Cosmology object)
@@ -1364,7 +1364,7 @@ subfind_run_script_lastline["kapteyn"] = """\
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s 3 %(snap)s
 """
 
-def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_cpu = 864000, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512_SL6/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', nodes = 1, queue = 'nodes', wait_on = None):
+def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_cpu = 864000, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', nodes = 1, queue = 'nodes', wait_on = None):
     """
     Use prepare_gadget_run() to prepare the parameter file. The following
     parameters in this function must be the same as what you used in
