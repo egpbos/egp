@@ -14,6 +14,13 @@ Contains the basic data types used in other modules.
 import numpy as np
 import egp.toolbox
 
+class EGPException(Exception):
+    def __init__(self, value):
+        self.parameter = value
+    def __str__(self):
+        return repr(self.parameter)
+
+
 class PeriodicArray(np.ndarray):
     """
     Based on http://docs.scipy.org/doc/numpy/user/basics.subclassing.html#slightly-more-realistic-example-attribute-added-to-existing-array
@@ -183,7 +190,6 @@ class Field(object):
         pl.colorbar()
 
 
-
 class VectorField(object):
     """
     A three component vector field, containing three Field instances as
@@ -207,14 +213,90 @@ class VectorField(object):
             self.z = Field(fourier=fourier[2])
 
 
-class ParticleSet(object):
+class Particles(object):
     """
-    A set of N particles with three-dimensional positions and velocities. Other
-    properties may be added later. Arrays /pos/ and /vel/ must have shape (N,3)
-    or otherwise be left empty for later assignment.
+    A set of N particles with three-dimensional cartesian positions and velocities.
+    Other properties may be added in subclasses.
+    Arrays /pos/ and /vel/ must have shape (N,3) or otherwise be left empty for
+    later assignment.
     """
     def __init__(self, pos = None, vel = None):
         if pos:
-            self.pos = pos
+            self._pos = pos
         if vel:
-            self.vel = vel
+            self._vel = vel
+    pos = property()
+    @pos.getter
+    def pos(self):
+        try:
+            return self._pos
+        except AttributeError:
+            print("Positions not yet loaded!")
+            raise EGPException
+    @pos.setter
+    def pos(self, pos):
+        self._pos = pos
+
+    vel = property()
+    @vel.getter
+    def vel(self):
+        try:
+            return self._vel
+        except AttributeError:
+            print("Velocities not yet loaded!")
+            raise EGPException
+    @vel.setter
+    def vel(self, vel):
+        self._vel = vel
+
+
+class OrderedParticles(Particles):
+    """
+    Particles with an extra order array.
+    """
+    def __init__(self, pos = None, vel = None, order = None):
+        super(OrderedParticles, self).__init__(pos, vel)
+        if order:
+            self._order = order
+    order = property()
+    @order.getter
+    def order(self):
+        try:
+            return self._order
+        except AttributeError:
+            print("Order not yet loaded!")
+            raise EGPException
+    @order.setter
+    def order(self, order):
+        self._order = order
+
+
+class MassiveParticles(Particles):
+    """
+    Particles with an extra mass array.
+    """
+    def __init__(self, pos = None, vel = None, mass = None):
+        super(MassiveParticles, self).__init__(pos, vel)
+        if mass:
+            self._mass = mass
+    mass = property()
+    @mass.getter
+    def mass(self):
+        try:
+            return self._order
+        except AttributeError:
+            print("Mass not yet loaded!")
+            raise EGPException
+    @mass.setter
+    def mass(self, mass):
+        self._mass = mass
+
+
+class MassiveOrderedParticles(OrderedParticles, MassiveParticles):
+    """
+    Particles with both an order and a a mass.
+    """
+    def __init__(self, pos = None, vel = None, order = None, mass = None):
+        super(MassiveOrderedParticles, self).__init__(pos = pos, vel = vel, order = order)
+        print("NEED TO SOMEHOW ALSO REFER BACK TO MassiveParticles HERE TO INITIALIZE THE MASS!")
+        raise EGPException

@@ -23,7 +23,7 @@ try:
 except:
     print "pyublas and egp.crunch not imported, making unconstrained IC fields will not work!"
 
-from egp.basic_types import Field, VectorField, ParticleSet, PeriodicArray
+from egp.basic_types import Field, VectorField, Particles, PeriodicArray
 from egp import toolbox
 
 # constants

@@ -3,4 +3,6 @@ syntax: glob
 *~
 crunch/build
 crunch.so
+crunch.dylib
 *.DS_Store
+*.swp
