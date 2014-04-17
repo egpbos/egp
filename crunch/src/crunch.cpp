@@ -28,6 +28,7 @@ void crunch::test2(float_vector v) {
 BOOST_PYTHON_MODULE(crunch)
 {
 	boost::python::def("TSCDensity", TSCDensity);
+	boost::python::def("CICDensity", CICDensity);
 	boost::python::def("test2", test2);
 	boost::python::def("fillrho", fillrho);
 	boost::python::def("redshiftspace", redshiftspace);

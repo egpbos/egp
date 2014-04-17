@@ -23,6 +23,7 @@ namespace crunch {
     extern void gaussian_filter(complex_vector rhok, complex_vector hk, int n, float dk, float akmax, float smooth);
 //  TSC: Density estimator using Triangular Shaped Cloud algorithm
     extern void TSCDensity(double_vector pos, double_vector rho, int Npart, double boxsize, int gridsize, double mass);
+    extern void CICDensity(double_vector pos, double_vector rho, int Npart, double boxsize, int gridsize, double mass);
     extern void fillrho(int_vector k, float_vector w, float_vector rho, int Npart, float mass);
 //	zspace: transformations to and from redshift space
     extern void redshiftspace(double_vector pos, double_vector vel, double_vector posZ, int Npart, double_vector origin, int centerOrigin, double boxsize, double H);
