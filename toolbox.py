@@ -391,6 +391,13 @@ def critical_density(cosmo = None):
     rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3)
     return rhoc
 
+def sigma_R(field, scale):
+    """Calculates the STD of the Field on a given /scale/ by first filtering
+    with a top-hat filter and then just calculating the STD of the filtered
+    Field. Can e.g. be used to find sigma_8 (when scale = 8)."""
+    field_filtered = filter_Field(field, tophat_kernel, (scale,))
+    return field_filtered.t.std()
+
 # Other useful stuff
 
 def x_to_xms(x_decimal):
