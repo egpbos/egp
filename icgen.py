@@ -318,6 +318,7 @@ class CosmoPowerSpectrum(PowerSpectrum):
         np.seterr(divide = 'ignore') # Divide by zero warning off
         Tb = (( Ttilde0(k,1,1)/(1+(k*s/5.2)**2) + alphaB/(1+(betaB/k/s)**3) * \
              np.exp(-(k/kSilk)**1.4) )) * np.sinc(k*st/2/np.pi)
+        print "WARNING!!!\n11 July 2014\nJust rediscovered that np.sinc is defined sin(pi*x)/(pi*x). It seems\nlike I'm trying to correct for this in trans8 by dividing by 2*pi.\nWhere does that 2 come from? Not from Eisenstein & Hu!"
         np.seterr(divide = error_setting) # Divide by zero warning back on
         
         f = 1/(1+(k*s/5.4)**4)
