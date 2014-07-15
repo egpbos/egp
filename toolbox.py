@@ -69,6 +69,8 @@ def cacheable(cache_key_template = None):
             self.fct_call = self.uncached_fct_call
             self.key = cache_key_template
             self.cache = {}
+            self.__name__ = fct.__name__
+            self.__doc__ = fct.__doc__
         def __call__(self, *args, **kwargs):
             #~ print self, self.fct_call
             return self.fct_call(*args, **kwargs)
@@ -319,6 +321,7 @@ def tophat_smooth(densityFourier, r_th, boxlen):
 #~ def calc_k_abs_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")
 def k_abs_grid(gridsize, boxlen):
+    """k_abs_grid(gridsize, boxlen)"""
     halfgrid = gridsize/2
     dk = 2*np.pi/boxlen
     k12 = np.fft.fftfreq(gridsize, 1/dk/gridsize) # k3 = k12[:halfgrid+1].abs()
@@ -327,6 +330,7 @@ def k_abs_grid(gridsize, boxlen):
 #~ def calc_k_i_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")
 def k_i_grid(gridsize, boxlen):
+    """k_i_grid(gridsize, boxlen)"""
     halfgrid = gridsize/2
     dk = 2*np.pi/boxlen
     kmax = gridsize*dk
