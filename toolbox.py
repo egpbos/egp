@@ -27,6 +27,8 @@ import os
 import csv
 import egp.basic_types
 
+import scipy.optimize # for fitting 1D functions
+
 
 # constants
 __version__ = "0.3, September 2012"
@@ -220,6 +222,20 @@ def ifftn_flip(A, *args, **kwargs):
     convention. See rfftn_flip.
     """
     return np.fft.ifftn(A, *args, **kwargs)[::-1,::-1,::-1]
+
+
+# Fitting 1D functions
+sqrt2pi = np.sqrt(2*np.pi)
+normal_fit = lambda p, x: 1./(p[1] * sqrt2pi) * np.exp(-0.5 * ((x - p[0])/p[1])**2)
+powerlaw_fit = lambda p, x: p[1] * x**p[0]
+powerlaw_norm_fit = lambda p, x: (x/p[1])**p[0]
+
+def fit_1D_fct(fitfunc, p0, x, y):
+    errfunc = lambda p, x, y: fitfunc(p, x) - y     # difference between fitfunc and y
+    pfit, success = scipy.optimize.leastsq(errfunc, p0[:], args=(x, y))
+    return pfit
+
+
 
 
 # Other stuff
