@@ -18,6 +18,7 @@ except:
     print "pyublas and egp.crunch not imported!"
 #~ import __builtin__
 
+import re  # for natural sort
 import types
 import functools
 from time import time
@@ -235,6 +236,18 @@ def fit_1D_fct(fitfunc, p0, x, y):
     pfit, success = scipy.optimize.leastsq(errfunc, p0[:], args=(x, y))
     return pfit
 
+def fit_2D_fct(fitfunc, p0, x1, x2, y):
+    errfunc = lambda p, x1, x2, y: fitfunc(p, x1, x2) - y     # difference between fitfunc and y
+    pfit, success = scipy.optimize.leastsq(errfunc, p0[:], args=(x1, x2, y))
+    return pfit
+
+def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
+    return [int(text) if text.isdigit() else text.lower()
+            for text in re.split(_nsre, s)]
+
+
+def natural_sorted(l):
+    return sorted(l, key=natural_sort_key)
 
 
 
