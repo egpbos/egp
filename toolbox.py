@@ -18,7 +18,7 @@ except:
     print "pyublas and egp.crunch not imported!"
 #~ import __builtin__
 
-import re  # for natural sort
+import re  # for natural sort and reglob
 import types
 import functools
 from time import time
@@ -251,6 +251,26 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 
 def natural_sorted(l):
     return sorted(l, key=natural_sort_key)
+
+
+# regular expression glob
+# From http://stackoverflow.com/a/17197678/1199693:
+def reglob(path, exp, invert=False):
+    """glob.glob() style searching which uses regex
+
+    :param exp: Regex expression for filename
+    :param invert: Invert match to non matching files
+    """
+
+    m = re.compile(exp)
+
+    if invert is False:
+        res = [f for f in os.listdir(path) if m.search(f)]
+    else:
+        res = [f for f in os.listdir(path) if not m.search(f)]
+
+    res = map(lambda x: "%s/%s" % (path, x,), res)
+    return res
 
 
 
