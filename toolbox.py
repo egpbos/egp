@@ -241,6 +241,9 @@ def fit_2D_fct(fitfunc, p0, x1, x2, y):
     pfit, success = scipy.optimize.leastsq(errfunc, p0[:], args=(x1, x2, y))
     return pfit
 
+
+# natural sorting
+# from http://stackoverflow.com/a/16090640/1199693:
 def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
     return [int(text) if text.isdigit() else text.lower()
             for text in re.split(_nsre, s)]
