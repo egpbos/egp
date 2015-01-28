@@ -273,6 +273,12 @@ def reglob(path, exp, invert=False):
     return res
 
 
+def running_mean(arr, window_size=100):
+    x = range(window_size/2, len(arr) - window_size + window_size/2 + 1)
+    y = np.convolve(arr, np.ones((window_size,))/window_size, mode='valid')
+    return x, y
+
+
 
 # Other stuff
 def TSC_density(pos, gridsize, boxsize, mass, periodic=True):
