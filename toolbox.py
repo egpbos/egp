@@ -460,6 +460,10 @@ def sigma_R(field, scale):
     field_filtered = filter_Field(field, tophat_kernel, (scale,))
     return field_filtered.t.std()
 
+def quick_power(field):
+    field_f = np.fft.rfftn(field)
+    return (field_f * field_f.conj()).real
+
 # Other useful stuff
 
 def x_to_xms(x_decimal):
