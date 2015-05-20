@@ -539,6 +539,7 @@ class GadgetData(egp.basic_types.OrderedParticles):
     including path.
     """
     def __init__(self, firstfile):
+        super(GadgetData, self).__init__()
         self.firstfile = os.path.abspath(firstfile)
         self.detectGType()
         self.loadHeaders()
@@ -553,7 +554,8 @@ class GadgetData(egp.basic_types.OrderedParticles):
         self.densityZGridsize = None
         self.originCentered = True
     
-    @order.getter
+    # http://stackoverflow.com/questions/7019643/overriding-properties-in-python
+    @egp.basic_types.OrderedParticles.order.getter
     def order(self):
         try:
             return self._order
@@ -581,7 +583,7 @@ class GadgetData(egp.basic_types.OrderedParticles):
             del idarray
             return self._order
     
-    @pos.getter
+    @egp.basic_types.OrderedParticles.pos.getter
     def pos(self):
         try:
             return self._pos
@@ -607,7 +609,7 @@ class GadgetData(egp.basic_types.OrderedParticles):
             self.pos = self.pos[self.order]
             return self._pos
 
-    @vel.getter
+    @egp.basic_types.OrderedParticles.vel.getter
     def vel(self):
         try:
             return self._vel
@@ -1000,6 +1002,7 @@ class CubeP3MData(egp.basic_types.OrderedParticles):
     Default instantiation argument is filename, including full path.
     """
     def __init__(self, filename, run_path = None):
+        super(GadgetData, self).__init__()
         self.filename = os.path.abspath(filename)
         if not run_path:
             self.run_path = os.path.dirname(self.filename)[:-6] # cut off "output"
@@ -1013,11 +1016,7 @@ class CubeP3MData(egp.basic_types.OrderedParticles):
             print "N.B.: particles have been deleted from the ICs!\nAdjusted particle number from %i to %i." % (self.metadata['N'], N)
         self.xv = np.memmap(self.filename, dtype='float32', mode='r', offset = self.offset*4)
     
-    order = property()
-    @order.setter
-    def order(self, order):
-        self._order = order
-    @order.getter
+    @egp.basic_types.OrderedParticles.order.getter
     def order(self):
         try:
             return self._order
@@ -1031,7 +1030,7 @@ class CubeP3MData(egp.basic_types.OrderedParticles):
                 self.order = np.arange(self.Ntotal)
             return self._order
     
-    @pos.getter
+    @egp.basic_types.OrderedParticles.pos.getter
     def pos(self):
         try:
             return self._pos
@@ -1043,7 +1042,7 @@ class CubeP3MData(egp.basic_types.OrderedParticles):
             self.pos = self.pos[self.order]
             return self._pos
     
-    @vel.getter
+    @egp.basic_types.OrderedParticles.vel.getter
     def vel(self):
         try:
             return self._vel
