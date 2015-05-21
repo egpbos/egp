@@ -1735,7 +1735,7 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     output_list_filename = run_dir_base+'/'+output_list_filename
     DE_file = run_dir_base+'/'+DE_file
     
-    time_begin = 1/(redshift_begin+1)
+    time_begin = 1./(redshift_begin+1)
     
     # Softening: based on Dolag's ratios
     # default ~ 1/17.3 of the mean ipd
