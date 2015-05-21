@@ -1427,10 +1427,28 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     
     # Values for HEAD
     N2 = len(pos) # Number of DM particles (Npart[1], i.e. the 2nd entry)
+    print N2
     
     # Make HEAD and write to file
     toFileDesc = struct.pack(BS['desc'], 8L, 'HEAD', 264L, 8L)
-    toFile = struct.pack(BS['HEAD'], 256L, 0L, N2, 0L, 0L, 0L, 0L, 0.0, mass, 0.0, 0.0, 0.0, 0.0, 1./(1+redshift), redshift, 0, 0, 0, N2, 0, 0, 0, 0, 0, 1, boxsize, om0, ol0, h0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 256L)
+
+    Npart = [0L, N2, 0L, 0L, 0L, 0L]
+    masses = [0.0, mass, 0.0, 0.0, 0.0, 0.0]
+    time = 1./(1+redshift)
+    FlagSfr = 0
+    FlagFeedback = 0
+    Nall = [0, N2, 0, 0, 0, 0]
+    FlagCooling = 0
+    NumFiles = 1
+    FlagAge = 0
+    FlagMetals = 0
+    NallHW = [0, 0, 0, 0, 0, 0]
+    flag_entr_ics = 0
+    header_contents = [256L, ] + Npart + masses + \
+                      [time, redshift, FlagSfr, FlagFeedback] + \
+                      Nall + [FlagCooling, NumFiles, boxsize, om0, ol0, h0] + \
+                      [FlagAge, FlagMetals] + NallHW + [flag_entr_ics, 256L]
+    toFile = struct.pack(BS['HEAD'], *header_contents)
     
     f.write(toFileDesc+toFile)
     

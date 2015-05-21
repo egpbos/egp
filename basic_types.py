@@ -13,6 +13,7 @@ Contains the basic data types used in other modules.
 
 import numpy as np
 import egp.toolbox
+from matplotlib import pyplot as plt
 
 class EGPException(Exception):
     def __init__(self, value):
@@ -184,10 +185,10 @@ class Field(object):
         N.B.: must import pyplot as pl from matplotlib!
         N.B.2: only works for objects with a boxlen property.
         """
-        pl.imshow(self.t.T, origin='bottom', interpolation='nearest', extent=(0,self.boxlen,0,self.boxlen))
-        pl.xlabel(xlabel)
-        pl.ylabel(ylabel)
-        pl.colorbar()
+        plt.imshow(self.t.T, origin='bottom', interpolation='nearest', extent=(0,self.boxlen,0,self.boxlen))
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.colorbar()
 
 
 class VectorField(object):

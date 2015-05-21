@@ -453,6 +453,11 @@ def critical_density(cosmo = None):
     rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3)
     return rhoc
 
+def particle_mass(omegaM, boxlen, gridsize):
+    rho_c = egp.toolbox.critical_density()
+    mass = omegaM * rho_c * boxlen**3 / (gridsize**3) / 1e10  # 10^10 M_sol / h
+    return mass
+
 def sigma_R(field, scale):
     """Calculates the STD of the Field on a given /scale/ by first filtering
     with a top-hat filter and then just calculating the STD of the filtered
