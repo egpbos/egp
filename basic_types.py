@@ -250,6 +250,45 @@ class Particles(object):
     def vel(self, vel):
         self._vel = vel
 
+    def calcPosSph(self, origin, centerOrigin):
+        """Calculate the positions of particles in spherical coordinates. The
+        origin is by default at the center of the box, but can be specified by
+        supplying an origin=(x,y,z) argument."""
+
+        # Implement periodic folding around to keep the origin centered
+
+        x = self.pos[:,0] - origin[0]
+        y = self.pos[:,1] - origin[1]
+        z = self.pos[:,2] - origin[2]
+
+        if centerOrigin:
+            box = self.header[0]['BoxSize']
+            halfbox = box/2.
+            #
+            # EGP (22 mei 2015):
+            # IS DIT NIET PERIODIC BOUNDARY CONDITIONS?
+            # WAAROM DOEN WE DIT HIER EIGENLIJK?
+            #
+            np.putmask(x, x < -halfbox, x + box)
+            np.putmask(y, y < -halfbox, y + box)
+            np.putmask(z, z < -halfbox, z + box)
+            np.putmask(x, x >= halfbox, x - box)
+            np.putmask(y, y >= halfbox, y - box)
+            np.putmask(z, z >= halfbox, z - box)
+            self.posCO = np.vstack((x,y,z)).T
+        
+        xy2 = x*x + y*y
+        xy = np.sqrt(xy2)
+        r = np.sqrt(xy2 + z*z)
+        phi = np.arctan2(y,x)        # [-180,180] angle in the (x,y) plane
+                                    # counterclockwise from x-axis towards y
+        theta = np.arctan2(xy,z)    # [0,180] angle from the positive towards
+                                    # the negative z-axis
+        
+        self.posSph = np.vstack((r,phi,theta)).T
+        self.posSphCalculated = True
+
+
 
 class OrderedParticles(Particles):
     """
