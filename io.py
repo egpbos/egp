@@ -672,9 +672,6 @@ class GadgetData(egp.basic_types.OrderedParticles):
         
         self.originCentered = centerOrigin
         
-        if not self.posloaded:
-            self.loadPos()
-            
         x = self.pos[:,0] - self.sphOrigin[0]
         y = self.pos[:,1] - self.sphOrigin[1]
         z = self.pos[:,2] - self.sphOrigin[2]
@@ -707,9 +704,8 @@ class GadgetData(egp.basic_types.OrderedParticles):
         center of the box, but can be specified by supplying an origin=(x,y,z)
         argument."""
         
-        if not (self.posSphCalculated and self.velloaded):
+        if not self.posSphCalculated:
             self.calcPosSph(origin=origin, centerOrigin=centerOrigin)
-            self.loadVel()
         
         if self.originCentered:
             x = self.posCO[:,0]
