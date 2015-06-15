@@ -1,7 +1,7 @@
 syntax: glob
 *.pyc
 *~
-crunch/build
+crunch/build*
 crunch.so
 crunch.dylib
 *.DS_Store
