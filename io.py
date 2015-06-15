@@ -17,7 +17,7 @@ try:
 except:
     print "pyublas and egp.crunch not imported!"
 import cPickle as pickle
-import egp.toolbox, egp.icgen, egp.basic_types
+import egp.toolbox, egp.icgen, egp.basic_types, egp.cosmology
 import tarfile
 
 
@@ -72,6 +72,8 @@ class GadgetData(egp.basic_types.OrderedParticles):
         self.densityGridsize = None
         self.densityZGridsize = None
         self.originCentered = True
+
+        self.parent = egp.basic_types.OrderedParticles
 
     # http://stackoverflow.com/questions/7019643/overriding-properties-in-python
     @egp.basic_types.OrderedParticles.order.getter
@@ -184,108 +186,38 @@ class GadgetData(egp.basic_types.OrderedParticles):
         origin is by default at the center of the box, but can be specified by
         supplying an origin=(x,y,z) argument."""
 
-        # Implement periodic folding around to keep the origin centered
-
+        boxsize = self.header[0]['BoxSize']
         if not origin:
             center = self.header[0]['BoxSize']/2
-            self.sphOrigin = np.array((center,center,center))
+            self.sphOrigin = np.array((center, center, center))
         else:
             self.sphOrigin = np.asarray(origin)
 
+        super(GadgetData, self).calcPosSph(self.sphOrigin,
+                                           boxsize,
+                                           centerOrigin=centerOrigin)
         self.originCentered = centerOrigin
-
-        x = self.pos[:,0] - self.sphOrigin[0]
-        y = self.pos[:,1] - self.sphOrigin[1]
-        z = self.pos[:,2] - self.sphOrigin[2]
-
-        if self.originCentered:
-            box = self.header[0]['BoxSize']
-            halfbox = box/2.
-            np.putmask(x, x < -halfbox, x + box)
-            np.putmask(y, y < -halfbox, y + box)
-            np.putmask(z, z < -halfbox, z + box)
-            np.putmask(x, x >= halfbox, x - box)
-            np.putmask(y, y >= halfbox, y - box)
-            np.putmask(z, z >= halfbox, z - box)
-            self.posCO = np.vstack((x,y,z)).T
-        
-        xy2 = x*x + y*y
-        xy = np.sqrt(xy2)
-        r = np.sqrt(xy2 + z*z)
-        phi = np.arctan2(y,x)        # [-180,180] angle in the (x,y) plane
-                                    # counterclockwise from x-axis towards y
-        theta = np.arctan2(xy,z)    # [0,180] angle from the positive towards
-                                    # the negative z-axis
-        
-        self.posSph = np.vstack((r,phi,theta)).T
-        self.posSphCalculated = True
-
 
     def calcRedshift(self, origin=None, centerOrigin=True):
         """Calculate the redshifts of the particles, i.e. the redshift space
         equivalents of the radial distances. The origin is by default at the
         center of the box, but can be specified by supplying an origin=(x,y,z)
         argument."""
-        
-        if not (self.posSphCalculated and self.velloaded):
-            self.calcPosSph(origin=origin, centerOrigin=centerOrigin)
-            self.loadVel()
-        
-        if self.originCentered:
-            x = self.posCO[:,0]
-            y = self.posCO[:,1]
-            z = self.posCO[:,2]
-        else:
-            x = self.pos[:,0] - self.sphOrigin[0]
-            y = self.pos[:,1] - self.sphOrigin[1]
-            z = self.pos[:,2] - self.sphOrigin[2]
-
-        r = self.posSph[:,0]
-        
-        unitvector_r = np.array([x/r, y/r, z/r]).T
-        
-        #vR_cartesian = self.vR_cartesian = unitvector_r * self.vel
-        # FOUTFOUTFOUTFOUT
-        # vR is zo altijd positief; richting gaat verloren
-        #vR = self.vR = np.sqrt(np.sum(vR_cartesian**2, axis=1))
-        # FOUTFOUTFOUTFOUT
-        # Dit lijkt wel te kloppen (en is theoretisch ook correct
-        # ook volgens Marsden en Tromba):
-        vR = np.sum(unitvector_r * self.vel, axis=1)
-        
         H = self.header[0]['HubbleParam']*100
-        
-        self.redshift = LOSToRedshift(r/1000, vR, H)
-        self.redshiftCalculated = True
+        super(GadgetData, self).calcRedshift(self.sphOrigin,
+                                             self.header[0]['BoxSize'], H,
+                                             centerOrigin=centerOrigin)
 
-    
     def calcRedshiftSpace(self, origin=None, centerOrigin=True):
         """Convert particle positions to cartesian redshift space, i.e. the
         space in which the redshift is used as the radial distance. The origin
         is by default at the center of the box, but can be specified by
         supplying an origin=(x,y,z) argument."""
-        
-        if not self.redshiftCalculated:
-            self.calcRedshift(origin=origin, centerOrigin=centerOrigin)
-        
-        r = 1000*redshiftToLOS(self.redshift, self.header[0]['HubbleParam']*100)
-        phi = self.posSph[:,1]
-        theta = self.posSph[:,2]
-        
-        if self.originCentered:
-            box = self.header[0]['BoxSize']
-            halfbox = box/2.
-            xZ = r*np.sin(theta)*np.cos(phi) + halfbox
-            yZ = r*np.sin(theta)*np.sin(phi) + halfbox
-            zZ = r*np.cos(theta) + halfbox
-        else:
-            xZ = r*np.sin(theta)*np.cos(phi) + self.sphOrigin[0]
-            yZ = r*np.sin(theta)*np.sin(phi) + self.sphOrigin[1]
-            zZ = r*np.cos(theta) + self.sphOrigin[2]
-        
-        self.posZ2 = np.array([xZ, yZ, zZ]).T
-        self.posZCalculated = True
-    
+        H = self.header[0]['HubbleParam']*100
+        super(GadgetData, self).calcRedshiftSpace(self.sphOrigin,
+                                                  self.header[0]['BoxSize'], H,
+                                                  centerOrigin=centerOrigin)
+
     def calcVelSph(self, origin=None):
         """Calculate the velocities of particles in spherical coordinates. The
         origin is by default at the center of the box, but can be specified by
@@ -1541,46 +1473,6 @@ def getheader(filename, gtype):
     f.close()
     return header
 
-def LOSToRedshift_wrong(xLOS, vLOS, H, split = False):
-    """
-    Input:  line of sight distances (Mpc), velocities (km/s) and Hubble
-    constant.
-    Output: relativistic (Doppler) and cosmological (Hubble) redshifts if
-    split = True, otherwise the sum of these (default).
-    """
-    c = 3.0e5
-    zREL = np.sqrt((1+vLOS/c)/(1-vLOS/c)) - 1
-    zCOS = xLOS*H/c # Needs replacement for large cosmological distances
-    if split:
-        return np.array((zREL, zCOS)).T
-    else:
-        return zREL + zCOS
-
-def LOSToRedshift(xLOS, vLOS, H, split = False):
-    """
-    Input:  line of sight distances (Mpc), velocities (km/s) and Hubble
-    constant.
-    Output: relativistic (Doppler) and cosmological (Hubble) redshifts if
-    split = True, otherwise the sum of these (default).
-    """
-    c = 3.0e5
-    zREL = np.sqrt((1+vLOS/c)/(1-vLOS/c)) - 1
-    zCOS = xLOS*H/c # Needs replacement for large cosmological distances
-    if split:
-        return np.array((zREL, zCOS)).T
-    else:
-        return zREL + zCOS +zREL*zCOS
-
-def redshiftToLOS(redshift, H):
-    """
-    Convert redshifts to apparent line of sight distances, ignoring particle
-    velocities.
-    
-    Input: redshifts and Hubble constant.
-    Output: line of sight distances (Mpc).
-    """
-    c = 3.0e5
-    return redshift*c/H
 
 def columnize(vol):
     hist = np.histogram(vol, bins=20, range=[0,1])

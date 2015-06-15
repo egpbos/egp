@@ -12,7 +12,7 @@ Contains the basic data types used in other modules.
 """
 
 import numpy as np
-import egp.toolbox
+import egp.toolbox, egp.cosmology
 from matplotlib import pyplot as plt
 
 class EGPException(Exception):
@@ -216,77 +216,130 @@ class VectorField(object):
 
 class Particles(object):
     """
-    A set of N particles with three-dimensional cartesian positions and velocities.
-    Other properties may be added in subclasses.
+    A set of N particles with three-dimensional cartesian positions and
+    velocities. Other properties may be added in subclasses.
     Arrays /pos/ and /vel/ must have shape (N,3) or otherwise be left empty for
     later assignment.
     """
-    def __init__(self, pos = None, vel = None):
+    def __init__(self, pos=None, vel=None):
         if pos:
             self._pos = pos
         if vel:
             self._vel = vel
     pos = property()
+
     @pos.getter
     def pos(self):
         try:
             return self._pos
         except AttributeError:
-            print("Positions not yet loaded!")
-            raise EGPException
+            raise EGPException("Positions not yet loaded!")
+
     @pos.setter
     def pos(self, pos):
         self._pos = pos
 
     vel = property()
+
     @vel.getter
     def vel(self):
         try:
             return self._vel
         except AttributeError:
-            print("Velocities not yet loaded!")
-            raise EGPException
+            raise EGPException("Velocities not yet loaded!")
+
     @vel.setter
     def vel(self, vel):
         self._vel = vel
 
-    def calcPosSph(self, origin, centerOrigin):
+    def calcPosSph(self, origin, boxsize, centerOrigin=False):
         """Calculate the positions of particles in spherical coordinates. The
         origin is by default at the center of the box, but can be specified by
         supplying an origin=(x,y,z) argument."""
 
-        # Implement periodic folding around to keep the origin centered
+        x = self.pos[:, 0] - origin[0]
+        y = self.pos[:, 1] - origin[1]
+        z = self.pos[:, 2] - origin[2]
 
-        x = self.pos[:,0] - origin[0]
-        y = self.pos[:,1] - origin[1]
-        z = self.pos[:,2] - origin[2]
-
+        # Implement periodic folding around to center the origin
         if centerOrigin:
-            box = self.header[0]['BoxSize']
-            halfbox = box/2.
-            #
-            # EGP (22 mei 2015):
-            # IS DIT NIET PERIODIC BOUNDARY CONDITIONS?
-            # WAAROM DOEN WE DIT HIER EIGENLIJK?
-            #
-            np.putmask(x, x < -halfbox, x + box)
-            np.putmask(y, y < -halfbox, y + box)
-            np.putmask(z, z < -halfbox, z + box)
-            np.putmask(x, x >= halfbox, x - box)
-            np.putmask(y, y >= halfbox, y - box)
-            np.putmask(z, z >= halfbox, z - box)
-            self.posCO = np.vstack((x,y,z)).T
-        
+            halfbox = boxsize/2.
+            np.putmask(x, x < -halfbox, x + boxsize)
+            np.putmask(y, y < -halfbox, y + boxsize)
+            np.putmask(z, z < -halfbox, z + boxsize)
+            np.putmask(x, x >= halfbox, x - boxsize)
+            np.putmask(y, y >= halfbox, y - boxsize)
+            np.putmask(z, z >= halfbox, z - boxsize)
+            self.posCO = np.vstack((x, y, z)).T
+
         xy2 = x*x + y*y
         xy = np.sqrt(xy2)
         r = np.sqrt(xy2 + z*z)
-        phi = np.arctan2(y,x)        # [-180,180] angle in the (x,y) plane
-                                    # counterclockwise from x-axis towards y
-        theta = np.arctan2(xy,z)    # [0,180] angle from the positive towards
-                                    # the negative z-axis
-        
-        self.posSph = np.vstack((r,phi,theta)).T
+        # [-180,180] angle in (x,y) plane counterclockw from x-axis towards y:
+        phi = np.arctan2(y, x)
+        # [0,180] angle from the positive towards the negative z-axis:
+        theta = np.arctan2(xy, z)
+
+        self.posSph = np.vstack((r, phi, theta)).T
         self.posSphCalculated = True
+
+    def calcRedshift(self, origin, boxsize, H, centerOrigin=False):
+        """Calculate the redshifts of the particles, i.e. the redshift space
+        equivalents of the radial distances. The origin is by default at the
+        center of the box, but can be specified by supplying an origin=(x,y,z)
+        argument.
+
+        Note: centerOrigin should be the same as what was used for calcPosSph.
+        """
+
+        if not (self.posSphCalculated):
+            self.calcPosSph(origin, boxsize, centerOrigin=centerOrigin)
+
+        if centerOrigin:
+            x = self.posCO[:, 0]
+            y = self.posCO[:, 1]
+            z = self.posCO[:, 2]
+        else:
+            x = self.pos[:, 0] - origin[0]
+            y = self.pos[:, 1] - origin[1]
+            z = self.pos[:, 2] - origin[2]
+
+        r = self.posSph[:, 0]
+
+        unitvector_r = np.array([x/r, y/r, z/r]).T
+
+        vR = np.sum(unitvector_r * self.vel, axis=1)
+
+        self.redshift = egp.cosmology.LOSToRedshift(r/1000, vR, H)
+        self.redshiftCalculated = True
+
+    def calcRedshiftSpace(self, origin, boxsize, H, centerOrigin=False):
+        """Convert particle positions to cartesian redshift space, i.e. the
+        space in which the redshift is used as the radial distance. The origin
+        is by default at the center of the box, but can be specified by
+        supplying an origin=(x,y,z) argument."""
+
+        if not self.redshiftCalculated:
+            self.calcRedshift(origin, boxsize, H, centerOrigin=centerOrigin)
+
+        rZ = 1000*egp.cosmology.redshiftToLOS(self.redshift, H)
+        phi = self.posSph[:, 1]
+        theta = self.posSph[:, 2]
+
+        if self.originCentered:
+            halfbox = boxsize/2.
+            xZ = rZ*np.sin(theta)*np.cos(phi) + halfbox
+            yZ = rZ*np.sin(theta)*np.sin(phi) + halfbox
+            zZ = rZ*np.cos(theta) + halfbox
+        else:
+            xZ = rZ*np.sin(theta)*np.cos(phi) + self.sphOrigin[0]
+            yZ = rZ*np.sin(theta)*np.sin(phi) + self.sphOrigin[1]
+            zZ = rZ*np.cos(theta) + self.sphOrigin[2]
+
+        self.posZ = np.array([xZ, yZ, zZ]).T
+        self.posZCalculated = True
+
+
 
 
 
