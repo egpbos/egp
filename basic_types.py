@@ -326,7 +326,7 @@ class Particles(object):
         phi = self.posSph[:, 1]
         theta = self.posSph[:, 2]
 
-        if self.originCentered:
+        if centerOrigin:
             halfbox = boxsize/2.
             xZ = rZ*np.sin(theta)*np.cos(phi) + halfbox
             yZ = rZ*np.sin(theta)*np.sin(phi) + halfbox

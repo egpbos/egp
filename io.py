@@ -181,40 +181,37 @@ class GadgetData(egp.basic_types.OrderedParticles):
             for filenr in range(self.header[0]['NumFiles'])[1:]:
                 self.header.append(getheader(basename+str(filenr), self.gtype))
 
-    def calcPosSph(self, origin=None, centerOrigin=True):
-        """Calculate the positions of particles in spherical coordinates. The
-        origin is by default at the center of the box, but can be specified by
-        supplying an origin=(x,y,z) argument."""
+    sphOrigin = property()
 
-        boxsize = self.header[0]['BoxSize']
-        if not origin:
+    @sphOrigin.getter
+    def sphOrigin(self):
+        try:
+            return self._sphOrigin
+        except AttributeError:
+            self.sphOrigin = 1
             center = self.header[0]['BoxSize']/2
             self.sphOrigin = np.array((center, center, center))
-        else:
-            self.sphOrigin = np.asarray(origin)
+            return self._sphOrigin
 
-        super(GadgetData, self).calcPosSph(self.sphOrigin,
-                                           boxsize,
+    @sphOrigin.setter
+    def sphOrigin(self, sphOrigin):
+        self._sphOrigin = sphOrigin
+
+    def calcPosSphGadget(self, centerOrigin=True):
+        self.parent.calcPosSph(self, self.sphOrigin,
+                                           self.header[0]['BoxSize'],
                                            centerOrigin=centerOrigin)
         self.originCentered = centerOrigin
 
-    def calcRedshift(self, origin=None, centerOrigin=True):
-        """Calculate the redshifts of the particles, i.e. the redshift space
-        equivalents of the radial distances. The origin is by default at the
-        center of the box, but can be specified by supplying an origin=(x,y,z)
-        argument."""
+    def calcRedshiftGadget(self, centerOrigin=True):
         H = self.header[0]['HubbleParam']*100
-        super(GadgetData, self).calcRedshift(self.sphOrigin,
+        self.parent.calcRedshift(self, self.sphOrigin,
                                              self.header[0]['BoxSize'], H,
                                              centerOrigin=centerOrigin)
 
-    def calcRedshiftSpace(self, origin=None, centerOrigin=True):
-        """Convert particle positions to cartesian redshift space, i.e. the
-        space in which the redshift is used as the radial distance. The origin
-        is by default at the center of the box, but can be specified by
-        supplying an origin=(x,y,z) argument."""
+    def calcRedshiftSpaceGadget(self, centerOrigin=True):
         H = self.header[0]['HubbleParam']*100
-        super(GadgetData, self).calcRedshiftSpace(self.sphOrigin,
+        self.parent.calcRedshiftSpace(self, self.sphOrigin,
                                                   self.header[0]['BoxSize'], H,
                                                   centerOrigin=centerOrigin)
 
