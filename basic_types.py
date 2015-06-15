@@ -222,9 +222,9 @@ class Particles(object):
     later assignment.
     """
     def __init__(self, pos=None, vel=None):
-        if pos:
+        if pos is not None:
             self._pos = pos
-        if vel:
+        if vel is not None:
             self._vel = vel
     pos = property()
 
@@ -292,8 +292,7 @@ class Particles(object):
         Note: centerOrigin should be the same as what was used for calcPosSph.
         """
 
-        if not (self.posSphCalculated):
-            self.calcPosSph(origin, boxsize, centerOrigin=centerOrigin)
+        self.calcPosSph(origin, boxsize, centerOrigin=centerOrigin)
 
         if centerOrigin:
             x = self.posCO[:, 0]
@@ -319,8 +318,7 @@ class Particles(object):
         is by default at the center of the box, but can be specified by
         supplying an origin=(x,y,z) argument."""
 
-        if not self.redshiftCalculated:
-            self.calcRedshift(origin, boxsize, H, centerOrigin=centerOrigin)
+        self.calcRedshift(origin, boxsize, H, centerOrigin=centerOrigin)
 
         rZ = 1000*egp.cosmology.redshiftToLOS(self.redshift, H)
         phi = self.posSph[:, 1]
