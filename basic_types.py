@@ -220,6 +220,7 @@ class Particles(object):
     velocities. Other properties may be added in subclasses.
     Arrays /pos/ and /vel/ must have shape (N,3) or otherwise be left empty for
     later assignment.
+    Note that pos units are kpc/h!
     """
     def __init__(self, pos=None, vel=None):
         if pos is not None:
@@ -316,7 +317,7 @@ class Particles(object):
         """Convert particle positions to cartesian redshift space, i.e. the
         space in which the redshift is used as the radial distance. The origin
         is by default at the center of the box, but can be specified by
-        supplying an origin=(x,y,z) argument."""
+        supplying an origin=np.array((x,y,z)) argument."""
 
         self.calcRedshift(origin, boxsize, H, centerOrigin=centerOrigin)
 
@@ -325,17 +326,78 @@ class Particles(object):
         theta = self.posSph[:, 2]
 
         if centerOrigin:
+            # the particles were centered around 0,0,0 in the intermediate
+            # coordinates, so to put them back in the box, just add halfbox
             halfbox = boxsize/2.
             xZ = rZ*np.sin(theta)*np.cos(phi) + halfbox
             yZ = rZ*np.sin(theta)*np.sin(phi) + halfbox
             zZ = rZ*np.cos(theta) + halfbox
         else:
-            xZ = rZ*np.sin(theta)*np.cos(phi) + self.sphOrigin[0]
-            yZ = rZ*np.sin(theta)*np.sin(phi) + self.sphOrigin[1]
-            zZ = rZ*np.cos(theta) + self.sphOrigin[2]
+            xZ = rZ*np.sin(theta)*np.cos(phi) + origin[0]
+            yZ = rZ*np.sin(theta)*np.sin(phi) + origin[1]
+            zZ = rZ*np.cos(theta) + origin[2]
 
         self.posZ = np.array([xZ, yZ, zZ]).T
         self.posZCalculated = True
+
+    def calcRedshiftSpaceAllInOne(self, boxsize, H, origin=np.array((0, 0, 0)),
+                                  centerOrigin=False):
+        """Convert particle positions to cartesian redshift space, i.e. the
+        space in which the redshift is used as the radial distance. The origin
+        is by default at the bottom corner of the box, but can be specified by
+        supplying an origin=np.array((x,y,z)) argument."""
+
+        x = self.pos[:, 0] - origin[0]
+        y = self.pos[:, 1] - origin[1]
+        z = self.pos[:, 2] - origin[2]
+
+        # Implement periodic folding around to center the origin (which is at
+        # 0,0,0 in the x,y,z coordinates), so that all particles will be within
+        # [-halfbox, halfbox]:
+        if centerOrigin:
+            halfbox = boxsize/2.
+            np.putmask(x, x < -halfbox, x + boxsize)
+            np.putmask(y, y < -halfbox, y + boxsize)
+            np.putmask(z, z < -halfbox, z + boxsize)
+            np.putmask(x, x >= halfbox, x - boxsize)
+            np.putmask(y, y >= halfbox, y - boxsize)
+            np.putmask(z, z >= halfbox, z - boxsize)
+
+        xy2 = x*x + y*y
+        xy = np.sqrt(xy2)
+        r = np.sqrt(xy2 + z*z)
+
+        unitvector_r = np.array([x/r, y/r, z/r]).T
+        vR = np.sum(unitvector_r * self.vel, axis=1)
+
+        redshift = egp.cosmology.LOSToRedshift(r/1000, vR, H)
+        rZ = 1000*egp.cosmology.redshiftToLOS(redshift, H)
+
+        # [-180,180] angle in (x,y) plane counterclockw from x-axis towards y:
+        phi = np.arctan2(y, x)
+        # [0,180] angle from the positive towards the negative z-axis:
+        theta = np.arctan2(xy, z)
+
+        xZ = rZ*np.sin(theta)*np.cos(phi) + origin[0]
+        yZ = rZ*np.sin(theta)*np.sin(phi) + origin[1]
+        zZ = rZ*np.cos(theta) + origin[2]
+
+        # Put the particles back into [0, boxsize]:
+        if centerOrigin:
+            # the particles were centered around 0,0,0 in the intermediate
+            # coordinates, so to put them back in the box, just add halfbox
+            halfbox = boxsize/2.
+            xZ = rZ*np.sin(theta)*np.cos(phi) + halfbox
+            yZ = rZ*np.sin(theta)*np.sin(phi) + halfbox
+            zZ = rZ*np.cos(theta) + halfbox
+        else:
+            xZ = rZ*np.sin(theta)*np.cos(phi) + origin[0]
+            yZ = rZ*np.sin(theta)*np.sin(phi) + origin[1]
+            zZ = rZ*np.cos(theta) + origin[2]
+
+        self.posZ = np.array([xZ, yZ, zZ]).T
+        self.posZCalculated = True
+
 
 
 
