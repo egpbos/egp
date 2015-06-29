@@ -6,7 +6,7 @@ toolbox.py
 /toolbox/ module in the /egp/ package.
   
 Created by Evert Gerardus Patrick Bos.
-Copyright (c) 2012. All rights reserved.
+Copyright (c) 2012-2015. All rights reserved.
 """
 
 # imports
@@ -443,20 +443,21 @@ def k_i_grid(gridsize, boxlen):
             #~ return KGridCache.k_i_cache[cache_key]
 
 
-
 # Cosmology
-def critical_density(cosmo = None):
+def critical_density(cosmo=None):
     """Gives the critical density in units of h^2 Msun Mpc^-3.
     N.B.: cosmo is not necessary in these units (left it in as deprecated)."""
-    hubble_constant = 100 * 3.24077649e-20 # h s^-1
-    gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31 # Mpc^3 Msun^-1 s^-2
-    rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant # critical density (h^2 Msun Mpc^-3)
+    hubble_constant = 100 * 3.24077649e-20  # h s^-1
+    gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31  # Mpc^3 Msun^-1 s^-2
+    rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant  # critical density (h^2 Msun Mpc^-3)
     return rhoc
+
 
 def particle_mass(omegaM, boxlen, gridsize):
     rho_c = egp.toolbox.critical_density()
     mass = omegaM * rho_c * boxlen**3 / (gridsize**3) / 1e10  # 10^10 M_sol / h
     return mass
+
 
 def sigma_R(field, scale):
     """Calculates the STD of the Field on a given /scale/ by first filtering
@@ -465,9 +466,61 @@ def sigma_R(field, scale):
     field_filtered = filter_Field(field, tophat_kernel, (scale,))
     return field_filtered.t.std()
 
+
+# Statistics
 def quick_power(field):
     field_f = np.fft.rfftn(field)
     return (field_f * field_f.conj()).real
+
+
+def cross_correlation(field_one, field_two, gridsize, boxlen, Nbin):
+    """
+    Input fields must be Fourier transforms of the true fields.
+    Note: only valid for real fields! The imaginary parts drop out due to
+    the symmetry in the Fourier transforms of real fields.
+
+    TODO: redo this function in c++ to avoid slow Python for-loops.
+    """
+    cross = field_one.real * field_two.real + field_one.imag * field_two.imag
+    k = egp.toolbox.k_abs_grid(gridsize, boxlen)
+    dk = k.max() / Nbin
+
+    spec = np.zeros(Nbin)
+    mode = np.zeros(Nbin)
+    for ii in range(gridsize):
+        for jj in range(gridsize):
+            for kk in range(gridsize/2+1):
+                try:
+                    ix_bin = int(k[ii, jj, kk]/dk)
+                    spec[ix_bin] += cross[ii, jj, kk]
+                    mode[ix_bin] += 1
+                except IndexError as error:
+                    if ix_bin == Nbin:  # k_max, which is always out of bounds
+                        continue
+                    else:
+                        raise error
+
+    spec /= mode
+
+    kbins = np.arange(0, k.max(), dk)
+
+    return kbins, spec
+
+
+def power_spectrum(field, gridsize, boxlen, Nbin):
+    return cross_correlation(field, field, gridsize, boxlen, Nbin)
+
+
+def norm_cross_correlation(field_one, field_two, gridsize, boxlen, Nbin):
+    """
+    Essentially returns a cosine similarity between the two fields (in Fourier
+    space).
+    """
+    kG, G = cross_correlation(field_one, field_two, gridsize, boxlen, Nbin)
+    kP1, P1 = power_spectrum(field_one, gridsize, boxlen, Nbin)
+    kP2, P2 = power_spectrum(field_two, gridsize, boxlen, Nbin)
+    return kG, G/np.sqrt(P1)/np.sqrt(P2)
+
 
 # Other useful stuff
 
@@ -478,23 +531,28 @@ def x_to_xms(x_decimal):
     seconds_decimal = (x_decimal - x - minutes/60)*3600
     return x, minutes, seconds_decimal
 
+
 def hms_to_deg(h,m,s):
     h_decimal = h + m/60. + s/3600.
     degrees_decimal = h_decimal/24.*360
     return degrees_decimal
 
+
 def hms_to_dms(h,m,s):
     degrees_decimal = hms_to_deg(h,m,s)
     return x_to_xms(degrees_decimal)
+
 
 def dms_to_deg(d,m,s):
     degrees_decimal = d + m/60. + s/3600.
     return degrees_decimal
 
-def dms_to_hms(h,m,s):
-    degrees_decimal = dms_to_deg(d,m,s)
+
+def dms_to_hms(d, m, s):
+    degrees_decimal = dms_to_deg(d, m, s)
     hours_decimal = degrees_decimal/360.*24
     return x_to_xms(hours_decimal)
+
 
 def load_csv_catalog(filename):
     table_file = open(filename)
@@ -531,6 +589,7 @@ def mkdir(path):
 def binfloat(filename):
     """Open a binary file with float32 format."""
     return np.memmap(filename, dtype='float32')
+
 
 def binint(filename):
     """Open a binary file with int32 format."""
