@@ -473,52 +473,62 @@ def quick_power(field):
     return (field_f * field_f.conj()).real
 
 
-def cross_correlation(field_one, field_two, gridsize, boxlen, Nbin):
+def cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=None):
     """
     Input fields must be Fourier transforms of the true fields.
     Note: only valid for real fields! The imaginary parts drop out due to
     the symmetry in the Fourier transforms of real fields.
+    If Nbin is None, a sensible number of bins is automatically calculated.
+    The returned spectrum always has Nbin + 1 elements; the last element
+    contains only the Nyquist component and should be considered very noisy.
 
     TODO: redo this function in c++ to avoid slow Python for-loops.
     """
+    if Nbin is None:
+        Nbin = gridsize
+        # rmax = boxlen/2 * np.sqrt(3)
+        # dmin = boxlen/gridsize
+        # Nbin = int(np.ceil(rmax/dmin))
+
     cross = field_one.real * field_two.real + field_one.imag * field_two.imag
     k = egp.toolbox.k_abs_grid(gridsize, boxlen)
     dk = k.max() / Nbin
+    print k.argmax(), k.max(), k.min(), k[0,0,0]-k[0,0,1], dk
 
-    spec = np.zeros(Nbin)
-    mode = np.zeros(Nbin)
+    spec = np.zeros(Nbin + 1)
+    mode = np.zeros(Nbin + 1)
     for ii in range(gridsize):
         for jj in range(gridsize):
             for kk in range(gridsize/2+1):
-                try:
+                # try:
                     ix_bin = int(k[ii, jj, kk]/dk)
                     spec[ix_bin] += cross[ii, jj, kk]
                     mode[ix_bin] += 1
-                except IndexError as error:
-                    if ix_bin == Nbin:  # k_max, which is always out of bounds
-                        continue
-                    else:
-                        raise error
+                # except IndexError as error:
+                #     if ix_bin == Nbin:  # k_max, which is always out of bounds
+                #         continue
+                #     else:
+                #         raise error
 
     spec /= mode
 
-    kbins = np.arange(0, k.max(), dk)
+    kbins = np.arange(0, k.max()+dk, dk)
 
     return kbins, spec
 
 
-def power_spectrum(field, gridsize, boxlen, Nbin):
-    return cross_correlation(field, field, gridsize, boxlen, Nbin)
+def power_spectrum(field, gridsize, boxlen, Nbin=None):
+    return cross_correlation(field, field, gridsize, boxlen, Nbin=Nbin)
 
 
-def norm_cross_correlation(field_one, field_two, gridsize, boxlen, Nbin):
+def norm_cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=None):
     """
     Essentially returns a cosine similarity between the two fields (in Fourier
     space).
     """
-    kG, G = cross_correlation(field_one, field_two, gridsize, boxlen, Nbin)
-    kP1, P1 = power_spectrum(field_one, gridsize, boxlen, Nbin)
-    kP2, P2 = power_spectrum(field_two, gridsize, boxlen, Nbin)
+    kG, G = cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=Nbin)
+    kP1, P1 = power_spectrum(field_one, gridsize, boxlen, Nbin=Nbin)
+    kP2, P2 = power_spectrum(field_two, gridsize, boxlen, Nbin=Nbin)
     return kG, G/np.sqrt(P1)/np.sqrt(P2)
 
 
