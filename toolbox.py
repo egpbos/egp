@@ -493,7 +493,6 @@ def cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=None):
     cross = field_one.real * field_two.real + field_one.imag * field_two.imag
     k = egp.toolbox.k_abs_grid(gridsize, boxlen)
     dk = k.max() / Nbin
-    print k.argmax(), k.max(), k.min(), k[0,0,0]-k[0,0,1], dk
 
     spec = np.zeros(Nbin + 1)
     mode = np.zeros(Nbin + 1)
