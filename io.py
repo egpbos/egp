@@ -790,7 +790,6 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     
     # Values for HEAD
     N2 = len(pos) # Number of DM particles (Npart[1], i.e. the 2nd entry)
-    print N2
     
     # Make HEAD and write to file
     toFileDesc = struct.pack(BS['desc'], 8L, 'HEAD', 264L, 8L)
@@ -1036,6 +1035,8 @@ cd %(run_dir_base)s
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
 """
 
+gadget_run_script_texts["local"] = gadget_run_script_texts["kapteyn"]
+
 def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 86400, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
     """Arguments:
     boxlen (Mpc h^-1)
@@ -1062,7 +1063,7 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
                               and no run directory will be made. This is useful
                               when you need to run on a remote location and
                               need to copy the files to there first.
-    run_location: 'kapteyn' or 'millipede'
+    run_location: 'kapteyn', 'millipede' or 'local' (same as kapteyn)
     mem (GB): required amount of memory for millipede runs.
     nodes: number of nodes (millipede).
     queue: millipede queue; choose between nodes, quads, short, etc.
@@ -1108,7 +1109,7 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     # For millipede runs:
     walltime = time_limit_cpu/3600
     
-    if resubmit_on and (run_location=='kapteyn'):
+    if resubmit_on and (run_location in ('kapteyn', 'local')):
         resubmit_command = restart_script_filename
     if resubmit_on and (run_location=='millipede'):
         resubmit_command = run_dir_base+'/'+run_name+'_qsub_restart.sh'
@@ -1191,6 +1192,8 @@ subfind_run_script_texts["kapteyn"] = """\
 cd %(run_dir_base)s
 """
 
+subfind_run_script_texts["local"] = subfind_run_script_texts["kapteyn"]
+
 subfind_run_script_lastline ={}
 
 subfind_run_script_lastline["millipede"] = """\
@@ -1200,6 +1203,8 @@ mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s 3 %(snap)s
 subfind_run_script_lastline["kapteyn"] = """\
 nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s 3 %(snap)s
 """
+
+subfind_run_script_lastline["local"] = subfind_run_script_lastline["kapteyn"]
 
 def prepare_gadget_subfind_run(run_dir_base, run_name, snaps, nproc, time_limit_cpu = 864000, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', nodes = 1, queue = 'nodes', wait_on = None):
     """
@@ -1576,3 +1581,22 @@ def saveVoidsAsIfrit(filename, rhoin):
     fwrite(ifritfile, rho.size, rho.ravel())
     ifritfile.write(struct.pack("=I", 4*rho.size))
     ifritfile.close()
+
+
+# Output to DTFEtext
+def pos_to_dtfe_txt(fn_txt, pos, boxlen):
+    """
+    `pos` shape should be (Npart, 3).
+    """
+    Npart = pos.shape[0]
+    xw = np.column_stack((pos, np.ones(Npart)))
+    header = "%i\n0 %i 0 %i 0 %i" % (Npart, boxlen, boxlen, boxlen)
+    np.savetxt(fn_txt, xw, header=header, comments="", fmt="%10.5f")
+
+
+def get_DTFE_grid(fn, gridsize):
+    """Also converts the DTFE density to an overdensity!"""
+    density = np.memmap(fn, dtype='float32')[3:].reshape(gridsize, gridsize,
+                                                         gridsize)
+    overdensity = density/density.mean() - 1
+    return overdensity
