@@ -854,7 +854,9 @@ def load_raw_density_field(filename, gridsize, boxlen, dtype):
 
 
 # global variables (used in next function):
-gadget_par_file_text = """\
+gadget_par_file_text = {}
+
+gadget_par_file_text[2] = """\
 %%%%%%%%%% In-/output
 InitCondFile          %(ic_file)s
 OutputDir           %(output_dir)s
@@ -870,12 +872,6 @@ Omega0                  %(omegaM)f
 OmegaLambda           %(omegaL)f
 OmegaBaryon           %(omegaB)f
 HubbleParam           %(hubble)f   ; only needed for cooling
-
-
-%%%%%%%%%% DE (GadgetXXL)
-DarkEnergyFile          %(DE_file)s
-%%DarkEnergyParam        -0.4
-VelIniScale                1.0
 
 
 %%%%%%%%%% Softening lengths
@@ -938,7 +934,6 @@ RestartFile       restart
 
 %%%% Misc. options
 ComovingIntegrationOn 1
-CoolingOn 0
 PeriodicBoundariesOn   1
 
 
@@ -979,6 +974,19 @@ UnitLength_in_cm         3.085678e21        ;  1.0 kpc /h
 UnitMass_in_g            1.989e43           ;  solar masses
 UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
 GravityConstantInternal  0
+"""
+
+gadget_par_file_text[3] = gadget_par_file_text[2] + """
+
+
+%%%%%%%%%% DE (GadgetXXL)
+DarkEnergyFile          %(DE_file)s
+%%DarkEnergyParam        -0.4
+VelIniScale                1.0
+
+
+%%%% Misc. Gadget-3 options
+CoolingOn 0
 
 
 %%%% Quantities for star formation and feedback
@@ -1007,6 +1015,8 @@ Shock_DeltaDecayTimeMax  0.02
 ErrTolThetaSubfind       0.1
 DesLinkNgb          32
 """
+
+
 
 gadget_run_script_texts = {}
 
@@ -1037,7 +1047,19 @@ nice %(nice)s mpiexec -np %(nproc)i %(gadget_executable)s %(parameter_filename)s
 
 gadget_run_script_texts["local"] = gadget_run_script_texts["kapteyn"]
 
-def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir_base, run_name, nproc, output_list_filename = 'outputs_main.txt', DE_file = 'wdHdGHz_LCDM_bosW7.txt', ic_format = 2, time_max = 1.0, softening_factor = 22.5*768/300000., time_limit_cpu = 86400, resubmit_on = 1, resubmit_command = '0', cpu_time_bet_restart_file = 3600, part_alloc_factor = 1.6, tree_alloc_factor = 0.7, buffer_size = 300, gadget_executable = "/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512", nice = "+0", save_dir = None, run_location = 'kapteyn', mem = 23, nodes = 1, queue = 'nodes'):
+
+def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
+                       run_dir_base, run_name, nproc,
+                       output_list_filename='outputs_main.txt',
+                       DE_file='wdHdGHz_LCDM_bosW7.txt', ic_format=2,
+                       time_max=1.0, softening_factor=22.5*768/300000.,
+                       time_limit_cpu=86400, resubmit_on=1,
+                       resubmit_command='0', cpu_time_bet_restart_file=3600,
+                       part_alloc_factor=1.6, tree_alloc_factor=0.7,
+                       buffer_size=300,
+                       gadget_executable="/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512",
+                       nice="+0", save_dir=None, run_location='kapteyn',
+                       mem=23, nodes=1, queue='nodes', gadget_version=3):
     """Arguments:
     boxlen (Mpc h^-1)
     cosmo (Cosmology object)
@@ -1126,7 +1148,7 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin, run_dir
     
     ### Open and write to files:
     global gadget_par_file_text
-    par_file_text = gadget_par_file_text % locals()
+    par_file_text = gadget_par_file_text[gadget_version] % locals()
     
     with open(parameter_filename, 'w') as par_file:
         par_file.write(par_file_text)
