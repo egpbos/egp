@@ -1119,6 +1119,9 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
         restart_script_filename = save_dir+'/'+run_name+'_restart.sh'
     
     output_list_filename = run_dir_base+'/'+output_list_filename
+    if not os.path.isfile(output_list_filename):  # check if it exists
+        print "output_list file doesn't exist yet, creating an empty one!"
+        open(output_list_filename, 'a').close()
     DE_file = run_dir_base+'/'+DE_file
     
     time_begin = 1./(redshift_begin+1)
@@ -1616,9 +1619,71 @@ def pos_to_dtfe_txt(fn_txt, pos, boxlen):
     np.savetxt(fn_txt, xw, header=header, comments="", fmt="%10.5f")
 
 
-def get_DTFE_grid(fn, gridsize):
+# def get_DTFE_grid(fn, gridsize):
+#     """Also converts the DTFE density to an overdensity!"""
+#     density = np.memmap(fn, dtype='float32')[3:].reshape(gridsize, gridsize,
+#                                                          gridsize)
+#     overdensity = density/density.mean() - 1
+#     return overdensity
+def get_DTFE_grid(fn):
     """Also converts the DTFE density to an overdensity!"""
+    gridsize = np.memmap(fn, dtype='int32')[0]
     density = np.memmap(fn, dtype='float32')[3:].reshape(gridsize, gridsize,
                                                          gridsize)
     overdensity = density/density.mean() - 1
     return overdensity
+
+
+# converters
+def barcode_to_nexus(fn_barcode, fn_nexus, gridSize, boxLength, omega0, hubble=0.702):
+    import density as NEXUSdensity  # from Marius' NEXUS python_inport scripts
+
+    optionsDesc = "barcode_to_nexus(" + ', '.join((fn_barcode, fn_nexus, str(gridSize),
+                                                   str(boxLength), str(omega0), str(hubble))) + ")"
+
+    # read the binary raw file
+    dataSize = gridSize * gridSize * gridSize
+    data = np.fromfile( fn_barcode, np.float64, dataSize )
+    
+    rho = data.astype('float32') + 1
+
+    #fill in a density header file
+    header = NEXUSdensity.DensityHeader()
+    header.gridSize[:] = gridSize
+    header.totalGrid = np.uint64(dataSize)
+    header.fileType  = np.int32( NEXUSdensity.DENSITY_FILE )
+    header.box[:] = 0., boxLength, 0., boxLength, 0., boxLength
+    header.Omega0  = np.float64( omega0 )
+    header.OmegaLambda  = np.float64( 1. - omega0 )
+    header.HubbleParam  = np.float64( hubble )
+    header.fill.put( range(len(optionsDesc)), optionsDesc)
+
+    # write the data
+    NEXUSdensity.writeDensityData( fn_nexus, header, rho)
+
+
+def DTFE_to_nexus(fn_dtfe, fn_nexus, boxLength, omega0, hubble=0.702):
+    import density as NEXUSdensity  # from Marius' NEXUS python_inport scripts
+
+    optionsDesc = "DTFE_to_nexus(" + ', '.join((fn_dtfe, fn_nexus,
+                                                str(boxLength), str(omega0),
+                                                str(hubble))) + ")"
+
+    # read the binary raw file
+    gridSize = np.memmap(fn_dtfe, dtype='int32')[0]
+    dataSize = gridSize * gridSize * gridSize
+    rho = np.memmap(fn_dtfe, dtype='float32', offset=3*4, mode='r')
+
+    # fill in a density header file
+    header = NEXUSdensity.DensityHeader()
+    header.gridSize[:] = gridSize
+    header.totalGrid = np.uint64(dataSize)
+    header.fileType = np.int32(NEXUSdensity.DENSITY_FILE)
+    header.box[:] = 0., boxLength, 0., boxLength, 0., boxLength
+    header.Omega0 = np.float64(omega0)
+    header.OmegaLambda = np.float64(1. - omega0)
+    header.HubbleParam = np.float64(hubble)
+    header.fill.put(range(len(optionsDesc)), optionsDesc)
+
+    # write the data
+    NEXUSdensity.writeDensityData(fn_nexus, header, rho)
