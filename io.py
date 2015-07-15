@@ -19,6 +19,7 @@ except:
 import cPickle as pickle
 import egp.toolbox, egp.icgen, egp.basic_types, egp.cosmology
 import tarfile
+import MMF
 
 
 # constants
@@ -1687,3 +1688,25 @@ def DTFE_to_nexus(fn_dtfe, fn_nexus, boxLength, omega0, hubble=0.702):
 
     # write the data
     NEXUSdensity.writeDensityData(fn_nexus, header, rho)
+
+
+def get_nexus_output(dn, verbose=False):
+    data = {}
+    data['all'] = MMF.readMMFData(dn + '/all_clean.MMF', VERBOSE=verbose)
+    data['fila_clean'] = MMF.readMMFData(dn + '/fila_clean.MMF',
+                                         VERBOSE=verbose)
+    data['fila_maxResponse'] = MMF.readMMFData(dn + '/fila_maxResponse.MMF',
+                                               VERBOSE=verbose)
+    data['wall_clean'] = MMF.readMMFData(dn + '/wall_clean.MMF',
+                                         VERBOSE=verbose)
+    data['wall_maxResponse'] = MMF.readMMFData(dn + '/wall_maxResponse.MMF',
+                                               VERBOSE=verbose)
+    data['node_clean'] = MMF.readMMFData(dn + '/node_clean.MMF',
+                                         VERBOSE=verbose)
+    data['node_maxResponse'] = MMF.readMMFData(dn + '/node_maxResponse.MMF',
+                                               VERBOSE=verbose)
+
+    headers = {key: value[0] for key, value in data.iteritems()}
+    grids = {key: value[1].reshape(value[0].gridSize) for key, value in
+             data.iteritems()}
+    return grids, headers
