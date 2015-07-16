@@ -10,7 +10,7 @@ Copyright (c) 2012. All rights reserved.
 """
 
 # imports
-import struct, os, stat, numpy as np
+import struct, os, stat, datetime, numpy as np
 try:
     import pyublas
     import crunch
@@ -783,15 +783,20 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     # here: http://www.mpa-garching.mpg.de/gadget/gadget-list/0113.html), but
     # what we want is the (old) internal Gadget velocity u (see manual p. 32).
     vel *= np.sqrt(1+redshift)
-    
+
+    try:
+        os.makedirs(os.path.dirname(filename))
+    except OSError:
+        pass
+
     f = open(filename,'wb')
     BS = {}
     BS['desc'] = '=I4sII'
     BS['HEAD'] = '=I6I6dddii6iiiddddii6ii60xI'
-    
+
     # Values for HEAD
     N2 = len(pos) # Number of DM particles (Npart[1], i.e. the 2nd entry)
-    
+
     # Make HEAD and write to file
     toFileDesc = struct.pack(BS['desc'], 8L, 'HEAD', 264L, 8L)
 
@@ -1060,7 +1065,8 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
                        buffer_size=300,
                        gadget_executable="/net/heckmann/data/users/pbos/sw/code/gadget/gadget3Sub_512/P-Gadget3_512",
                        nice="+0", save_dir=None, run_location='kapteyn',
-                       mem=23, nodes=1, queue='nodes', gadget_version=3):
+                       mem=23, nodes=1, queue='nodes', gadget_version=3,
+                       remote=False, ic_dir="/ICs", softlink=None):
     """Arguments:
     boxlen (Mpc h^-1)
     cosmo (Cosmology object)
@@ -1089,105 +1095,229 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
     run_location: 'kapteyn', 'millipede' or 'local' (same as kapteyn)
     mem (GB): required amount of memory for millipede runs.
     nodes: number of nodes (millipede).
-    queue: millipede queue; choose between nodes, quads, short, etc.
-    
+    queue: for millipede: queue; choose between nodes, quads, short, etc.
+           for kapteyn: machine; e.g. virgo10, hathor, etc.
+    gadget_version: 2 or 3; 3 needs more options in the parameter file
+    remote: True/False; when True, it returns instructions on how to copy the
+            files to the remote location and run the code there.
+            Note: when run_location is millipede, remote is automatically True.
+    ic_dir: usually, the ICs are put in a subdirectory of run_dir_base and
+            save_dir. This specifies the subpath.
+    softlink: create softlinks to the run_name. Can be useful for shorthand.
+              When used, the scripts and parameter files are run using the
+              links, not the real paths. Note: is alternative to run_name.
+              Default: None.
+
     Note that run_dir_base is not the directory where the simulation will be
     run; that is run_dir_base+run_name; the run_name directory will be created
     by this function.
+
+    Filenames/paths in Gadget 2 can be at most 100 characters. If longer names
+    are given, a (shorter) softlink will be used. The link will be placed at
+    run_dir_base. This could still lead to problems if the run_dir_base is too
+    long, so be alert.
     """
+
+    #
+    #
+    # DO INPUT PARAMETER CONSISTENCY CHECKS
+    #
+    #
+
+    if run_location == 'millipede':
+        remote = True
+    if remote and (save_dir is None):
+        raise Exception("When remote is True, a local save_dir must be given!")
+    if not remote and (save_dir is not None):
+        raise Exception("When remote is False, save_dir must be None, data " +
+                        "will be saved in run_dir_base!")
+    if not remote:
+        save_dir = run_dir_base
+
+    #
+    #
+    # DETERMINE PARAMETERS
+    #
+    #
+
+    # Variables commented with "PARAMETER" are used in the par-file. Variables
+    # with "RUN SCRIPT" go in the run script.
+
+    # TODO: make a parameter/run script dictionary, that will make this
+    #       clearer.
+
     # Length units are converted to kpc h^-1, the default Gadget unit.
-    boxlen *= 1000
-    
-    output_dir = run_dir_base+'/'+run_name
-    if not save_dir:
+    boxlen *= 1000  # PARAMETER
+
+    output_dir = run_dir_base+'/'+run_name  # PARAMETER
+    if not remote:  # local run -> output directory must be created
         try:
             os.mkdir(output_dir)
         except OSError:
-            print "Warning: output directory already exists. This run might be overwriting previous runs!"
-    
-    omegaM = cosmo.omegaM
-    omegaL = cosmo.omegaL
-    omegaB = cosmo.omegaB
-    hubble = cosmo.h
-    
-    if not save_dir:
-        parameter_filename = run_dir_base+'/'+run_name+'.par'
-        run_script_filename = run_dir_base+'/'+run_name+'.sh'
-        restart_script_filename = run_dir_base+'/'+run_name+'_restart.sh'
-    else:
-        parameter_filename = save_dir+'/'+run_name+'.par'
-        run_script_filename = save_dir+'/'+run_name+'.sh'
-        restart_script_filename = save_dir+'/'+run_name+'_restart.sh'
-    
-    output_list_filename = run_dir_base+'/'+output_list_filename
-    if not os.path.isfile(output_list_filename):  # check if it exists
-        print "output_list file doesn't exist yet, creating an empty one!"
-        open(output_list_filename, 'a').close()
-    DE_file = run_dir_base+'/'+DE_file
-    
-    time_begin = 1./(redshift_begin+1)
-    
+            print "Warning: output directory already exists. This run might" +\
+                  " be overwriting previous runs!"
+
+    omegaM = cosmo.omegaM  # PARAMETER
+    omegaL = cosmo.omegaL  # PARAMETER
+    omegaB = cosmo.omegaB  # PARAMETER
+    hubble = cosmo.h  # PARAMETER
+
+    parameter_filename = save_dir+'/'+run_name+'.par'  # RUN SCRIPT later on!
+    run_script_filename = save_dir+'/'+run_name+'.sh'
+    restart_script_filename = save_dir+'/'+run_name+'_restart.sh'
+
+    output_list_fn_save_dir = save_dir+'/'+output_list_filename
+    if not os.path.isfile(output_list_fn_save_dir):  # check if it exists
+        print "output_list file doesn't exist yet in save_dir, creating an empty one!"
+        open(output_list_fn_save_dir, 'a').close()
+    output_list_filename = run_dir_base+'/'+output_list_filename  # PARAMETER
+    DE_file = run_dir_base+'/'+DE_file  # PARAMETER
+
+    time_begin = 1./(redshift_begin+1)  # PARAMETER
+
     # Softening: based on Dolag's ratios
     # default ~ 1/17.3 of the mean ipd
-    softening = softening_factor*boxlen/gridsize
-    softening_max_phys = softening/3
-    
+    softening = softening_factor*boxlen/gridsize  # PARAMETER
+    softening_max_phys = softening/3  # PARAMETER
+
     # For millipede runs:
-    walltime = time_limit_cpu/3600
-    
+    walltime = time_limit_cpu/3600  # RUN SCRIPT
+
     if resubmit_on and (run_location in ('kapteyn', 'local')):
-        resubmit_command = restart_script_filename
+        resubmit_command = restart_script_filename  # PARAMETER
     if resubmit_on and (run_location=='millipede'):
-        resubmit_command = run_dir_base+'/'+run_name+'_qsub_restart.sh'
+        resubmit_command = run_dir_base+'/'+run_name+'_qsub_restart.sh'  # PARAMETER
         local_filename = save_dir+'/'+run_name+'_qsub_restart.sh'
         with open(local_filename, 'w') as qresub_file:
             qresub_file.write("#!/usr/bin/env bash\n")
             # HIER KUN JE DINGEN TOEVOEGEN OM BESTANDEN LOKAAL (OP DE NODE) TE rsync'EN EN rm'EN!
             qresub_file.write("qsub %(run_dir_base)s/%(run_name)s_restart.sh -q %(queue)s\n" % locals())
         os.chmod(local_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-    
-    ppn = nproc/nodes
+
+    ppn = nproc/nodes  # RUN SCRIPT
     # N.B.: make sure that nproc and nodes fit with the queue!
     # 12 max. ppn for nodes queue, 24 max. ppn for quads queue.
-    
-    ### Open and write to files:
+
+    #
+    #
+    # WRITE TO FILES
+    #
+    #
+
+    #
+    # Softlinks
+    #
+
+    # Before we write (especially to the parameter file), we need to decide
+    # whether we're going to use softlinks, or not. The lengths to check are
+    # based on the code, in which a few strings with maximum length 100 are
+    # defined. In our case, the longest one based on the output_dir is the
+    # timings file (assuming there aren't more than 1000 cores so that the
+    # restart files don't become longer than restart.999 and that there aren't
+    # more than 999999 snapshots, so snap_999999 is the longest).
+    # NOTE: if ever the timings or restart filenames become variable in
+    #       gadget_par_file_text, then this must be reevaluated!
+    # NOTE 2: output_list_filename and DE_file are not checked, take care of
+    #         them yourself (usually they don't have long run_names in them).
+    fns_to_check = [ic_file, output_dir + "timings.txt", resubmit_command]
+    if any([len(fn) > 100 for fn in fns_to_check]) or softlink is not None:
+        if softlink is None:
+            now = datetime.datetime.now()
+            ts = int((now - datetime.datetime(1970, 1, 1)).total_seconds())
+            softlink = str(ts)
+        # true file names:
+        ic_file_true = ic_file
+        output_dir_true = output_dir
+        resubmit_command_true = resubmit_command
+        # softlink names:
+        ic_file_ln = os.path.dirname(ic_file) + "/" + softlink
+        output_dir_ln = run_dir_base + '/' + softlink
+        resubmit_command_ln = os.path.dirname(resubmit_command) +\
+            "/" + softlink + "r.sh"
+        # parameters for in parameter file:
+        ic_file = ic_file_ln
+        output_dir = output_dir_ln
+        resubmit_command = resubmit_command_ln
+    else:
+        ic_file_true = ic_file
+
+    #
+    # Open and write to files
+    #
+
+    # Parameter file
     global gadget_par_file_text
     par_file_text = gadget_par_file_text[gadget_version] % locals()
-    
+
     with open(parameter_filename, 'w') as par_file:
         par_file.write(par_file_text)
-    
-    if save_dir: # parameter_filename is used in the run_script, so needs to be localized!
-        parameter_filename = run_dir_base+'/'+run_name+'.par'
-    
+
+    if remote:  # parameter_filename is used in the run_script, so needs to be localized!
+        parameter_filename = run_dir_base+'/'+run_name+'.par'  # RUN SCRIPT
+
+    # Run script
     global gadget_run_script_texts
     run_script_text = gadget_run_script_texts[run_location] % locals()
-    
+
     with open(run_script_filename, 'w') as run_script:
         run_script.write(run_script_text)
     os.chmod(run_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-    
+
+    # Restart script
     run_name += "_restart"
     run_script_text = gadget_run_script_texts[run_location] % locals()
-    
+
     with open(restart_script_filename, 'w') as restart_script:
         restart_script.write(run_script_text[:-1]+" 1\n")
     os.chmod(restart_script_filename, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-    
+
     run_name = run_name[:-8] # _restart taken off again
-    
-    if run_location=='millipede':
-        ic_file_local = '/Users/users/pbos/dataserver/sims/ICs/'+os.path.basename(ic_file)
+
+    # Make links for local run
+    if not remote:
+        os.symlink(ic_file_true, ic_file_ln)
+        os.symlink(output_dir_true, output_dir_ln)
+        os.symlink(resubmit_command_true, resubmit_command_ln)
+
+    #
+    #
+    # GIVE RUNNING INSTRUCTIONS
+    #
+    #
+
+    if remote:  # run_location=='millipede':
+        ic_file_local = save_dir + ic_dir + "/" +\
+                        os.path.basename(ic_file_true)
         run_dir = run_dir_base+'/'+run_name
-        run_instructions = "# Copy the files to millipede with the following commands:\n"+\
-                           "scp %(ic_file_local)s millipede:%(run_dir_base)s/ICs\n" % locals()+\
-                           "scp %(save_dir)s/%(run_name)s*.{sh,par} millipede:%(run_dir_base)s\n" % locals()+\
-                           "ssh millipede mkdir %(run_dir)s\n" % locals()+\
-                           "# Start the run on millipede in the %(queue)s queue using:\n" % locals()+\
-                           "GADGETRUNID=`ssh millipede qsub %(run_dir_base)s/%(run_name)s.sh -q %(queue)s`\n" % locals()+\
-                           "echo $GADGETRUNID"
-        print("Check status of running jobs with:\n"+\
-              "ssh millipede qstat -u p252012")
+        run_instructions = (
+            "# Copy the files to %(run_location)s with the following commands:\n" +
+            "scp %(ic_file_local)s %(run_location)s:%(run_dir_base)s%(ic_dir)s\n" +
+            "scp %(save_dir)s/%(run_name)s*.{sh,par} %(run_location)s:%(run_dir_base)s\n" +
+            "ssh %(run_location)s mkdir %(run_dir)s\n") % locals()
+        if softlink is not None:
+            run_instructions += (
+                "# Make softlinks on the remote location:\n" +
+                "ssh %(run_location)s ln -s %(ic_file_true)s " +
+                "%(ic_file_ln)s\n" +
+                "ssh %(run_location)s ln -s %(output_dir_true)s " +
+                "%(output_dir_ln)s\n" +
+                "ssh %(run_location)s ln -s %(resubmit_command_true)s " +
+                "%(resubmit_command_ln)s\n"
+                ) % locals()
+        if run_location == 'kapteyn':
+            run_instructions += (
+                "# Start the run on kapteyn on machine %(queue)s using:\n" +
+                "ssh kapteyn ssh %(queue)s " +
+                "screen -S %(run_name)s -d -m %(run_dir_base)s/%(run_name)s.sh"
+                ) % locals()
+        if run_location == 'millipede':
+            run_instructions += (
+                "# Start the run on millipede in the %(queue)s queue using:\n" +
+                "GADGETRUNID=`ssh millipede qsub %(run_dir_base)s/%(run_name)s.sh -q %(queue)s`\n" +
+                "echo $GADGETRUNID") % locals()
+
+            print(("Check status of running jobs with:\n" +
+                   "ssh millipede qstat -u p252012") % locals())
         return run_instructions
     else:
         return "Time to run!"
