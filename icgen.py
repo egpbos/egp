@@ -73,9 +73,18 @@ class Cosmology(object):
             self.rth, self.sigma0 = 8.0, 0.809
             self.w_0, self.w_a = -1.0, 0.0
             self.primn = 0.963
+        elif choice.lower() == "wmap7max":
+            self.omegaM, self.omegaL, self.omegaR = 0.272, 0.728, 0.0
+            self.rth = 8.0
+            self.w_0, self.w_a = -1.0, 0.0
+            # few adjustments to wmap7 by Paco in Barcode values:
+            self.omegaB = 0.046
+            self.h = 0.702
+            self.sigma0 = 0.807
+            self.primn = 0.961
         self.bias, self.TCMB = 1.0, 2.7
         self.trans = trans
-    
+
     def __str__(self):
         out = ""
         out +=   "Omega_matter:                     " + str(self.omegaM)

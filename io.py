@@ -1308,7 +1308,9 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
             run_instructions += (
                 "# Start the run on kapteyn on machine %(queue)s using:\n" +
                 "ssh kapteyn ssh %(queue)s " +
-                "screen -S %(run_name)s -d -m %(run_dir_base)s/%(run_name)s.sh"
+                "screen -S %(run_name)s -d -m " +
+                "'%(run_dir_base)s/%(run_name)s.sh; " +
+                "touch %(run_dir_base)s/%(run_name)s/gadget_done'"
                 ) % locals()
         if run_location == 'millipede':
             run_instructions += (
@@ -1821,20 +1823,22 @@ def DTFE_to_nexus(fn_dtfe, fn_nexus, boxLength, omega0, hubble=0.702):
 
 
 def get_nexus_output(dn, verbose=False):
+    get_dict = {
+        'all': 'all_clean.MMF',
+        'fila_clean': 'fila_clean.MMF',
+        'fila_maxResponse': 'fila_maxResponse.MMF',
+        'wall_clean': 'wall_clean.MFF',
+        'wall_maxResponse': 'wall_maxResponse.MMF',
+        'node_clean': 'node_clean.MFF',
+        'node_maxResponse': 'node_maxResponse.MMF'
+    }
+    return get_nexus_output_specified(dn, get_dict, verbose=verbose)
+
+
+def get_nexus_output_specified(dn, get_dict, verbose=False):
     data = {}
-    data['all'] = MMF.readMMFData(dn + '/all_clean.MMF', VERBOSE=verbose)
-    data['fila_clean'] = MMF.readMMFData(dn + '/fila_clean.MMF',
-                                         VERBOSE=verbose)
-    data['fila_maxResponse'] = MMF.readMMFData(dn + '/fila_maxResponse.MMF',
-                                               VERBOSE=verbose)
-    data['wall_clean'] = MMF.readMMFData(dn + '/wall_clean.MMF',
-                                         VERBOSE=verbose)
-    data['wall_maxResponse'] = MMF.readMMFData(dn + '/wall_maxResponse.MMF',
-                                               VERBOSE=verbose)
-    data['node_clean'] = MMF.readMMFData(dn + '/node_clean.MMF',
-                                         VERBOSE=verbose)
-    data['node_maxResponse'] = MMF.readMMFData(dn + '/node_maxResponse.MMF',
-                                               VERBOSE=verbose)
+    for key, fn in get_dict.iteritems():
+        data[key] = MMF.readMMFData(dn + '/' + fn, VERBOSE=verbose)
 
     headers = {key: value[0] for key, value in data.iteritems()}
     grids = {key: value[1].reshape(value[0].gridSize) for key, value in
