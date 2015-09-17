@@ -358,7 +358,7 @@ class InterpolatedPowerSpectrum(PowerSpectrum):
     def P(self, k):
         shape = k.shape
         k_flat = k.reshape(np.prod(shape))
-        return self.amplitude * self.interpolator(k_flat).reshape(shape)
+        return self.interpolator(k_flat).reshape(shape)
 
 
 class EstimatedPowerSpectrum(InterpolatedPowerSpectrum):
