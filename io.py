@@ -1306,11 +1306,11 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
                 ) % locals()
         if run_location == 'kapteyn':
             run_instructions += (
-                "# Start the run on kapteyn on machine %(queue)s using:\n" +
-                "ssh kapteyn ssh %(queue)s " +
-                "screen -S %(run_name)s -d -m " +
+                "# Start the run on kapteyn on machine %(queue)s using (set up SSH tunnel to %(queue)s in .ssh/config first!):\n" +
+                "ssh %(queue)s " +
+                "\"screen -S %(run_name)s -d -m bash -c " +
                 "'%(run_dir_base)s/%(run_name)s.sh; " +
-                "touch %(run_dir_base)s/%(run_name)s/gadget_done'"
+                "touch %(run_dir_base)s/%(run_name)s/gadget_done'\""
                 ) % locals()
         if run_location == 'millipede':
             run_instructions += (
