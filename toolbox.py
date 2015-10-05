@@ -513,11 +513,21 @@ def cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=None):
 
     kbins = np.arange(0, k.max()+dk, dk)
 
+    spec = np.ma.masked_where(~(np.isfinite(spec)), spec)
+    kbins = np.ma.masked_where(~(np.isfinite(spec)), kbins)
+
     return kbins, spec
 
 
-def power_spectrum(field, gridsize, boxlen, Nbin=None):
-    return cross_correlation(field, field, gridsize, boxlen, Nbin=Nbin)
+def power_spectrum_real(field, gridsize, boxlen, Nbin=None):
+    return power_spectrum(np.fft.rfftn(field), gridsize, boxlen, Nbin=Nbin)
+
+
+def power_spectrum(field_F, gridsize, boxlen, Nbin=None):
+    """
+    Note: input field_F must be Fourier transform of real field!
+    """
+    return cross_correlation(field_F, field_F, gridsize, boxlen, Nbin=Nbin)
 
 
 def norm_cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=None):
