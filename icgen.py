@@ -100,6 +100,9 @@ class Cosmology(object):
         out += "\nPower spectrum sigma_0:           " + str(self.sigma0)
         return out
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class PowerSpectrum(object):
     """
