@@ -41,3 +41,17 @@ def impl(grid_name, vmin=None, vmax=None, extent=None):
         if type(extent) not in (list, tuple):
             extent = (0, extent, 0, extent)
     implot(eval(grid_name), grid_name, vmin, vmax, extent)
+
+
+def add_shaded_region(line, ax, deviation, deviation_low=None, alpha=0.5):
+    """
+    line: matplotlib line object, which is returned from plot function.
+    If deviation_low is None: use deviation for both upper and lower boundary.
+    """
+    x = line.get_xdata()
+    y = line.get_ydata()
+    if deviation_low is None:
+        deviation_low = deviation
+    shade = ax.fill_between(x, y - deviation_low, y + deviation, alpha=alpha,
+                            color=line.get_color())
+    return shade
