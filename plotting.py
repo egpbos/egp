@@ -47,6 +47,13 @@ def add_shaded_region(line, ax, deviation, deviation_low=None, alpha=0.5):
     """
     line: matplotlib line object, which is returned from plot function.
     If deviation_low is None: use deviation for both upper and lower boundary.
+
+    Note: set the log scale AFTER adding shaded regions when using log plots,
+          otherwise you get strange artefacts when some values are below zero!
+          So don't use loglog or semilogx/y, but just use plot and use
+          set_x/yscale('log') afterwards. Some people also suggest using
+          set_yscale('log', nonposy='clip'); haven't seen the advantage of that
+          myself, but it seems to be fine as well.
     """
     x = line.get_xdata()
     y = line.get_ydata()
