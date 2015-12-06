@@ -1822,15 +1822,15 @@ def DTFE_to_nexus(fn_dtfe, fn_nexus, boxLength, omega0, hubble=0.702):
     NEXUSdensity.writeDensityData(fn_nexus, header, rho)
 
 
-def get_nexus_output(dn, verbose=False):
+def get_nexus_output(dn, verbose=False, name_pre="", name_app=""):
     get_dict = {
-        'all': 'all_clean.MMF',
-        'fila_clean': 'fila_clean.MMF',
-        'fila_maxResponse': 'fila_maxResponse.MMF',
-        'wall_clean': 'wall_clean.MFF',
-        'wall_maxResponse': 'wall_maxResponse.MMF',
-        'node_clean': 'node_clean.MFF',
-        'node_maxResponse': 'node_maxResponse.MMF'
+        'all': '{name_pre}all{name_app}_clean.MMF'.format(**locals()),
+        'fila_clean': '{name_pre}fila{name_app}_clean.MMF'.format(**locals()),
+        'fila_maxResponse': '{name_pre}fila{name_app}_maxResponse.MMF'.format(**locals()),
+        'wall_clean': '{name_pre}wall{name_app}_clean.MMF'.format(**locals()),
+        'wall_maxResponse': '{name_pre}wall{name_app}_maxResponse.MMF'.format(**locals()),
+        'node_clean': '{name_pre}node{name_app}_clean.MMF'.format(**locals()),
+        'node_maxResponse': '{name_pre}node{name_app}_maxResponse.MMF'.format(**locals())
     }
     return get_nexus_output_specified(dn, get_dict, verbose=verbose)
 
