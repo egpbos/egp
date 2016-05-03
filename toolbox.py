@@ -30,6 +30,8 @@ import egp.basic_types
 
 import scipy.optimize # for fitting 1D functions
 
+import contextlib  # for directory switching context manager
+
 
 # constants
 __version__ = "0.3, September 2012"
@@ -167,6 +169,21 @@ def cacheable(cache_key_template = None):
     return closer
 
 
+
+@contextlib.contextmanager
+def tmp_chdir(path):
+    """A context manager which changes the working directory to the given
+    path, and then changes it back to its previous value on exit.
+    From http://code.activestate.com/recipes/576620-changedirectory-context-manager/
+    """
+    prev_cwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev_cwd)
+
+
 # functions
 
 def field_show(field, boxlen, xlabel="y (Mpc)", ylabel="z (Mpc)"):
@@ -278,6 +295,16 @@ def running_mean(arr, window_size=100):
     y = np.convolve(arr, np.ones((window_size,))/window_size, mode='valid')
     return x, y
 
+
+def savefigd(path):
+    import matplotlib.pyplot as plt
+    import os
+
+    try:
+        os.mkdir(os.path.dirname(path))
+    except OSError:
+        pass
+    plt.savefig(path)
 
 
 # Other stuff
