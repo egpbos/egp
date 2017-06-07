@@ -15,7 +15,7 @@ try:
     import pyublas
     import crunch
 except:
-    print "pyublas and egp.crunch not imported!"
+    print("pyublas and egp.crunch not imported!")
 #~ import __builtin__
 
 import re  # for natural sort and reglob
@@ -101,13 +101,13 @@ def cacheable(cache_key_template = None):
                     #~ print "5"
                     cache_key = kwargs.pop('cache_key')
                 except KeyError:
-                    print "Caching activated, but no cache_key given! Will not use cache for this call."
+                    print("Caching activated, but no cache_key given! Will not use cache for this call.")
                     return self.fct(*args, **kwargs)
             try:
                 #~ print "6"
                 return self.cache[cache_key]
             except KeyError:
-                print "Caching result"
+                print("Caching result")
                 #~ print "7"
                 self.cache[cache_key] = self.fct(*args, **kwargs)
                 #~ print "8"
