@@ -6,8 +6,10 @@ toolbox.py
 /toolbox/ module in the /egp/ package.
   
 Created by Evert Gerardus Patrick Bos.
-Copyright (c) 2012-2015. All rights reserved.
+Copyright (c) 2012-2017. All rights reserved.
 """
+
+from __future__ import division
 
 # imports
 import numpy as np
@@ -291,7 +293,7 @@ def reglob(path, exp, invert=False):
 
 
 def running_mean(arr, window_size=100):
-    x = range(window_size/2, len(arr) - window_size + window_size/2 + 1)
+    x = range(window_size // 2, len(arr) - window_size + window_size // 2 + 1)
     y = np.convolve(arr, np.ones((window_size,))/window_size, mode='valid')
     return x, y
 
@@ -407,7 +409,7 @@ def tophat_smooth(densityFourier, r_th, boxlen):
 @cacheable("grid_%s_box_%s")
 def k_abs_grid(gridsize, boxlen):
     """k_abs_grid(gridsize, boxlen)"""
-    halfgrid = gridsize/2
+    halfgrid = gridsize // 2
     dk = 2*np.pi/boxlen
     k12 = np.fft.fftfreq(gridsize, 1/dk/gridsize) # k3 = k12[:halfgrid+1].abs()
     return np.sqrt(k12[:halfgrid+1]**2 + k12[:,np.newaxis]**2 + k12[:,np.newaxis,np.newaxis]**2)
@@ -416,7 +418,7 @@ def k_abs_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")
 def k_i_grid(gridsize, boxlen):
     """k_i_grid(gridsize, boxlen)"""
-    halfgrid = gridsize/2
+    halfgrid = gridsize // 2
     dk = 2*np.pi/boxlen
     kmax = gridsize*dk
     k1, k2, k3 = dk*np.mgrid[0:gridsize, 0:gridsize, 0:halfgrid+1]
@@ -525,7 +527,7 @@ def cross_correlation(field_one, field_two, gridsize, boxlen, Nbin=None):
     mode = np.zeros(Nbin + 1)
     for ii in range(gridsize):
         for jj in range(gridsize):
-            for kk in range(gridsize/2+1):
+            for kk in range(gridsize // 2 + 1):
                 # try:
                     ix_bin = int(k[ii, jj, kk]/dk)
                     spec[ix_bin] += cross[ii, jj, kk]
