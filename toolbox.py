@@ -298,7 +298,7 @@ def running_mean(arr, window_size=100):
     return x, y
 
 
-def savefigd(path, **kwargs):
+def savefigd(path, fig=None, **kwargs):
     import matplotlib.pyplot as plt
     import os
 
@@ -306,7 +306,11 @@ def savefigd(path, **kwargs):
         os.mkdir(os.path.dirname(path))
     except OSError:
         pass
-    plt.savefig(path, **kwargs)
+
+    if fig is None:
+        plt.savefig(path, **kwargs)
+    else:
+        fig.savefig(path, **kwargs)
 
 
 # Other stuff
