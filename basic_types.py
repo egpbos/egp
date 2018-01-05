@@ -119,6 +119,12 @@ class Field(object):
     If you manually set only one of the two, the other will automatically be
     calculated once it is called upon. If you set both, no automatic checks are
     done, so make sure that the fields are the correct corresponding ones!
+
+    The class overrides __add__ and __sub__, since these are invariant to the
+    Fourier transformation. Multiplication is different in true and Fourier
+    space, so we have to be more careful there. We chose __mul__ to do the
+    multiplication in true space and __matmul__ (the @ operator) to be in
+    Fourier space. Note: __matmul__ makes the class Python 3 only.
     """
     def __init__(self, true=None, fourier=None):
         if np.any(true):
@@ -170,7 +176,7 @@ class Field(object):
         except AttributeError:
             self._periodic = PeriodicArray(self.t)
             return self._periodic
-    
+
     def show(self, xlabel="x (Mpc)", ylabel="y (Mpc)"):
         """
         Plot a 2D field slice with the right axes on the right side for it to make
@@ -189,6 +195,25 @@ class Field(object):
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.colorbar()
+
+    def __add__(self, other):
+        return Field(true=(self.t + other.t))
+
+    def __sub__(self, other):
+        return Field(true=(self.t - other.t))
+
+    def __mul__(self, other):
+        return Field(true=(self.t * other.t))
+
+    def __matmul__(self, other):
+        return Field(fourier=(self.f * other.f))
+
+    def subvolve(self, other):
+        """
+        calculate A - A*B, i.e. subtract the convolution of A and B from A, leaving
+        us with the "subvolution" of A with B
+        """
+        return self - self @ other
 
 
 class VectorField(object):
