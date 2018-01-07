@@ -206,14 +206,34 @@ class Field(object):
         return Field(true=(self.t * other.t))
 
     def __matmul__(self, other):
-        return Field(fourier=(self.f * other.f))
+        size = self.f.shape[0] ** 3
+        return Field(fourier=(self.f * other.f * size))
 
     def subvolve(self, other):
         """
         calculate A - A*B, i.e. subtract the convolution of A and B from A, leaving
         us with the "subvolution" of A with B
         """
-        return self - self @ other
+        return self - (self @ other)
+
+
+def test_Field_matmul():
+    """
+    A convolution of f(x) with a "Kronecker delta" should give f(x).
+    """
+    N = 10
+    kronecker_raw = np.ones((N, N, N))
+    a_raw = np.random.rand(N, N, N)
+
+    kronecker = Field(true=kronecker_raw)
+    a = Field(true=a_raw)
+
+    b = a * kronecker
+
+    # print(a.t)
+    # print(b.t)
+
+    assert(np.allclose(a.t, b.t))
 
 
 class VectorField(object):
