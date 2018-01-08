@@ -28,20 +28,24 @@ class DensityField(egp.basic_types.Field):
 
     :param boxlen: A density field must have a physical size to be meaningful.
 
-    :param raw_type: string that specifies the type of input density given to initialize the DensityField. This allows conversion to the correct internal units. Options are:
+    :param input_type: string that specifies the type of input density given to
+    initialize the DensityField. This allows conversion to the correct internal
+    units. Options are:
     - 'overdensity' (default): input in units of the critical density, but minus
       one, so that empty space has value -1 and 0 is the mean density.
     - 'SI': input in SI units, h^2 kg m^{-3}.
     - 'cosmology': input in cosmological density units, h^2 Msun Mpc^-3.
     - 'critical': input already in internal units, no conversion.
+
+    :param **kwargs: Remaining kwargs are passed on to the Field initializer.
     """
 
-    def __init__(self, boxlen, raw_type='overdensity', **kwargs):
+    def __init__(self, boxlen, input_type='overdensity', **kwargs):
         self.boxlen = boxlen
 
         raw_field = egp.basic_types.Field(**kwargs)
         field_t = raw_field.t
-        if raw_type == 'overdensity':
+        if input_type == 'overdensity':
             # sanity checks:
             if np.any(field_t < -1):
                 raise Exception("overdensity fields should not have values below -1!")
@@ -52,23 +56,23 @@ class DensityField(egp.basic_types.Field):
 
             # transform to internal units:
             field_t += 1
-        elif raw_type == 'SI':
+        elif input_type == 'SI':
             # sanity checks:
             if np.any(field_t < 0):
                 raise Exception("density fields should not have values below 0!")
             # transform to internal units:
             rho_c = egp.cosmology.critical_density(G=egp.cosmology.gravitational_constant_SI)
             field_t /= rho_c
-        elif raw_type == 'cosmology':
+        elif input_type == 'cosmology':
             # sanity checks:
             if np.any(raw_field.t < 0):
                 raise Exception("density fields should not have values below 0!")
             # transform to internal units:
             rho_c = egp.cosmology.critical_density()
             field_t /= rho_c
-        elif raw_type == 'critical':
+        elif input_type == 'critical':
             pass
         else:
-            raise Exception(f'raw_type "{raw_type}" not recognized!')
+            raise Exception(f'input_type "{input_type}" not recognized!')
 
         super().__init__(true=field_t)
