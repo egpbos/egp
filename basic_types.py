@@ -110,6 +110,7 @@ class PeriodicArray(np.ndarray):
             raise TypeError
 
 
+# TODO: remove object superclass; no longer necessary in Python 3!
 class Field(object):
     """
     Contains a field itself, given on a discrete 3D numpy.array, and the field's
@@ -236,6 +237,7 @@ def test_Field_matmul():
     assert(np.allclose(a.t, b.t))
 
 
+# TODO: remove object superclass; no longer necessary in Python 3!
 class VectorField(object):
     """
     A three component vector field, containing three Field instances as
@@ -259,6 +261,7 @@ class VectorField(object):
             self.z = Field(fourier=fourier[2])
 
 
+# TODO: remove object superclass; no longer necessary in Python 3!
 class Particles(object):
     """
     A set of N particles with three-dimensional cartesian positions and

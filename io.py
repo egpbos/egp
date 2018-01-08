@@ -851,10 +851,10 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     f.close()
 
 def load_raw_density_field(filename, gridsize, boxlen, dtype):
-    """Returns a DensityField object."""
+    """Returns a Field object."""
     field_array = np.memmap(filename, dtype=dtype).reshape(gridsize, gridsize, gridsize).copy()
     byte_size = field_array.dtype.itemsize
-    field = egp.icgen.DensityField(true = field_array)
+    field = egp.basic_types.Field(true = field_array)
     field.boxlen = boxlen
     return field
 

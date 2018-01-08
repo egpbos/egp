@@ -26,6 +26,12 @@ except:
 from egp.basic_types import Field, VectorField, Particles, PeriodicArray
 from egp import toolbox
 
+
+# TODO:
+# - Create PrimordialDensityField or LinearDensityField class for use in the
+#   DisplacementField class, instead of the current Field-type density variable.
+
+
 # constants
 # exception classes
 # interface functions
@@ -364,32 +370,26 @@ class InterpolatedPowerSpectrum(PowerSpectrum):
         return self.interpolator(k_flat).reshape(shape)
 
 
-class EstimatedPowerSpectrum(InterpolatedPowerSpectrum):
-    """
-    InterpolatedPowerSpectrum based on an estimation of the power spectrum of a
-    given DensityField.
-    Needs to be implemented to be able to build ConstrainedFields with the
-    Hoffman-Ribak method from van de Weygaert & Bertschinger (1996) based on
-    DensityFields that are not built up from a power spectrum like the
-    GaussianRandomField is.
-    """
-    def __init__(self, density):
-        pass
-
-
-class DensityField(Field):
-    """
-    A single component Field representing density on a periodic grid.
-    """
+# class EstimatedPowerSpectrum(InterpolatedPowerSpectrum):
+#     """
+#     InterpolatedPowerSpectrum based on an estimation of the power spectrum of a
+#     given DensityField.
+#     Needs to be implemented to be able to build ConstrainedFields with the
+#     Hoffman-Ribak method from van de Weygaert & Bertschinger (1996) based on
+#     DensityFields that are not built up from a power spectrum like the
+#     GaussianRandomField is.
+#     """
+#     def __init__(self, density):
+#         pass
 
 
 class DisplacementField(VectorField):
     """
     A three component VectorField representing the displacement field
-    corresponding to a DensityField on a periodic grid. N.B.: the DensityField
-    must have attribute /boxlen/ set. The components are stored as attributes x,
-    y and z, which are Field instances.
-    
+    corresponding to a density Field on a periodic grid that represents a linear
+    overdensity field. The components are stored as attributes x, y and z, which
+    are Field instances. The density Field must have a `boxlen` attribute.
+
     Gives the displacement field in the units as the box length, which should be
     h^{-1} Mpc (or kpc, but at least in "Hubble units", with h^{-1}!).
     """
@@ -400,8 +400,8 @@ class DisplacementField(VectorField):
         except AttributeError:
             self.gridsize = self.density.t.shape[0]
         self.boxlen = self.density.boxlen
-        self.build_fourier() # this method calls VectorField.__init__()
-    
+        self.build_fourier()  # this method calls VectorField.__init__()
+
     def build_fourier(self):
         #~ halfgrid = self.gridsize/2
         #~ dk = 2*np.pi / self.boxlen
@@ -489,27 +489,27 @@ class DisplacementField2ndOrder(VectorField):
         symmetrizeMatrix(self.z.f)
 
 
-class GaussianRandomField(DensityField):
+class GaussianRandomField(Field):
     """
-    Generates a Gaussian random DensityField based on a given PowerSpectrum for
+    Generates a Gaussian random Field based on a given PowerSpectrum for
     use as initial conditions in a cosmological N-body simulation. Before use,
-    the Zel'dovich approximation needs to be applied on a DisplacementField 
-    (based e.g. on this DensityField) to obtain actual particle positions and
+    the Zel'dovich approximation needs to be applied on a DisplacementField
+    (based e.g. on this Field) to obtain actual particle positions and
     velocities.
-    
+
     Input for initialization:
-    - power:     A PowerSpectrum, defining the Gaussian random DensityField.
+    - power:     A PowerSpectrum, defining the Gaussian random Field.
     - boxlen:    Length of the sides of the box that will be produced.
                  Units of h^{-1} Mpc.
     - gridsize:  Number of grid points in one direction
     - seed:      If given, a random seed is passed to the random number
                  generator, otherwise NumPy finds its own seed somewhere.
-    
+
     Computed attributes:
     - t:        The true density field.
     - f:        The density field in Fourier space.
     """
-    def __init__(self, power, boxlen, gridsize, seed = None):
+    def __init__(self, power, boxlen, gridsize, seed=None):
         print "NOTE: ksphere is removed from default GRF! Use GaussianRandomFieldKSphere instead if you want that."
         self.power = power
         self.boxlen = boxlen
@@ -518,7 +518,7 @@ class GaussianRandomField(DensityField):
         if not self.seed:
             self.seed = np.random.randint(0x100000000)
         self.build_fourier()
-    
+
     def build_fourier(self):
         # Initialize some used constants
         halfgrid = self.gridsize/2
@@ -586,7 +586,7 @@ class GaussianRandomField(DensityField):
 
 class GaussianRandomFieldKSphere(GaussianRandomField):
     """
-    Generates a Gaussian random DensityField, but adds the option of
+    Generates a Gaussian random Field, but adds the option of
     filtering k-space; either outside of the radius k_nyquist everything
     is to zero (/ksphere/ > 0) or inside this radius it's zero
     (/ksphere/ < 0). If /ksphere/ = 0 there is no filtering and you get
@@ -641,7 +641,7 @@ def resolution_dependent_random_grid(gridsize, seed):
 # Dit kunnen we in het algemene DensityField (of zelfs in het Field?) als
 # property implementeren die standaard een EstimatedPowerSpectrum bepaalt als
 # dat nodig is en die in het GRF geval natuurlijk gewoon gegeven is.
-class ConstrainedField(DensityField):
+class ConstrainedField(Field):
     def __init__(self, unconstrained_density, constraints, correlations = None, calculate = True):
         self.constraints = constraints
         constraint_values = []
@@ -685,7 +685,7 @@ class ConstrainedField(DensityField):
         xi_times_c = np.matrix(self.correlations.xi_ij_inverse) * delta_c_j
         PH = self.correlations.PH
         rhoR_f = np.sum(PH * np.array(xi_times_c)[:, np.newaxis, np.newaxis], axis=0)
-        self.rhoR = DensityField(fourier = rhoR_f)
+        self.rhoR = Field(fourier = rhoR_f)
     
     def calculate_unconstrained_constraints(self, ki):
         """Calculate the values of the constraints in the unconstrained
@@ -1478,7 +1478,7 @@ def two_LPT_ICs(redshift, psi1, psi2, cosmo):
 
 def density_to_pos_vel(density_field, cosmology, redshift):
     """Of course, the density_field must be at z=\inf. It must be a
-    DensityField object. cosmology must be a Cosmology object. redshift should
+    Field object. cosmology must be a Cosmology object. redshift should
     be the redshift to which you want the Zel'dovich approximation to put the
     particles.
     The output are two arrays: positions (Mpc/h) and velocities (km/s) of the

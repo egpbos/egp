@@ -478,12 +478,10 @@ def k_i_grid(gridsize, boxlen):
 
 # Cosmology
 def critical_density(cosmo=None):
-    """Gives the critical density in units of h^2 Msun Mpc^-3.
-    N.B.: cosmo is not necessary in these units (left it in as deprecated)."""
-    hubble_constant = 100 * 3.24077649e-20  # h s^-1
-    gravitational_constant = 6.67300e-11 * (3.24077649e-23)**3 / 5.02785431e-31  # Mpc^3 Msun^-1 s^-2
-    rhoc = 3.*hubble_constant**2/8/np.pi/gravitational_constant  # critical density (h^2 Msun Mpc^-3)
-    return rhoc
+    """Replaced by egp.cosmology.critical_density()"""
+    raise DeprecationWarning
+    from egp.cosmology import critical_density
+    return critical_density()
 
 
 def particle_mass(omegaM, boxlen, gridsize):

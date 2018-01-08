@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 from iconstrain2 import *
+from egp.basic_types import Field
 from egp.icgen import Cosmology, CosmoPowerSpectrum, GaussianRandomField, DensityField
 from csv import reader as csvreader
 import egp.io as io
@@ -68,7 +69,7 @@ POS_tussen, v_tussen = zeldovich(intermediate_redshift, psiC, cosmo)
 rhoc = critical_density(cosmo)
 particle_mass = rhoc*boxlen**3/gridsize**3
 rho_tussen = egp.toolbox.TSC_density(POS_tussen.reshape((3,gridsize_iter**3)).T, gridsize_iter, boxlen, particle_mass)
-del_tussen = DensityField(true = rho_tussen/rho_tussen.mean() - 1)
+del_tussen = Field(true = rho_tussen/rho_tussen.mean() - 1)
 del_tussen.boxlen = boxlen
 psi_tussen = DisplacementField(del_tussen)
 
@@ -78,14 +79,14 @@ POS, v = zeldovich_step(intermediate_redshift, 0., psi_tussen, POS_tussen, cosmo
 POS3_1, v3_1 = zeldovich(zeld3_redshift1, psiC, cosmo)
 
 rho3_1 = egp.toolbox.TSC_density(POS3_1.reshape((3,gridsize_iter**3)).T, gridsize_iter, boxlen, particle_mass)
-del3_1 = DensityField(true = rho3_1/rho3_1.mean() - 1)
+del3_1 = Field(true = rho3_1/rho3_1.mean() - 1)
 del3_1.boxlen = boxlen
 psi3_1 = DisplacementField(del3_1)
 
 POS3_2, v3_2 = zeldovich_step(zeld3_redshift1, zeld3_redshift2, psi3_1, POS3_1, cosmo)
 
 rho3_2 = egp.toolbox.TSC_density(POS3_2.reshape((3,gridsize_iter**3)).T, gridsize_iter, boxlen, particle_mass)
-del3_2 = DensityField(true = rho3_2/rho3_2.mean() - 1)
+del3_2 = Field(true = rho3_2/rho3_2.mean() - 1)
 del3_2.boxlen = boxlen
 psi3_2 = DisplacementField(del3_2)
 

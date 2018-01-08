@@ -9,7 +9,7 @@ tNaked = []
 R = np.random.random((N,N,N))
 
 for i in range(10):
-    den = egp.icgen.DensityField()
+    den = egp.icgen.Field()
     t=time();den.t = R.copy();t2 = time()#;print t2-t
     t=time();f = den.f;t2 = time();tClass.append(t2-t)#;print t2-t
     
@@ -20,7 +20,7 @@ for i in range(10):
     t=time();a = R.copy();t2 = time()#;print t2-t
     t=time();b = np.fft.rfftn(a)/np.size(a);t2 = time();tNaked.append(t2-t)#;print t2-t
     
-    den = egp.icgen.DensityField()
+    den = egp.icgen.Field()
     t=time();den.t = R.copy();t2 = time()#;print t2-t
     t=time();f = den.f;t2 = time();tClass.append(t2-t)#;print t2-t
 
@@ -36,6 +36,6 @@ for i in range(50):
     t=time();b = np.fft.rfftn(a)/np.size(a);t2 = time();tNaked.append(t2-t)#;print t2-t
 
 for i in range(50):
-    den = egp.icgen.DensityField()
+    den = egp.icgen.Field()
     t=time();den.t = R.copy();t2 = time()#;print t2-t
     t=time();f = den.f;t2 = time();tClass.append(t2-t)#;print t2-t
