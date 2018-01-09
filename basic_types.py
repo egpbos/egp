@@ -277,7 +277,7 @@ class Field(object):
         """
         if np.any(self.boxsize != other.boxsize) or self.volume != other.volume:
             raise ValueError("boxsizes/volumes of Fields in convolution do not match!")
-        martel_norm = self.volume  # DFT convention dependent!
+        martel_norm = self.volume * egp.fft.inverse_norm(self.t)
 
         return Field(fourier=(martel_norm * self.f * other.f), odd_3rd_dim=self.odd_3rd_dim)
 
