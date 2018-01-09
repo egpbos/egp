@@ -73,6 +73,6 @@ class DensityField(egp.basic_types.Field):
         elif input_type == 'critical':
             pass
         else:
-            raise Exception(f'input_type "{input_type}" not recognized!')
+            raise ValueError(f'input_type "{input_type}" not valid!')
 
         super().__init__(true=field_t)

@@ -4,7 +4,7 @@
 """
 basic_types.py
 /basic_types/ module in the /egp/ package.
-  
+
 Created by Evert Gerardus Patrick Bos.
 Copyright (c) 2012. All rights reserved.
 
@@ -12,12 +12,16 @@ Contains the basic data types used in other modules.
 """
 
 import numpy as np
-import egp.toolbox, egp.cosmology
+import egp.toolbox
+import egp.fft
+import egp.cosmology
 from matplotlib import pyplot as plt
+
 
 class EGPException(Exception):
     def __init__(self, value):
         self.parameter = value
+
     def __str__(self):
         return repr(self.parameter)
 
@@ -127,46 +131,46 @@ class Field(object):
     multiplication in true space and __matmul__ (the @ operator) to be in
     Fourier space. Note: __matmul__ makes the class Python 3 only.
     """
-    def __init__(self, true=None, fourier=None):
+    def __init__(self, true=None, fourier=None, boxsizes=(1, 1, 1)):
         if np.any(true):
             self.t = true
         if np.any(fourier):
             self.f = fourier
-    
+        self.boxsizes = np.array(boxsizes)
+        self.volume = np.prod(boxsizes)
+
     t, f = property(), property()
-    
+
     @t.getter
     def t(self):
         try:
             return self._true
         except AttributeError:
             self.t = self._ifft(self.f)
-            self.t *= np.size(self.t) # factor from discrete to true Fourier transform
             return self._true
+
     @t.setter
     def t(self, field):
         self._true = field
+
     @f.getter
     def f(self):
         try:
             return self._fourier
         except AttributeError:
-            self._fourier = egp.toolbox.rfftn_flip(self.t)/np.size(self.t)
-            #~ self._fourier = np.fft.rfftn(self.t)/np.size(self.t)
+            self._fourier = egp.fft.rfftn_flip(self.t)
             return self._fourier
+
     @f.setter
     def f(self, field):
         self._fourier = field
         if field is None:
-            self._ifft = egp.toolbox.irfftn_flip
-            #~ self._ifft = np.fft.irfftn
+            self._ifft = egp.fft.irfftn_flip
         elif field.shape[0] == field.shape[2]:
-            self._ifft = egp.toolbox.ifftn_flip
-            #~ self._ifft = np.fft.ifftn
-        elif field.shape[0] == (field.shape[2]-1)*2:
-            self._ifft = egp.toolbox.irfftn_flip
-            #~ self._ifft = np.fft.irfftn
-    
+            self._ifft = egp.fft.ifftn_flip
+        elif field.shape[0] == (field.shape[2] - 1) * 2:
+            self._ifft = egp.fft.irfftn_flip
+
     @property
     def periodic(self):
         """The true fields are all defined on periodic grids, so here's a
@@ -207,8 +211,13 @@ class Field(object):
         return Field(true=(self.t * other.t))
 
     def __matmul__(self, other):
-        size = self.f.shape[0] ** 3
-        return Field(fourier=(self.f * other.f * size))
+        """
+        Convolution of two Fields. Multiplies by volume (which must match). See
+        Martel+05 or section 3.B.3 of my thesis for a derivation of this.
+        """
+        if np.any(self.boxsizes != other.boxsizes) or self.volume != other.volume:
+            raise ValueError("boxsizes/volumes of Fields in convolution do not match!")
+        return Field(fourier=(self.volume * self.f * other.f))
 
     def subvolve(self, other):
         """
@@ -244,9 +253,9 @@ class VectorField(object):
     attributes x, y and z.
     Initialization parameter true must have shape (3,N,N,N) and fourier must
     have shape (3,N,N,N/2+1).
-    
+
     Note: We could change this to only contain one array of shape (3,N,N,N) (for
-    the true component) and use egp.toolbox.rfftn_flip(psi, axes=(1,2,3)) so the
+    the true component) and use egp.fft.rfftn_flip(psi, axes=(1,2,3)) so the
     first axis is not transformed. Might be more convenient in e.g. the
     Zel'dovich code.
     """
