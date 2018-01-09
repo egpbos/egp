@@ -2,7 +2,7 @@
 # @Author: pbos
 # @Date:   2018-01-08 16:22:07
 # @Last Modified by:   pbos
-# @Last Modified time: 2018-01-09 14:08:56
+# @Last Modified time: 2018-01-09 16:45:37
 
 """
 fft.py
@@ -16,7 +16,16 @@ Copyright (c) 2012-2018. All rights reserved.
 import numpy as np
 
 
-# (r)FFTn's with flipped minus sign convention
+# (r)FFTn's with flipped minus sign convention and normalization in the forward
+# transforms instead of the inverse transforms
+
+def forward_norm(real_space_array):
+    return 1 / np.size(real_space_array)
+
+
+def inverse_norm(real_space_array):
+    return 1
+
 
 def rfftn(A, *args, **kwargs):
     """
@@ -34,11 +43,14 @@ def rfftn(A, *args, **kwargs):
     other way around, physical-coordinates-to-grid-indices transformation to be
     int(x/boxlen*gridsize).
 
+    Additionally, we put the normalization term in the forward transform,
+    contrary to NumPy which puts it in the inverse transform.
+
     The effect of a changed sign in the FFT convention is a mirroring of your
     in- and output arrays. This is what this function and irfftn thus undo.
     Try plotting np.fft.fft(np.fft.fft(A)) versus A to see for yourself.
     """
-    norm = 1 / np.size(A)
+    norm = forward_norm(A)
     return norm * np.fft.rfftn(A[::-1, ::-1, ::-1], *args, **kwargs)
 
 
@@ -48,7 +60,9 @@ def irfftn(A, *args, **kwargs):
     convention. See rfftn.
     """
     real_space = np.fft.irfftn(A, *args, **kwargs)[::-1, ::-1, ::-1]
-    norm = np.size(real_space)  # factor from discrete to true Fourier transform
+
+    norm = np.size(real_space)  # cancel the default NumPy normalization term
+    norm *= inverse_norm(real_space)  # ... and apply our chosen standard
 
     return norm * real_space
 
@@ -73,5 +87,9 @@ def ifftn(A, *args, **kwargs):
     Inverse N-dimensional fast fourier transform, with flipped minus sign
     convention. See rfftn.
     """
-    norm = np.size(A)  # factor from discrete to true Fourier transform
-    return norm * np.fft.ifftn(A, *args, **kwargs)[::-1, ::-1, ::-1]
+    real_space = np.fft.ifftn(A, *args, **kwargs)[::-1, ::-1, ::-1]
+
+    norm = np.size(real_space)  # cancel the default NumPy normalization term
+    norm *= inverse_norm(real_space)  # ... and apply our chosen standard
+
+    return norm * real_space
