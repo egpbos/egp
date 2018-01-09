@@ -142,6 +142,10 @@ class Field(object):
             self.t = true
         if np.any(fourier):
             self.f = fourier
+        self._init_boxsize(boxsize)
+        self.volume = np.prod(boxsize)
+
+    def _init_boxsize(self, boxsize):
         if isinstance(boxsize, collections.abc.Sequence) and len(boxsize) == 3:
             self.boxsize = np.array(boxsize)
             if boxsize[0] != boxsize[1] or boxsize[1] != boxsize[2]:
@@ -151,8 +155,27 @@ class Field(object):
             self.boxsize = np.array([boxsize, boxsize, boxsize])
         else:
             raise ValueError("boxsize must either be a single number (for cubic boxes) or a sequence of 3 numbers!")
-        self.volume = np.prod(boxsize)
 
+    # to account for old code that uses boxlen instead of boxsize, we capture it
+    # as a property and implement it using boxsize internally:
+    boxlen = property()
+    _boxlen_set = False
+
+    @boxlen.getter
+    def boxlen(self):
+        if self._boxlen_set:
+            warnings.warn("use boxsize instead of boxlen!", category=DeprecationWarning)
+            return self.boxsize
+        else:
+            raise AttributeError("boxlen not set (and neither should it be, since it is deprecated, use boxsize instead)")
+
+    @boxlen.setter
+    def boxlen(self, boxlen):
+        warnings.warn("use boxsize instead of boxlen!", category=DeprecationWarning)
+        self._init_boxsize(boxlen)
+        self._boxlen_set = True
+
+    # the core data members, the true and fourier fields:
     t, f = property(), property()
 
     @t.getter
@@ -196,25 +219,6 @@ class Field(object):
             self._periodic = PeriodicArray(self.t)
             return self._periodic
 
-    def show(self, xlabel="x (Mpc)", ylabel="y (Mpc)"):
-        """
-        Plot a 2D field slice with the right axes on the right side for it to make
-        sense to me. In my world, the first axis of an array should represent the
-        x-axis, in that if you ask for a[0] in a 2D array /a/ then you should get
-        the field entries at x=0 for varying (a[0,-1] would be (x,y)=(0,boxlen)).
-        
-        By default matplotlib.pyplot's imshow does it the other way around, which
-        could of course easily be remedied by a transpose, but this easy function
-        does that all for you, and a little more.
-        
-        N.B.: must import pyplot as pl from matplotlib!
-        N.B.2: only works for objects with a boxlen property.
-        """
-        plt.imshow(self.t.T, origin='bottom', interpolation='nearest', extent=(0,self.boxlen,0,self.boxlen))
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.colorbar()
-
     def __add__(self, other):
         return Field(true=(self.t + other.t))
 
@@ -224,7 +228,7 @@ class Field(object):
     def __mul__(self, other):
         return Field(true=(self.t * other.t))
 
-    def __matmul__(self, other):
+    def convolve(self, other):
         """
         Convolution of two Fields. Multiplies by volume (which must match). See
         Martel+05 or section 3.B.3 of my thesis for a derivation of this. Note
@@ -236,6 +240,8 @@ class Field(object):
             raise ValueError("boxsizes/volumes of Fields in convolution do not match!")
         martel_norm = self.volume  # DFT convention dependent!
         return Field(fourier=(martel_norm * self.f * other.f))
+
+    __matmul__ = convolve
 
     def subvolve(self, other):
         """
