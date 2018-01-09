@@ -139,12 +139,40 @@ class Field(object):
     """
 
     # by default, use real fft:
-    _ifft = egp.fft.irfftn_flip
+    _ifft = egp.fft.irfftn
 
-    def __init__(self, true=None, fourier=None, boxsize=1):
-        if np.any(true):
+    def __init__(self, true=None, fourier=None, boxsize=1, odd_3rd_dim=None):
+        """
+        :param odd_3rd_dim: When using real fft, which we do by default, one
+        needs to specify whether the number of grid cells in the last dimension
+        are odd or even in real space, since irfft cannot deduce this
+        automatically. Set this parameter to True to make the dimension odd,
+        False to make it even. Only necessary when passing the fourier
+        component to __init__. When set to None, will auto-detect.
+        """
+        if true is None and fourier is None:
+            raise ValueError("Must pass true and/or fourier to Field.__init__!")
+
+        if odd_3rd_dim is None:
+            if fourier is not None:
+                raise ValueError("Must set odd_3rd_dim to True or False when passing fourier to Field.__init__!")
+            else:
+                if true is not None:
+                    if true.shape[2] % 2 == 0:
+                        self.odd_3rd_dim = False
+                    else:
+                        self.odd_3rd_dim = True
+                        self._ifft = egp.fft.irfftn_odd
+        else:
+            if true is not None:
+                if odd_3rd_dim is True and true.shape[2] % 2 == 0:
+                    raise ValueError("The third dimension of the given true array is even, so odd_3rd_dim cannot be True!")
+                if odd_3rd_dim is False and true.shape[2] % 2 != 0:
+                    raise ValueError("The third dimension of the given true array is odd, so odd_3rd_dim cannot be False!")
+            self.odd_3rd_dim = odd_3rd_dim
+        if true is not None:
             self.t = true
-        if np.any(fourier):
+        if fourier is not None:
             self.f = fourier
         self._init_boxsize(boxsize)
         self.volume = np.prod(boxsize)
@@ -199,17 +227,20 @@ class Field(object):
         try:
             return self._fourier
         except AttributeError:
-            self._fourier = egp.fft.rfftn_flip(self.t)
+            self._fourier = egp.fft.rfftn(self.t)
             return self._fourier
 
     @f.setter
     def f(self, field):
         self._fourier = field
         if field.shape[0] == field.shape[2]:
-            self._ifft = egp.fft.ifftn_flip
+            self._ifft = egp.fft.ifftn
         elif (field.shape[0] == (field.shape[2] - 1) * 2 or  # even sized
               field.shape[0] == field.shape[2] * 2 - 1):   # odd sized
-            self._ifft = egp.fft.irfftn_flip
+            if self.odd_3rd_dim:
+                self._ifft = egp.fft.irfftn_odd
+            else:
+                self._ifft = egp.fft.irfftn
         else:
             raise ValueError("shape of fourier field is not supported!")
 
@@ -247,7 +278,8 @@ class Field(object):
         if np.any(self.boxsize != other.boxsize) or self.volume != other.volume:
             raise ValueError("boxsizes/volumes of Fields in convolution do not match!")
         martel_norm = self.volume  # DFT convention dependent!
-        return Field(fourier=(martel_norm * self.f * other.f))
+
+        return Field(fourier=(martel_norm * self.f * other.f), odd_3rd_dim=self.odd_3rd_dim)
 
     __matmul__ = convolve
 
@@ -263,6 +295,26 @@ def test_Field_convolve():
     """
     A convolution of f(x) with a "Kronecker delta" should give f(x).
     """
+    N = 4
+    kronecker_raw = np.zeros((N, N, N))
+    kronecker_raw[N - 1, N - 1, N - 1] = N**3  # because volume = 1, dx^3 = 1/N^3, and integral over box must be 1
+    a_raw = np.random.rand(N, N, N)
+
+    kronecker = Field(true=kronecker_raw)
+    a = Field(true=a_raw)
+
+    b = a @ kronecker
+
+    # print(a.t)
+    # print(b.t)
+
+    assert np.allclose(a.t, b.t)
+
+
+def test_Field_convolve_odd():
+    """
+    A convolution of f(x) with a "Kronecker delta" should give f(x).
+    """
     N = 3
     kronecker_raw = np.zeros((N, N, N))
     kronecker_raw[N - 1, N - 1, N - 1] = N**3  # because volume = 1, dx^3 = 1/N^3, and integral over box must be 1
@@ -273,10 +325,10 @@ def test_Field_convolve():
 
     b = a @ kronecker
 
-    print(a.t)
-    print(b.t)
+    # print(a.t)
+    # print(b.t)
 
-    assert(np.allclose(a.t, b.t))
+    assert np.allclose(a.t, b.t)
 
 
 # TODO: remove object superclass; no longer necessary in Python 3!
@@ -288,7 +340,7 @@ class VectorField(object):
     have shape (3,N,N,N/2+1).
 
     Note: We could change this to only contain one array of shape (3,N,N,N) (for
-    the true component) and use egp.fft.rfftn_flip(psi, axes=(1,2,3)) so the
+    the true component) and use egp.fft.rfftn(psi, axes=(1,2,3)) so the
     first axis is not transformed. Might be more convenient in e.g. the
     Zel'dovich code.
     """
