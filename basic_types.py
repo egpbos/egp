@@ -137,6 +137,10 @@ class Field(object):
     multiplication in true space and __matmul__ (the @ operator) to be in
     Fourier space. Note: __matmul__ makes the class Python 3 only.
     """
+
+    # by default, use real fft:
+    self._ifft = egp.fft.irfftn_flip
+
     def __init__(self, true=None, fourier=None, boxsize=1):
         if np.any(true):
             self.t = true
@@ -201,12 +205,13 @@ class Field(object):
     @f.setter
     def f(self, field):
         self._fourier = field
-        if field is None:
-            self._ifft = egp.fft.irfftn_flip
-        elif field.shape[0] == field.shape[2]:
+        if field.shape[0] == field.shape[2]:
             self._ifft = egp.fft.ifftn_flip
-        elif field.shape[0] == (field.shape[2] - 1) * 2:
+        elif (field.shape[0] == (field.shape[2] - 1) * 2 or  # even sized
+              field.shape[0] == field.shape[2] * 2 - 1):   # odd sized
             self._ifft = egp.fft.irfftn_flip
+        else:
+            raise ValueError("shape of fourier field is not supported!")
 
     @property
     def periodic(self):
@@ -254,12 +259,13 @@ class Field(object):
         return self - (self @ other)
 
 
-def test_Field_matmul():
+def test_Field_convolve():
     """
     A convolution of f(x) with a "Kronecker delta" should give f(x).
     """
-    N = 10
-    kronecker_raw = np.ones((N, N, N))
+    N = 3
+    kronecker_raw = np.zeros((N, N, N))
+    kronecker_raw[N - 1, N - 1, N - 1] = N**3  # because volume = 1, dx^3 = 1/N^3, and integral over box must be 1
     a_raw = np.random.rand(N, N, N)
 
     kronecker = Field(true=kronecker_raw)
@@ -267,8 +273,8 @@ def test_Field_matmul():
 
     b = a @ kronecker
 
-    # print(a.t)
-    # print(b.t)
+    print(a.t)
+    print(b.t)
 
     assert(np.allclose(a.t, b.t))
 
