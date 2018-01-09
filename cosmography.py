@@ -26,7 +26,10 @@ class DensityField(egp.basic_types.Field):
     To convert to physical density, multiply the raw field by the critical
     density (e.g. using `cosmology.critical_density()`).
 
-    :param boxlen: A density field must have a physical size to be meaningful.
+    :param boxsize: A density field must have a physical size to be meaningful.
+    It can be given as a single number (for cubic boxes) or as a sequence of
+    three numbers. Note that this is not an explicit keyword argument of this
+    class's initializer, but rather of the Field class.
 
     :param input_type: string that specifies the type of input density given to
     initialize the DensityField. This allows conversion to the correct internal
@@ -40,9 +43,7 @@ class DensityField(egp.basic_types.Field):
     :param **kwargs: Remaining kwargs are passed on to the Field initializer.
     """
 
-    def __init__(self, boxlen, input_type='overdensity', **kwargs):
-        self.boxlen = boxlen
-
+    def __init__(self, input_type='overdensity', **kwargs):
         raw_field = egp.basic_types.Field(**kwargs)
         field_t = raw_field.t
         if input_type == 'overdensity':
@@ -75,4 +76,8 @@ class DensityField(egp.basic_types.Field):
         else:
             raise ValueError(f'input_type "{input_type}" not valid!')
 
-        super().__init__(true=field_t)
+        if 'boxsize' not in kwargs:
+            warnings.warn("The boxsize keyword argument was not given in DensityField.__init__, so it will be set to the default value for Field.__init__. It is highly unlikely that this is what you intended!")
+
+        kwargs.pop('true', None)
+        super().__init__(true=field_t, **kwargs)
