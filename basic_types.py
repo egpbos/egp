@@ -219,6 +219,9 @@ class Field(object):
             self._periodic = PeriodicArray(self.t)
             return self._periodic
 
+    # removed show() method, keep this here for when it's inadvertently used
+    show = None
+
     def __add__(self, other):
         return Field(true=(self.t + other.t))
 
