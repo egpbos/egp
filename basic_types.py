@@ -139,7 +139,7 @@ class Field(object):
     """
 
     # by default, use real fft:
-    self._ifft = egp.fft.irfftn_flip
+    _ifft = egp.fft.irfftn_flip
 
     def __init__(self, true=None, fourier=None, boxsize=1):
         if np.any(true):
