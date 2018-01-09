@@ -265,7 +265,7 @@ def test_Field_matmul():
     kronecker = Field(true=kronecker_raw)
     a = Field(true=a_raw)
 
-    b = a * kronecker
+    b = a @ kronecker
 
     # print(a.t)
     # print(b.t)
