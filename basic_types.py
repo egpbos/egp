@@ -17,6 +17,12 @@ import egp.fft
 import egp.cosmology
 from matplotlib import pyplot as plt
 
+# for type checking of arguments:
+import collections.abc
+import numbers
+
+import warnings
+
 
 class EGPException(Exception):
     def __init__(self, value):
@@ -131,13 +137,21 @@ class Field(object):
     multiplication in true space and __matmul__ (the @ operator) to be in
     Fourier space. Note: __matmul__ makes the class Python 3 only.
     """
-    def __init__(self, true=None, fourier=None, boxsizes=(1, 1, 1)):
+    def __init__(self, true=None, fourier=None, boxsize=1):
         if np.any(true):
             self.t = true
         if np.any(fourier):
             self.f = fourier
-        self.boxsizes = np.array(boxsizes)
-        self.volume = np.prod(boxsizes)
+        if isinstance(boxsize, collections.abc.Sequence) and len(boxsize) == 3:
+            self.boxsize = np.array(boxsize)
+            if boxsize[0] != boxsize[1] or boxsize[1] != boxsize[2]:
+                warnings.warn("unequal box sizes are not taken into account in most functions",
+                              category=RuntimeWarning)
+        elif isinstance(boxsize, numbers.Real):
+            self.boxsize = np.array([boxsize, boxsize, boxsize])
+        else:
+            raise ValueError("boxsize must either be a single number (for cubic boxes) or a sequence of 3 numbers!")
+        self.volume = np.prod(boxsize)
 
     t, f = property(), property()
 
@@ -213,11 +227,15 @@ class Field(object):
     def __matmul__(self, other):
         """
         Convolution of two Fields. Multiplies by volume (which must match). See
-        Martel+05 or section 3.B.3 of my thesis for a derivation of this.
+        Martel+05 or section 3.B.3 of my thesis for a derivation of this. Note
+        that this factor is dependent on DFT convention. When using 1/N in the
+        inverse DFT (like NumPy does, but instead of in the forward DFT as we
+        do) the factor is volume/N_grid_cells.
         """
-        if np.any(self.boxsizes != other.boxsizes) or self.volume != other.volume:
+        if np.any(self.boxsize != other.boxsize) or self.volume != other.volume:
             raise ValueError("boxsizes/volumes of Fields in convolution do not match!")
-        return Field(fourier=(self.volume * self.f * other.f))
+        martel_norm = self.volume  # DFT convention dependent!
+        return Field(fourier=(martel_norm * self.f * other.f))
 
     def subvolve(self, other):
         """
