@@ -9,9 +9,9 @@ Created by Evert Gerardus Patrick Bos.
 Copyright (c) 2012-2018. All rights reserved.
 """
 import numpy as np
-import basic_types
-import toolbox
 import numbers
+import egp.basic_types
+import egp.toolbox
 
 
 def gaussian_3d_kernel(gridsize, boxsize, gaussian_scale):
@@ -31,16 +31,16 @@ def gaussian_3d_kernel(gridsize, boxsize, gaussian_scale):
     if not isinstance(gridsize, numbers.Integral):
         raise TypeError("gridsize must be integer!")
 
-    k_squared = toolbox.k_abs_grid(gridsize, boxsize)**2
+    k_squared = egp.toolbox.k_abs_grid(gridsize, boxsize)**2
 
     kernel_f = np.exp(-k_squared * gaussian_scale**2 / 2) + 0j
     # since we were too lazy to calculate the true normalization factor, we just force it to one:
-    kernel_t = basic_types.Field(fourier=kernel_f, odd_3rd_dim=(gridsize % 2 != 0)).t
+    kernel_t = egp.basic_types.Field(fourier=kernel_f, odd_3rd_dim=(gridsize % 2 != 0)).t
     kernel_f /= kernel_t.sum()
     # then, dividing by dV is necessary to make sure the integral over V is 1
     dV = boxsize**3 / gridsize**3
     kernel_f /= dV
-    kernel = basic_types.Field(fourier=kernel_f, boxsize=boxsize, odd_3rd_dim=(gridsize % 2 != 0))
+    kernel = egp.basic_types.Field(fourier=kernel_f, boxsize=boxsize, odd_3rd_dim=(gridsize % 2 != 0))
 
     return kernel
 
@@ -67,7 +67,7 @@ def gaussian_3d_kernel_real_space(gridsize, boxsize, gaussian_scale):
     x_sq = np.fft.fftshift((x**2).sum(axis=0))[::-1, ::-1, ::-1]
 
     kernel = np.exp(- x_sq / gaussian_scale**2 / 2) / (np.sqrt(2 * np.pi) * gaussian_scale)**3
-    kernel = basic_types.Field(true=kernel, boxsize=boxsize)
+    kernel = egp.basic_types.Field(true=kernel, boxsize=boxsize)
 
     return kernel
 
@@ -96,7 +96,7 @@ def filter_Field(field, kernel, kernel_arguments, gridsize=None):
     if not gridsize:
         gridsize = field.f.shape[0]
     field_fourier_filtered = filter_field(field_fourier, boxlen, kernel, kernel_arguments, gridsize)
-    return basic_types.Field(fourier=field_fourier_filtered)
+    return egp.basic_types.Field(fourier=field_fourier_filtered)
 
 
 def filter_field(fieldFourier, boxlen, kernel, kernel_arguments, gridsize=None):
@@ -108,7 +108,7 @@ def filter_field(fieldFourier, boxlen, kernel, kernel_arguments, gridsize=None):
     fieldFourier will be used."""
     if not gridsize:
         gridsize = fieldFourier.shape[0]
-    k = toolbox.k_abs_grid(gridsize, boxlen)
+    k = egp.toolbox.k_abs_grid(gridsize, boxlen)
     return fieldFourier * kernel(k, *kernel_arguments)
 
 
@@ -125,7 +125,7 @@ def tophat_kernel(k, r_th):
 def gaussian_smooth(densityFourier, r_g, boxlen):
     """Returns the fourier-space representation of the smoothed density field."""
     gridsize = len(densityFourier)
-    k = toolbox.k_abs_grid(gridsize, boxlen)
+    k = egp.toolbox.k_abs_grid(gridsize, boxlen)
 
     def windowGauss(ka, Rg):
         return np.exp(-ka * ka * Rg * Rg / 2)   # N.B.: de /2 factor is als je het veld smooth!
