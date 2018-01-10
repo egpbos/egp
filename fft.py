@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-# @Author: pbos
-# @Date:   2018-01-08 16:22:07
-# @Last Modified by:   pbos
-# @Last Modified time: 2018-01-09 16:45:37
 
 """
 fft.py

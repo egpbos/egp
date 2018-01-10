@@ -34,6 +34,9 @@ import scipy.optimize # for fitting 1D functions
 
 import contextlib  # for directory switching context manager
 
+# for backwards compatibility, import the old filter functions here
+from field_filtering import filter_Field, filter_field, gaussian_kernel, tophat_kernel, gaussian_smooth
+
 
 # constants
 __version__ = "0.3, September 2012"
@@ -278,107 +281,56 @@ def savefigd(path, fig=None, **kwargs):
 # Other stuff
 def TSC_density(pos, gridsize, boxsize, mass, periodic=True):
 	"""Distribute particle masses on a regular grid of gridsize cubed based
-	on particle positions in array pos. The masses are distributed using a
-	Triangular Shaped Cloud algorithm (quadratic splines), taken from the
-	P3M code of Rien van de Weygaert. By default the particle box is taken
-	to be periodic; if this is not the case, you can call with argument
-	periodic=False. Argument boxsize is the physical size of the box and
-	defines the inter-gridpoint-distance.
-	Mass of the particles is taken to be constant at the moment and is
-	given by argument mass. THIS NEEDS TO BE FURTHER SPECIFIED IF OTHER
-	PARTICLE TYPES ARE INCLUDED! E.g. by passing a full mass array.
-	This function makes full use of Boost/PyUblas, thanks to Maarten Breddels.
-	"""
-	
-	rho = np.zeros((gridsize,gridsize,gridsize), dtype='float64')
-	
-	Npart = len(pos)
-	pos = np.array(pos, dtype='float64', order='C')
-    
-	crunch.TSCDensity(pos, rho, Npart, boxsize, gridsize, mass)
-	
-	return rho
+    on particle positions in array pos. The masses are distributed using a
+    Triangular Shaped Cloud algorithm (quadratic splines), taken from the
+    P3M code of Rien van de Weygaert. By default the particle box is taken
+    to be periodic; if this is not the case, you can call with argument
+    periodic=False. Argument boxsize is the physical size of the box and
+    defines the inter-gridpoint-distance.
+    Mass of the particles is taken to be constant at the moment and is
+    given by argument mass. THIS NEEDS TO BE FURTHER SPECIFIED IF OTHER
+    PARTICLE TYPES ARE INCLUDED! E.g. by passing a full mass array.
+    This function makes full use of Boost/PyUblas, thanks to Maarten Breddels.
+    """
+    rho = np.zeros((gridsize,gridsize,gridsize), dtype='float64')
+
+    Npart = len(pos)
+    pos = np.array(pos, dtype='float64', order='C')
+
+    crunch.TSCDensity(pos, rho, Npart, boxsize, gridsize, mass)
+
+    return rho
 
 def TSC_density_old(pos, gridsize, boxsize, mass, periodic=True):
-	"""Distribute particle masses on a regular grid of gridsize cubed based
-	on particle positions in array pos. The masses are distributed using a
-	Triangular Shaped Cloud algorithm (quadratic splines), taken from the
-	P3M code of Rien van de Weygaert. By default the particle box is taken
-	to be periodic; if this is not the case, you can call with argument
-	periodic=False. Argument boxsize is the physical size of the box and
-	defines the inter-gridpoint-distance.
-	Mass of the particles is taken to be constant at the moment and is
-	given by argument mass. THIS NEEDS TO BE FURTHER SPECIFIED IF OTHER
-	PARTICLE TYPES ARE INCLUDED! E.g. by passing a full mass array.
-	This function makes full use of Boost/PyUblas, thanks to Maarten Breddels.
-	"""
-	
-	rho = np.zeros((gridsize,gridsize,gridsize), dtype='float64')
-	
-	Npart = len(pos)
-	
-	crunch.TSCDensity(pos.astype('float64'), rho, Npart, boxsize, gridsize, mass)
-	
-	return rho
+    """Distribute particle masses on a regular grid of gridsize cubed based
+    on particle positions in array pos. The masses are distributed using a
+    Triangular Shaped Cloud algorithm (quadratic splines), taken from the
+    P3M code of Rien van de Weygaert. By default the particle box is taken
+    to be periodic; if this is not the case, you can call with argument
+    periodic=False. Argument boxsize is the physical size of the box and
+    defines the inter-gridpoint-distance.
+    Mass of the particles is taken to be constant at the moment and is
+    given by argument mass. THIS NEEDS TO BE FURTHER SPECIFIED IF OTHER
+    PARTICLE TYPES ARE INCLUDED! E.g. by passing a full mass array.
+    This function makes full use of Boost/PyUblas, thanks to Maarten Breddels.
+    """
+    rho = np.zeros((gridsize,gridsize,gridsize), dtype='float64')
 
-def filter_Field(field, kernel, kernel_arguments, gridsize=None):
-    """Returns a new Field object that is the input Field /field/
-    convolved with a kernel. Kind of speaks for itself, I'd say. Use
-    gaussian_kernel or tophat_kernel for /kernel/ and a list of
-    appropriate kernel arguments in /kernel_arguments/. Gridsize can be
-    optionally specified, otherwise the first shape element of
-    fieldFourier of /field.f/ will be used."""
-    field_fourier = field.f
-    boxlen = field.boxlen
-    if not gridsize:
-        gridsize = field.f.shape[0]
-    field_fourier_filtered = filter_field(field_fourier, boxlen, kernel, kernel_arguments, gridsize)
-    return egp.basic_types.Field(fourier = field_fourier_filtered)
+    Npart = len(pos)
 
-def filter_field(fieldFourier, boxlen, kernel, kernel_arguments, gridsize=None):
-    """Returns the fourier-space representation of the field
-    convolved with a kernel. Kind of speaks for itself, I'd say. Use
-    gaussian_kernel or tophat_kernel for /kernel/ and a list of
-    appropriate kernel arguments in /kernel_arguments/. Gridsize can be
-    optionally specified, otherwise the first shape element of
-    fieldFourier will be used."""
-    if not gridsize:
-        gridsize = fieldFourier.shape[0]
-    k = k_abs_grid(gridsize, boxlen)
-    return fieldFourier * kernel(k, *kernel_arguments)
+    crunch.TSCDensity(pos.astype('float64'), rho, Npart, boxsize, gridsize, mass)
 
-def gaussian_kernel(k, r_g):
-    return np.exp( -k*k*r_g*r_g/2 )
+    return rho
 
-def tophat_kernel(k, r_th):
-    x = k * r_th
-    kernel = 3*(np.sin(x) - x*np.cos(x))/x**3
-    return np.nan_to_num(kernel) # to get out the divisions by zero
 
-def gaussian_smooth(densityFourier, r_g, boxlen):
-    """Returns the fourier-space representation of the smoothed density field."""
-    gridsize = len(densityFourier)
-    k = k_abs_grid(gridsize, boxlen)
-    
-    def windowGauss(ka, Rg):
-        return np.exp( -ka*ka*Rg*Rg/2 ) # N.B.: de /2 factor is als je het veld smooth!
-                                        # Het PowerSpec heeft deze factor niet.
-    
-    return densityFourier*windowGauss(k,r_g)
-
-def tophat_smooth(densityFourier, r_th, boxlen):
-    """Returns the fourier-space representation of the smoothed density field."""
-    gridsize = len(densityFourier)
-    k = k_abs_grid(gridsize, boxlen)
-
-#~ def calc_k_abs_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")
 def k_abs_grid(gridsize, boxlen):
     """k_abs_grid(gridsize, boxlen)"""
     halfgrid = gridsize // 2
-    dk = 2*np.pi/boxlen
-    k12 = np.fft.fftfreq(gridsize, 1/dk/gridsize) # k3 = k12[:halfgrid+1].abs()
-    return np.sqrt(k12[:halfgrid+1]**2 + k12[:,np.newaxis]**2 + k12[:,np.newaxis,np.newaxis]**2)
+    dk = 2 * np.pi / boxlen
+    k12 = np.fft.fftfreq(gridsize, 1 / dk / gridsize)  # k3 = k12[:halfgrid+1].abs()
+    return np.sqrt(k12[:halfgrid + 1]**2 + k12[:, np.newaxis]**2 + k12[:, np.newaxis, np.newaxis]**2)
+
 
 #~ def calc_k_i_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")

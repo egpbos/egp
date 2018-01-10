@@ -175,7 +175,7 @@ class Field(object):
         if fourier is not None:
             self.f = fourier
         self._init_boxsize(boxsize)
-        self.volume = np.prod(boxsize)
+        self.volume = np.prod(self.boxsize)
 
     def _init_boxsize(self, boxsize):
         if isinstance(boxsize, collections.abc.Sequence) and len(boxsize) == 3:
