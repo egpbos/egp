@@ -280,7 +280,7 @@ def savefigd(path, fig=None, **kwargs):
 
 # Other stuff
 def TSC_density(pos, gridsize, boxsize, mass, periodic=True):
-	"""Distribute particle masses on a regular grid of gridsize cubed based
+    """Distribute particle masses on a regular grid of gridsize cubed based
     on particle positions in array pos. The masses are distributed using a
     Triangular Shaped Cloud algorithm (quadratic splines), taken from the
     P3M code of Rien van de Weygaert. By default the particle box is taken
@@ -300,6 +300,7 @@ def TSC_density(pos, gridsize, boxsize, mass, periodic=True):
     crunch.TSCDensity(pos, rho, Npart, boxsize, gridsize, mass)
 
     return rho
+
 
 def TSC_density_old(pos, gridsize, boxsize, mass, periodic=True):
     """Distribute particle masses on a regular grid of gridsize cubed based
