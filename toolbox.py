@@ -35,7 +35,7 @@ import scipy.optimize # for fitting 1D functions
 import contextlib  # for directory switching context manager
 
 # for backwards compatibility, import the old filter functions here
-from field_filtering import filter_Field, filter_field, gaussian_kernel, tophat_kernel, gaussian_smooth
+from egp.field_filtering import filter_Field, filter_field, gaussian_kernel, tophat_kernel, gaussian_smooth
 
 
 # constants
