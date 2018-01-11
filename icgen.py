@@ -21,7 +21,7 @@ try:
     import pyublas
     from egp.crunch import resolution_independent_random_grid
 except:
-    print "pyublas and egp.crunch not imported, making unconstrained IC fields will not work!"
+    print("pyublas and egp.crunch not imported, making unconstrained IC fields will not work!")
 
 from egp.basic_types import Field, VectorField, Particles, PeriodicArray
 from egp import toolbox
@@ -336,7 +336,7 @@ class CosmoPowerSpectrum(PowerSpectrum):
         np.seterr(divide = 'ignore') # Divide by zero warning off
         Tb = (( Ttilde0(k,1,1)/(1+(k*s/5.2)**2) + alphaB/(1+(betaB/k/s)**3) * \
              np.exp(-(k/kSilk)**1.4) )) * np.sinc(k*st/2/np.pi)
-        print "WARNING!!!\n11 July 2014\nJust rediscovered that np.sinc is defined sin(pi*x)/(pi*x). It seems\nlike I'm trying to correct for this in trans8 by dividing by 2*pi.\nWhere does that 2 come from? Not from Eisenstein & Hu!"
+        print("WARNING!!!\n11 July 2014\nJust rediscovered that np.sinc is defined sin(pi*x)/(pi*x). It seems\nlike I'm trying to correct for this in trans8 by dividing by 2*pi.\nWhere does that 2 come from? Not from Eisenstein & Hu!")
         np.seterr(divide = error_setting) # Divide by zero warning back on
         
         f = 1/(1+(k*s/5.4)**4)
@@ -388,7 +388,7 @@ class DisplacementField(VectorField):
     A three component VectorField representing the displacement field
     corresponding to a density Field on a periodic grid that represents a linear
     overdensity field. The components are stored as attributes x, y and z, which
-    are Field instances. The density Field must have a `boxlen` attribute.
+    are Field instances.
 
     Gives the displacement field in the units as the box length, which should be
     h^{-1} Mpc (or kpc, but at least in "Hubble units", with h^{-1}!).
@@ -399,7 +399,7 @@ class DisplacementField(VectorField):
             self.gridsize = self.density.gridsize
         except AttributeError:
             self.gridsize = self.density.t.shape[0]
-        self.boxlen = self.density.boxlen
+        self.boxsize = self.density.boxsize
         self.build_fourier()  # this method calls VectorField.__init__()
 
     def build_fourier(self):
@@ -408,7 +408,7 @@ class DisplacementField(VectorField):
         #~ kmax = self.gridsize*dk
         
         # Initialize fourier-space k-values grid
-        k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.boxlen)
+        k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.density.boxsize)
         #~ k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
         #~ k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
         #~ k2 -= kmax*(k2 > dk*(halfgrid - 1))
@@ -435,8 +435,7 @@ class DisplacementField(VectorField):
 class DisplacementField2ndOrder(VectorField):
     """
     A three component VectorField representing the 2nd order displacement field
-    corresponding to a DisplacementField on a periodic grid. N.B.: the
-    DisplacementField must have attribute /boxlen/ set. The components are
+    corresponding to a DisplacementField on a periodic grid. The components are
     stored as attributes x, y and z, which are Field instances.
     
     Gives the 2nd order displacement field in the units as the box length, which
@@ -448,12 +447,12 @@ class DisplacementField2ndOrder(VectorField):
             self.gridsize = self.psi1.gridsize
         except AttributeError:
             self.gridsize = self.psi1.x.t.shape[0]
-        self.boxlen = self.psi1.boxlen
+        self.boxsize = self.psi1.boxsize
         self.build_fourier() # this method calls VectorField.__init__()
     
     def build_fourier(self):
         # Initialize fourier-space k-values grid
-        k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.boxlen)
+        k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.boxsize)
         k_sq = k1**2 + k2**2 + k3**2
         k_sq[0,0,0] = 1 # to avoid division by zero
 
@@ -510,7 +509,7 @@ class GaussianRandomField(Field):
     - f:        The density field in Fourier space.
     """
     def __init__(self, power, boxlen, gridsize, seed=None):
-        print "NOTE: ksphere is removed from default GRF! Use GaussianRandomFieldKSphere instead if you want that."
+        print("NOTE: ksphere is removed from default GRF! Use GaussianRandomFieldKSphere instead if you want that.")
         self.power = power
         self.boxlen = boxlen
         self.gridsize = int(gridsize)
@@ -1166,7 +1165,7 @@ def generate_shape_constraints(location, scale, power_spectrum, boxlen, curvatur
     else:
         curvature = float(curvature)
     if not a21 or not a31:
-		a21, a31 = random_shape(curvature)
+        a21, a31 = random_shape(curvature)
     else:
         a21 = float(a21)
         a31 = float(a31)
@@ -1338,18 +1337,18 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     boxlen = psi.boxlen
     
     gridsize = len(psi1)
-    if print_info: print "Boxlen:    ",boxlen
+    if print_info: print("Boxlen:    ", boxlen)
     dx = boxlen/gridsize
-    if print_info: print "dx:        ",dx
+    if print_info: print("dx:        ",dx)
     f = fpeebl(redshift, omegaR, omegaM, omegaL)
-    if print_info: print "fpeebl:    ",f
+    if print_info: print("fpeebl:    ",f)
     D = grow(redshift, omegaR, omegaM, omegaL)
     D0 = grow(0, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
-    if print_info: print "D+(z):     ",D
-    if print_info: print "D+(0):     ",D0
-    if print_info: print "D(z)/D(0): ",D/D0
+    if print_info: print("D+(z):     ",D)
+    if print_info: print("D+(0):     ",D0)
+    if print_info: print("D(z)/D(0): ",D/D0)
     H = hubble(redshift, omegaR, omegaM, omegaL)
-    if print_info: print "H(z):      ",H
+    if print_info: print("H(z):      ",H)
     
     xfact = D/D0
     vfact = D/D0*H*f/(1+redshift)
@@ -1552,7 +1551,7 @@ def fpeebl(z, omegaR, omegaM, omegaL):
     if (omegaM == 1) and (omegaL == 0):
         return 1.0
     elif omegaM == 0:
-        print "Omega_M <= 0 in fpeebl!"
+        print("Omega_M <= 0 in fpeebl!")
         sys.exit()
 
     # Evaluate f := dlog[D+]/dlog[a] (logarithmic linear growth rate) for
