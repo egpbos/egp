@@ -416,8 +416,8 @@ class DisplacementField(VectorField):
         k_sq[0,0,0] = 1 # to avoid division by zero
 
         # Indices for the 7 real, independent, non-zero grid values:
-        real7x,real7y,real7z = np.mgrid[0:2,0:2,0:2]*self.gridsize/2
-        real7x,real7y,real7z = real7x.ravel()[1:],real7y.ravel()[1:],real7z.ravel()[1:]
+        real7x, real7y, real7z = np.mgrid[0:2, 0:2, 0:2] * self.gridsize // 2
+        real7x, real7y, real7z = real7x.ravel()[1:], real7y.ravel()[1:], real7z.ravel()[1:]
         
         # Then, the actual displacement field:
         #~ Z = 1.0j/k_sq/self.boxlen * self.density.f # This was also missing a minus sign (at least in the new fourier convention)
