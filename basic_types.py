@@ -15,11 +15,8 @@ import numpy as np
 import egp.toolbox
 import egp.fft
 import egp.cosmology
+import egp.utils
 from matplotlib import pyplot as plt
-
-# for type checking of arguments:
-import collections.abc
-import numbers
 
 import warnings
 
@@ -178,15 +175,7 @@ class Field(object):
         self.volume = np.prod(self.boxsize)
 
     def _init_boxsize(self, boxsize):
-        if isinstance(boxsize, collections.abc.Sequence) and len(boxsize) == 3:
-            self.boxsize = np.array(boxsize)
-            if boxsize[0] != boxsize[1] or boxsize[1] != boxsize[2]:
-                warnings.warn("unequal box sizes are not taken into account in most functions",
-                              category=RuntimeWarning)
-        elif isinstance(boxsize, numbers.Real):
-            self.boxsize = np.array([boxsize, boxsize, boxsize])
-        else:
-            raise ValueError("boxsize must either be a single number (for cubic boxes) or a sequence of 3 numbers!")
+        self.boxsize = egp.utils.boxsize_tuple(boxsize)
 
     # to account for old code that uses boxlen instead of boxsize, we capture it
     # as a property and implement it using boxsize internally:
