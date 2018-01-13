@@ -621,10 +621,10 @@ def symmetrizeMatrix(m):
     # fill the k3<=nyquist part for an inverse fft to a real field; so not in
     # the k1 and k2 nyquist planes and not outside the nyquist planes either.
     gridsize = m.shape[0]
-    halfgrid = gridsize/2
-    xi, yi, zi = np.ogrid[0:halfgrid+1,0:gridsize,0:halfgrid+1:halfgrid]
-    xj, yj, zj = np.ogrid[gridsize:halfgrid-1:-1,gridsize:0:-1,0:halfgrid+1:halfgrid]
-    xj[0], yj[:,0] = 0,0
+    halfgrid = gridsize // 2
+    xi, yi, zi = np.ogrid[0:(halfgrid + 1), 0:gridsize, 0:(halfgrid + 1):halfgrid]
+    xj, yj, zj = np.ogrid[gridsize:(halfgrid - 1):-1, gridsize:0:-1, 0:(halfgrid + 1):halfgrid]
+    xj[0], yj[:, 0] = 0, 0
     # The following must be in 2 halfs, or you won't get a symmetric matrix,
     # but just the full matrix mirrored and conjugated.
     m[xi,yi[:,:halfgrid],zi] = m[xj,yj[:,:halfgrid],zj].conj()
