@@ -424,7 +424,8 @@ class DisplacementField(VectorField):
         Z = -1.0j/k_sq * self.density.f
         Z[real7x,real7y,real7z] = 0.0 # waarom dit eigenlijk?
         Z[0,0,0] = 0.0
-        VectorField.__init__(self, fourier = (k1*Z, k2*Z, k3*Z))
+        VectorField.__init__(self, fourier=(k1 * Z, k2 * Z, k3 * Z),
+                             odd_3rd_dim=self.density.odd_3rd_dim)
         
         # Finally add symmetry to the nyquist planes (so the ifft is not imaginary):
         symmetrizeMatrix(self.x.f)

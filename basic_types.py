@@ -333,15 +333,15 @@ class VectorField(object):
     first axis is not transformed. Might be more convenient in e.g. the
     Zel'dovich code.
     """
-    def __init__(self, true=None, fourier=None):
+    def __init__(self, true=None, fourier=None, **kwargs):
         if np.any(true):
-            self.x = Field(true=true[0])
-            self.y = Field(true=true[1])
-            self.z = Field(true=true[2])
+            self.x = Field(true=true[0], **kwargs)
+            self.y = Field(true=true[1], **kwargs)
+            self.z = Field(true=true[2], **kwargs)
         if np.any(fourier):
-            self.x = Field(fourier=fourier[0])
-            self.y = Field(fourier=fourier[1])
-            self.z = Field(fourier=fourier[2])
+            self.x = Field(fourier=fourier[0], **kwargs)
+            self.y = Field(fourier=fourier[1], **kwargs)
+            self.z = Field(fourier=fourier[2], **kwargs)
 
 
 # TODO: remove object superclass; no longer necessary in Python 3!
