@@ -29,6 +29,7 @@ import sys
 import os
 import csv
 import egp.basic_types
+import egp.utils
 
 import scipy.optimize # for fitting 1D functions
 
@@ -333,17 +334,19 @@ def k_abs_grid(gridsize, boxlen):
     return np.sqrt(k12[:halfgrid + 1]**2 + k12[:, np.newaxis]**2 + k12[:, np.newaxis, np.newaxis]**2)
 
 
-#~ def calc_k_i_grid(gridsize, boxlen):
 @cacheable("grid_%s_box_%s")
-def k_i_grid(gridsize, boxlen):
+def k_i_grid(gridsize, boxsize):
     """k_i_grid(gridsize, boxlen)"""
     halfgrid = gridsize // 2
-    dk = 2*np.pi/boxlen
-    kmax = gridsize*dk
-    k1, k2, k3 = dk*np.mgrid[0:gridsize, 0:gridsize, 0:halfgrid+1]
-    k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
-    k2 -= kmax*(k2 > dk*(halfgrid - 1))
-    return np.array((k1,k2,k3))
+    boxsize = egp.utils.boxsize_tuple(boxsize)
+    dk = 2 * np.pi / boxsize
+    kmax = gridsize * dk
+    _ = np.newaxis
+    k1, k2, k3 = dk[:, _, _, _] * np.mgrid[0:gridsize, 0:gridsize, 0:halfgrid + 1]
+    k1 -= kmax[0] * (k1 > dk[0] * (halfgrid - 1))  # shift the second half to negative k values
+    k2 -= kmax[1] * (k2 > dk[1] * (halfgrid - 1))
+    return np.array((k1, k2, k3))
+
 
 #~ cache_k_grids = False
 

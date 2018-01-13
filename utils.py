@@ -23,7 +23,7 @@ def boxsize_tuple(boxsize):
     with three times that same number. When a sequence of size 3 it will convert
     that to the output np.array.
     """
-    if isinstance(boxsize, collections.abc.Sequence) and len(boxsize) == 3:
+    if isinstance(boxsize, (collections.abc.Sequence, np.ndarray)) and len(boxsize) == 3:
         boxtuple = np.array(boxsize)
         if boxsize[0] != boxsize[1] or boxsize[1] != boxsize[2]:
             warnings.warn("unequal box sizes are not taken into account in most functions",
