@@ -403,30 +403,26 @@ class DisplacementField(VectorField):
         self.build_fourier()  # this method calls VectorField.__init__()
 
     def build_fourier(self):
-        #~ halfgrid = self.gridsize/2
-        #~ dk = 2*np.pi / self.boxlen
-        #~ kmax = self.gridsize*dk
-        
         # Initialize fourier-space k-values grid
         k1, k2, k3 = toolbox.k_i_grid(self.gridsize, self.density.boxsize)
-        #~ k1, k2, k3 = dk*np.mgrid[0:self.gridsize, 0:self.gridsize, 0:halfgrid+1]
-        #~ k1 -= kmax*(k1 > dk*(halfgrid - 1)) # shift the second half to negative k values
-        #~ k2 -= kmax*(k2 > dk*(halfgrid - 1))
         k_sq = k1**2 + k2**2 + k3**2
-        k_sq[0,0,0] = 1 # to avoid division by zero
+        k_sq[0, 0, 0] = 1  # to avoid division by zero
 
-        # Indices for the 7 real, independent, non-zero grid values:
-        real7x, real7y, real7z = np.mgrid[0:2, 0:2, 0:2] * self.gridsize // 2
-        real7x, real7y, real7z = real7x.ravel()[1:], real7y.ravel()[1:], real7z.ravel()[1:]
-        
+        # Indices for the Nyquist components in all directions, which must be
+        # set to zero. See http://math.mit.edu/~stevenj/fft-deriv.pdf,
+        # footnote 4 for an explanation.
+        nyquist_xy = np.ones(self.gridsize, dtype=np.int32) * self.gridsize // 2
+        nyquist_z = np.ones(self.gridsize // 2 + 1, dtype=np.int32) * self.gridsize // 2
+
         # Then, the actual displacement field:
-        #~ Z = 1.0j/k_sq/self.boxlen * self.density.f # This was also missing a minus sign (at least in the new fourier convention)
-        Z = -1.0j/k_sq * self.density.f
-        Z[real7x,real7y,real7z] = 0.0 # waarom dit eigenlijk?
-        Z[0,0,0] = 0.0
+        Z = -1.0j / k_sq * self.density.f
+        Z[nyquist_xy, :, :] = 0.0
+        Z[:, nyquist_xy, :] = 0.0
+        Z[:, :, nyquist_z] = 0.0
+        Z[0, 0, 0] = 0.0
         VectorField.__init__(self, fourier=(k1 * Z, k2 * Z, k3 * Z),
                              odd_3rd_dim=self.density.odd_3rd_dim)
-        
+
         # Finally add symmetry to the nyquist planes (so the ifft is not imaginary):
         symmetrizeMatrix(self.x.f)
         symmetrizeMatrix(self.y.f)
@@ -1316,14 +1312,13 @@ def f_BBKS(x):
 # --- END CONSTRAINED FIELD STUFF --- #
 
 
-
-# Zel'dovich approximation    
+# Zel'dovich approximation
 def zeldovich(redshift, psi, cosmo, print_info=False):
     """
     Use the Zel'dovich approximation to calculate positions and velocities at
     certain /redshift/, based on the DisplacementField /psi/ of e.g. a Gaussian
     random density field and Cosmology /cosmo/.
-    
+
     Outputs a tuple of a position and velocity vector array; positions are in
     units of h^{-1} Mpc (or in fact the same units as /psi.boxlen/) and
     velocities in km/s.
@@ -1331,40 +1326,46 @@ def zeldovich(redshift, psi, cosmo, print_info=False):
     psi1 = psi.x.t
     psi2 = psi.y.t
     psi3 = psi.z.t
-    
+
     omegaM = cosmo.omegaM
     omegaL = cosmo.omegaL
     omegaR = cosmo.omegaR
-    boxlen = psi.boxlen
-    
-    gridsize = len(psi1)
-    if print_info: print("Boxlen:    ", boxlen)
-    dx = boxlen/gridsize
-    if print_info: print("dx:        ",dx)
+    boxsize = psi.boxsize
+
+    gridsize = psi1.shape
+
+    dx = boxsize / gridsize
+
     f = fpeebl(redshift, omegaR, omegaM, omegaL)
-    if print_info: print("fpeebl:    ",f)
+
     D = grow(redshift, omegaR, omegaM, omegaL)
-    D0 = grow(0, omegaR, omegaM, omegaL) # used for normalization of D to t = 0
-    if print_info: print("D+(z):     ",D)
-    if print_info: print("D+(0):     ",D0)
-    if print_info: print("D(z)/D(0): ",D/D0)
+    D0 = grow(0, omegaR, omegaM, omegaL)  # used for normalization of D to t = 0
+
     H = hubble(redshift, omegaR, omegaM, omegaL)
-    if print_info: print("H(z):      ",H)
-    
-    xfact = D/D0
-    vfact = D/D0*H*f/(1+redshift)
-    
-    v = vfact * np.array([psi1,psi2,psi3]) # vx,vy,vz
+
+    if print_info:
+        print("Boxlen:    ", boxsize)
+        print("dx:        ", dx)
+        print("fpeebl:    ", f)
+        print("D+(z):     ", D)
+        print("D+(0):     ", D0)
+        print("D(z)/D(0): ", D / D0)
+        print("H(z):      ", H)
+
+    xfact = D / D0
+    vfact = D / D0 * H * f / (1 + redshift)
+
+    v = vfact * np.array([psi1, psi2, psi3])  # vx,vy,vz
     # lagrangian coordinates, in the center of the gridcells:
-    q = np.mgrid[dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx,dx/2:boxlen+dx/2:dx] # IN EEN CACHEABLE FUNCTIE ZETTEN
-    X = (q + xfact*(v/vfact))%boxlen
-    #~ # Mirror coordinates, because somehow it doesn't match the coordinates put
-    #~ # into the constrained field.
-    #~ X = boxlen - X # x,y,z
-    #~ v = -v
-    # FIXED MIRRORING: using different FFT convention now (toolbox.rfftn etc).
-    
-    return X,v
+    qbegin = dx / 2
+    qend = boxsize + dx / 2
+    q = np.mgrid[qbegin[0]:qend[0]:dx[0],
+                 qbegin[1]:qend[1]:dx[1],
+                 qbegin[2]:qend[2]:dx[2]]  # IN EEN CACHEABLE FUNCTIE ZETTEN
+    _ = np.newaxis
+    X = (q + xfact * (v / vfact)) % boxsize[:, _, _, _]
+
+    return X, v
 
 
 def zeldovich_displacement(redshift, psi, cosmo, print_info=False):
