@@ -25,6 +25,7 @@ except:
 
 from egp.basic_types import Field, VectorField, Particles, PeriodicArray
 from egp import toolbox
+import egp.utils
 
 
 # TODO:
@@ -392,15 +393,35 @@ class DisplacementField(VectorField):
 
     Gives the displacement field in the units as the box length, which should be
     h^{-1} Mpc (or kpc, but at least in "Hubble units", with h^{-1}!).
+
+    :param density: DensityField from which to derive the displacement field.
+    When set to None, the true or fourier components and the boxsize must be
+    given directly.
+    :param true: Sequence of 3 true components, only used when density is None.
+    :param fourier: Sequence of 3 Fourier components, only used when density is None.
+    :param boxsize: Box size, only used when density is None.
+    :param odd_3rd_dim: When passing only the fourier components, this parameter
+    specifies whether in real space the 3rd dimension should have odd size.
     """
-    def __init__(self, density):
-        self.density = density
-        try:
-            self.gridsize = self.density.gridsize
-        except AttributeError:
-            self.gridsize = self.density.t.shape[0]
-        self.boxsize = self.density.boxsize
-        self.build_fourier()  # this method calls VectorField.__init__()
+    def __init__(self, density=None,
+                 true=None, fourier=None, boxsize=None, odd_3rd_dim=None):
+        if density is not None:
+            self.density = density
+            try:
+                self.gridsize = self.density.gridsize
+            except AttributeError:
+                self.gridsize = self.density.t.shape[0]
+            self.boxsize = self.density.boxsize
+            self.build_fourier()  # this method calls VectorField.__init__()
+        elif ((true is not None) or (fourier is not None)) and (boxsize is not None):
+            self.boxsize = egp.utils.boxsize_tuple(boxsize)
+            if true is not None and len(true) == 3:
+                VectorField.__init__(self, true=true, boxsize=self.boxsize)
+            elif fourier is not None and len(fourier) == 3:
+                VectorField.__init__(self, fourier=fourier, boxsize=self.boxsize,
+                                     odd_3rd_dim=odd_3rd_dim)
+        else:
+            raise RuntimeError("DisplacementField cannot be initialized, no initialization parameters given.")
 
     def build_fourier(self):
         # Initialize fourier-space k-values grid
@@ -421,12 +442,61 @@ class DisplacementField(VectorField):
         Z[:, :, nyquist_z] = 0.0
         Z[0, 0, 0] = 0.0
         VectorField.__init__(self, fourier=(k1 * Z, k2 * Z, k3 * Z),
-                             odd_3rd_dim=self.density.odd_3rd_dim)
+                             odd_3rd_dim=self.density.odd_3rd_dim,
+                             boxsize=self.density.boxsize)
 
         # Finally add symmetry to the nyquist planes (so the ifft is not imaginary):
         symmetrizeMatrix(self.x.f)
         symmetrizeMatrix(self.y.f)
         symmetrizeMatrix(self.z.f)
+
+    def convolve(self, field):
+        """
+        Convolve all components of self with field.
+
+        Currently, only single component Fields are supported.
+        """
+        return DisplacementField(true=((self.x @ field).t,
+                                       (self.y @ field).t,
+                                       (self.z @ field).t),
+                                 boxsize=self.boxsize)
+
+    __matmul__ = convolve
+
+    def subvolve(self, field):
+        """
+        Subvolve all components of self with field.
+
+        Currently, only single component Fields are supported.
+        """
+        return DisplacementField(true=((self.x.subvolve(field)).t,
+                                       (self.y.subvolve(field)).t,
+                                       (self.z.subvolve(field)).t),
+                                 boxsize=self.boxsize)
+
+    def __add__(self, other):
+        return DisplacementField(true=((self.x + other.x).t,
+                                       (self.y + other.y).t,
+                                       (self.z + other.z).t),
+                                 boxsize=self.boxsize)
+
+    def __sub__(self, other):
+        return DisplacementField(true=((self.x - other.x).t,
+                                       (self.y - other.y).t,
+                                       (self.z - other.z).t),
+                                 boxsize=self.boxsize)
+
+    def __mul__(self, other):
+        return DisplacementField(true=((self.x * other.x).t,
+                                       (self.y * other.y).t,
+                                       (self.z * other.z).t),
+                                 boxsize=self.boxsize)
+
+    def __div__(self, other):
+        return DisplacementField(true=((self.x / other.x).t,
+                                       (self.y / other.y).t,
+                                       (self.z / other.z).t),
+                                 boxsize=self.boxsize)
 
 
 class DisplacementField2ndOrder(VectorField):
