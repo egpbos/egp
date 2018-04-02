@@ -15,11 +15,11 @@ try:
     import pyublas
     import crunch
 except:
-    print "pyublas and egp.crunch not imported!"
-import cPickle as pickle
+    print("pyublas and egp.crunch not imported!")
+import pickle
 import egp.toolbox, egp.icgen, egp.basic_types, egp.cosmology
 import tarfile
-import MMF
+import MMF_io as MMF
 
 
 # constants
@@ -336,7 +336,7 @@ class CubeP3MData(egp.basic_types.OrderedParticles):
         N = xvint[0]
         if N != self.Ntotal:
             self.Ntotal = N
-            print "N.B.: particles have been deleted from the ICs!\nAdjusted particle number from %i to %i." % (self.metadata['N'], N)
+            print("N.B.: particles have been deleted from the ICs!\nAdjusted particle number from %i to %i." % (self.metadata['N'], N))
         self.xv = np.memmap(self.filename, dtype='float32', mode='r', offset = self.offset*4)
     
     @egp.basic_types.OrderedParticles.order.getter
@@ -798,9 +798,9 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     N2 = len(pos) # Number of DM particles (Npart[1], i.e. the 2nd entry)
 
     # Make HEAD and write to file
-    toFileDesc = struct.pack(BS['desc'], 8L, 'HEAD', 264L, 8L)
+    toFileDesc = struct.pack(BS['desc'], 8, 'HEAD', 264, 8)
 
-    Npart = [0L, N2, 0L, 0L, 0L, 0L]
+    Npart = [0, N2, 0, 0, 0, 0]
     masses = [0.0, mass, 0.0, 0.0, 0.0, 0.0]
     time = 1./(1+redshift)
     FlagSfr = 0
@@ -812,18 +812,18 @@ def write_gadget_ic_dm(filename, pos, vel, mass, redshift, boxsize = 0.0, om0 = 
     FlagMetals = 0
     NallHW = [0, 0, 0, 0, 0, 0]
     flag_entr_ics = 0
-    header_contents = [256L, ] + Npart + masses + \
+    header_contents = [256, ] + Npart + masses + \
                       [time, redshift, FlagSfr, FlagFeedback] + \
                       Nall + [FlagCooling, NumFiles, boxsize, om0, ol0, h0] + \
-                      [FlagAge, FlagMetals] + NallHW + [flag_entr_ics, 256L]
+                      [FlagAge, FlagMetals] + NallHW + [flag_entr_ics, 256]
     toFile = struct.pack(BS['HEAD'], *header_contents)
     
     f.write(toFileDesc+toFile)
     
     # Make POS, VEL and ID and write to file
-    toFileDescPOS = struct.pack(BS['desc'], 8L, 'POS ', 3*4*N2+8, 8L)
-    toFileDescVEL = struct.pack(BS['desc'], 8L, 'VEL ', 3*4*N2+8, 8L)
-    toFileDescID  = struct.pack(BS['desc'], 8L, 'ID  ', 4*N2+8, 8L)
+    toFileDescPOS = struct.pack(BS['desc'], 8, 'POS ', 3*4*N2+8, 8)
+    toFileDescVEL = struct.pack(BS['desc'], 8, 'VEL ', 3*4*N2+8, 8)
+    toFileDescID  = struct.pack(BS['desc'], 8, 'ID  ', 4*N2+8, 8)
     
     toFilePOSVELsize = struct.pack('I', 3*4*N2) # Just the block sizes
     toFileIDsize     = struct.pack('I', 4*N2)
@@ -1154,8 +1154,7 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
         try:
             os.mkdir(output_dir)
         except OSError:
-            print "Warning: output directory already exists. This run might" +\
-                  " be overwriting previous runs!"
+            print("Warning: output directory already exists. This run might be overwriting previous runs!")
 
     omegaM = cosmo.omegaM  # PARAMETER
     omegaL = cosmo.omegaL  # PARAMETER
@@ -1168,7 +1167,7 @@ def prepare_gadget_run(boxlen, gridsize, cosmo, ic_file, redshift_begin,
 
     output_list_fn_save_dir = save_dir+'/'+output_list_filename
     if not os.path.isfile(output_list_fn_save_dir):  # check if it exists
-        print "output_list file doesn't exist yet in save_dir, creating an empty one!"
+        print("output_list file doesn't exist yet in save_dir, creating an empty one!")
         open(output_list_fn_save_dir, 'a').close()
     output_list_filename = run_dir_base+'/'+output_list_filename  # PARAMETER
     DE_file = run_dir_base+'/'+DE_file  # PARAMETER
@@ -1591,9 +1590,9 @@ def setup_cubep3m_run(pos, vel, cosmo, boxlen, gridsize, redshift, snapshots, ru
         run_script_path = run_path+"batch/kapteyn.run"
     elif location == 'millipede':
         run_script_path = run_path+"batch/millipede.run"
-        print "N.B.: MILLIPEDE SCRIPT WERKT NOG NIET!"
+        print("N.B.: MILLIPEDE SCRIPT WERKT NOG NIET!")
     else:
-        print "location parameter not recognized! Either kapteyn or millipede."
+        print("location parameter not recognized! Either kapteyn or millipede.")
         raise SystemExit
     
     egp.toolbox.fill_template_file(run_script_path, locals())
@@ -1640,7 +1639,7 @@ def columnize(vol):
     y = hist[0]/tot
     x = np.array([(hist[1][i]+hist[1][i+1])/2. for i in range(len(hist[1])-1)])
     for i in range(len(x)):
-        print x[i], y[i]
+        print(x[i], y[i])
 
 def logColumnize(vol):
     vollog = np.log10(vol)
@@ -1649,7 +1648,7 @@ def logColumnize(vol):
     y = hist[0]/tot
     x = 10**np.array([(hist[1][i]+hist[1][i+1])/2. for i in range(len(hist[1])-1)])
     for i in range(len(x)):
-        print x[i], y[i]
+        print(x[i], y[i])
 
 def savePosAsErwin(pos, boxsize, filename, weight = None):
     """Save the position data as an Erwin-type binary file (Npart|x|y|z|
