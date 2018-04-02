@@ -19,7 +19,7 @@ except:
 import pickle
 import egp.toolbox, egp.icgen, egp.basic_types, egp.cosmology
 import tarfile
-import MMF_io as MMF
+import egp.MMF_io as MMF
 
 
 # constants

@@ -12,8 +12,7 @@ from __future__ import print_function
 
 import numpy as np
 import os.path
-from miscellaneous import throwError, charToString, readArrayEntries, writeArrayEntries, sourceDirectoryPath, checkArraySizes
-import analysis
+from pyNEXUS.miscellaneous import throwError, charToString, readArrayEntries, writeArrayEntries, sourceDirectoryPath, checkArraySizes
 
 currentDirectory = sourceDirectoryPath
 bufferType = np.uint64
