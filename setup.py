@@ -40,14 +40,13 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     test_suite='tests',
     install_requires=[
         'numpy',
         'scipy',
-        'matplotlib',
-        'pyublas',
-        'mayavi'
+        'matplotlib'
     ],
     setup_requires=[
         # dependency for `python setup.py test`
@@ -64,6 +63,10 @@ setup(
     ],
     extras_require={
         'dev':  ['prospector[with_pyroma]', 'yapf', 'isort'],
-        'iconstrain': ['FuncDesigner', 'openopt']
+        'iconstrain': ['FuncDesigner', 'openopt', 'mayavi'],
+        # note: crunch will be replaced by egpcrunch, which is based on pybind11 instead of pyublas
+        'crunch': ['pyublas'],
+        # set of random testing scripts used during research:
+        'testing': ['mayavi']
     }
 )
