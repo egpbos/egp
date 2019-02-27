@@ -13,14 +13,12 @@ The values in Fields correspond to physical coordinates. The boxlen size spans t
 Python versions
 ---------------
 
-This repository is set up with Python versions:
+This package was developed originally in 2009, so in Python 2.6 and 2.7.
+I since (mostly) converted it to Python 3, while keeping it Python 2 compatible as much as possible.
+It can be installed only in Python 3.3 and higher, because it is an implicit namespace package.
+I give no guarantees about version compatiblity, but am always open to suggestions to make things more compatible.
+Generally, I just try to use the newest version of Python and adjust this package accordingly when I need it in a new environment.
 
-* 3.4
-* 3.5
-* 3.6
-* 3.7
-
-Add or remove Python versions based on project requirements. `The guide <https://guide.esciencecenter.nl/best_practices/language_guides/python.html>`_ contains more information about Python versions and writing Python 2 and 3 compatible code.
 
 Installation
 ------------
@@ -46,18 +44,21 @@ Documentation
 
 .. _README:
 
-Include a link to your project's full documentation here.
+Some of the classes and functions are well documented.
+Some are not.
+I plan on improving this situation soon.
+Stay tuned.
 
 Contributing
 ************
 
-If you want to contribute to the development of egp,
+If you want to contribute to the development of `egp`,
 have a look at the `contribution guidelines <CONTRIBUTING.rst>`_.
 
 License
 *******
 
-Copyright (c) 2009-2019, E. G. Patrick Bos
+Copyright (c) 2009-2019, E. G. Patrick Bos & Rijksuniversiteit Groningen
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
