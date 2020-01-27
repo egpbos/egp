@@ -15,9 +15,9 @@ from __future__ import division
 import numpy as np
 try:
     import pyublas
-    import crunch
+    import crunch.TSCDensity
 except:
-    print("pyublas and egp.crunch not imported!")
+    print("crunch.TSCDensity not imported, cannot use toolbox.TSC_density(_old)!")
 #~ import __builtin__
 
 import re  # for natural sort and reglob

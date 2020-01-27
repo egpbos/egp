@@ -18,10 +18,14 @@ from scipy.special import erf
 from csv import reader as csvreader
 
 try:
-    import pyublas
-    from egp.crunch import resolution_independent_random_grid
+    from egpcrunch import resolution_independent_random_grid
 except:
-    print("pyublas and egp.crunch not imported, making unconstrained IC fields will not work!")
+    print("could not import egpcrunch, will try old pyublas crunch version...")
+    try:
+        import pyublas
+        from egp.crunch import resolution_independent_random_grid
+    except:
+        print("pyublas and egp.crunch not imported, making unconstrained IC fields will not work!")
 
 from egp.basic_types import Field, VectorField, Particles, PeriodicArray
 from egp import toolbox

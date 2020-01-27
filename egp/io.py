@@ -11,11 +11,11 @@ Copyright (c) 2012. All rights reserved.
 
 # imports
 import struct, os, stat, datetime, numpy as np
-try:
-    import pyublas
-    import crunch
-except:
-    print("pyublas and egp.crunch not imported!")
+# try:
+#     import pyublas
+#     import crunch
+# except:
+#     print("pyublas and egp.crunch not imported!")
 import pickle
 import egp.toolbox, egp.icgen, egp.basic_types, egp.cosmology
 import tarfile
